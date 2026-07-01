@@ -1,0 +1,13 @@
+Rebuild a package
+
+Usage:
+npm rebuild [<package-spec>] ...]
+
+Options:
+[-g|--global] [--no-bin-links] [--foreground-scripts] [--ignore-scripts]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+alias: rb
+
+Run "npm help rebuild" for more info

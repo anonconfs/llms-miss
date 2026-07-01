@@ -1,0 +1,24 @@
+Usage: fold [OPTION]... [FILE]...
+Wrap input lines in each FILE, writing to standard output.
+
+With no FILE, or when FILE is -, read standard input.
+
+Mandatory arguments to long options are mandatory for short options too.
+  -b, --bytes
+         count bytes rather than columns
+  -c, --characters
+         count characters rather than columns
+  -s, --spaces
+         break after blanks, or in words greater than WIDTH
+  -w, --width=WIDTH
+         use WIDTH columns instead of 80
+      --help
+         display this help and exit
+      --version
+         output version information and exit
+
+Report bugs to: bug-coreutils@gnu.org
+GNU coreutils home page: <https://www.gnu.org/software/coreutils/>
+General help using GNU software: <https://www.gnu.org/gethelp/>
+Full documentation <https://www.gnu.org/software/coreutils/fold>
+or available locally via: info '(coreutils) fold invocation'

@@ -1,0 +1,15 @@
+-f
+--force
+--include-workspace-root
+--init-author-name
+--init-author-url
+--init-license
+--init-module
+--init-version
+--no-workspaces-update
+--scope
+-w
+--workspace
+--workspaces
+-y
+--yes

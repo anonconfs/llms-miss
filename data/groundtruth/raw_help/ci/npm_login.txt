@@ -1,0 +1,9 @@
+Login to a registry user account
+
+Usage:
+npm login
+
+Options:
+[--registry <registry>] [--scope <@scope>] [--auth-type <legacy|web>]
+
+Run "npm help login" for more info

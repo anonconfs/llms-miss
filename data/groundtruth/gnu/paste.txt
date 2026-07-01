@@ -1,0 +1,8 @@
+-d
+--delimiters
+--help
+-s
+--serial
+--version
+-z
+--zero-terminated

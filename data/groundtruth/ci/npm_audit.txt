@@ -1,0 +1,16 @@
+--audit-level
+--dry-run
+-f
+--force
+--foreground-scripts
+--ignore-scripts
+--include
+--include-workspace-root
+--install-links
+--json
+--no-package-lock
+--omit
+--package-lock-only
+-w
+--workspace
+--workspaces

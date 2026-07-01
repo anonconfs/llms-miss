@@ -1,0 +1,15 @@
+--bytes
+-c
+--chars
+--debug
+--files0-from
+--help
+-l
+-L
+--lines
+-m
+--max-line-length
+--total
+--version
+-w
+--words

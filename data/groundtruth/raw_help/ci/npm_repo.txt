@@ -1,0 +1,11 @@
+Open package repository page in the browser
+
+Usage:
+npm repo [<pkgname> [<pkgname> ...]]
+
+Options:
+[--no-browser|--browser <browser>] [--registry <registry>]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root]
+
+Run "npm help repo" for more info

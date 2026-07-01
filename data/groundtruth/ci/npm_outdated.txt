@@ -1,0 +1,11 @@
+-a
+--all
+-g
+--global
+--json
+-l
+--long
+-p
+--parseable
+-w
+--workspace

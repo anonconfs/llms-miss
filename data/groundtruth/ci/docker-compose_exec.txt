@@ -1,0 +1,13 @@
+-d
+--detach
+--dry-run
+-e
+--env
+--index
+--no-tty
+--privileged
+-T
+-u
+--user
+-w
+--workdir

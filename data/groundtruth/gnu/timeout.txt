@@ -1,0 +1,13 @@
+-f
+--foreground
+--help
+-k
+--kill-after
+-l
+-p
+--preserve-status
+-s
+--signal
+-v
+--verbose
+--version

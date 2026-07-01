@@ -1,0 +1,17 @@
+--
+--abbrev
+-d
+--format
+--full-name
+--full-tree
+-l
+--long
+--name-only
+--name-status
+--no-abbrev
+--no-full-name
+--no-full-tree
+--object-only
+-r
+-t
+-z

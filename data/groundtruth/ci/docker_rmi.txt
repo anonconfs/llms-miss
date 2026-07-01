@@ -1,0 +1,4 @@
+-f
+--force
+--no-prune
+--platform

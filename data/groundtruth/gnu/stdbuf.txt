@@ -1,0 +1,8 @@
+-e
+--error
+--help
+-i
+--input
+-o
+--output
+--version

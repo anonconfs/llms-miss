@@ -1,0 +1,10 @@
+--foreground-scripts
+-g
+--global
+--ignore-scripts
+--include-workspace-root
+--install-links
+--no-bin-links
+-w
+--workspace
+--workspaces

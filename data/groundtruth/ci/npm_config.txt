@@ -1,0 +1,8 @@
+--editor
+-g
+--global
+--json
+-l
+-L
+--location
+--long

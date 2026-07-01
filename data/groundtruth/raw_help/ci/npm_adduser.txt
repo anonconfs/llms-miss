@@ -1,0 +1,11 @@
+Add a registry user account
+
+Usage:
+npm adduser
+
+Options:
+[--registry <registry>] [--scope <@scope>] [--auth-type <legacy|web>]
+
+alias: add-user
+
+Run "npm help adduser" for more info

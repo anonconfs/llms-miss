@@ -1,0 +1,7 @@
+--dry-run
+--remove-orphans
+--rmi
+-t
+--timeout
+-v
+--volumes

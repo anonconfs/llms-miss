@@ -1,0 +1,6 @@
+--help
+-i
+--initial
+-t
+--tabs
+--version

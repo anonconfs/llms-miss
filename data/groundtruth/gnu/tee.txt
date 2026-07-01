@@ -1,0 +1,8 @@
+-a
+--append
+--help
+-i
+--ignore-interrupts
+--output-error
+-p
+--version

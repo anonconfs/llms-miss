@@ -1,0 +1,15 @@
+--
+--allow-unrelated-histories
+--merge-base
+--messages
+--name-only
+--no-merge-base
+--no-messages
+--no-strategy-option
+--quiet
+--stdin
+--strategy-option
+--trivial-merge
+--write-tree
+-X
+-z

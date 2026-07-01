@@ -1,0 +1,5 @@
+--allow-unknown-hook-name
+--ignore-missing
+--show-scope
+--to-stdin
+-z

@@ -1,0 +1,9 @@
+View packages marked as favorites
+
+Usage:
+npm stars [<user>]
+
+Options:
+[--registry <registry>]
+
+Run "npm help stars" for more info

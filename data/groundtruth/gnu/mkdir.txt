@@ -1,0 +1,10 @@
+--context
+--help
+-m
+--mode
+-p
+--parents
+-v
+--verbose
+--version
+-Z

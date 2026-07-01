@@ -1,0 +1,11 @@
+--build
+--dry-run
+--force-recreate
+--no-build
+--no-recreate
+--pull
+--quiet-pull
+--remove-orphans
+--scale
+-y
+--yes

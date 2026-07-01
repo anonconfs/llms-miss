@@ -1,0 +1,15 @@
+Manage package owners
+
+Usage:
+npm owner add <user> <package-spec>
+npm owner rm <user> <package-spec>
+npm owner ls <package-spec>
+
+Options:
+[--registry <registry>] [--otp <otp>]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces]
+
+alias: author
+
+Run "npm help owner" for more info

@@ -1,0 +1,17 @@
+-f
+--force
+--help
+-l
+--list
+-q
+--quiet
+-r
+--recursive
+-S
+--suffix
+--synchronous
+-t
+--test
+-v
+--verbose
+--version

@@ -1,0 +1,7 @@
+-b
+--browse
+--browser
+-c
+--config
+-t
+--tool

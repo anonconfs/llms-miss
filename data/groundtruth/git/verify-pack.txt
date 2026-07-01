@@ -1,0 +1,9 @@
+--
+--no-object-format
+--no-stat-only
+--no-verbose
+--object-format
+-s
+--stat-only
+-v
+--verbose

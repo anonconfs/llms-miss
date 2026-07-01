@@ -1,0 +1,12 @@
+-b
+-f
+-h
+--help
+-i
+-l
+--lookup
+-p
+-q
+-s
+--version
+-w

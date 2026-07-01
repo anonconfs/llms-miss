@@ -1,0 +1,8 @@
+-b
+--before
+--help
+-r
+--regex
+-s
+--separator
+--version

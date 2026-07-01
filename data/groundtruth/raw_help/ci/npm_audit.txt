@@ -1,0 +1,15 @@
+Run a security audit
+
+Usage:
+npm audit [fix|signatures]
+
+Options:
+[--audit-level <info|low|moderate|high|critical|none>] [--dry-run] [-f|--force]
+[--json] [--package-lock-only] [--no-package-lock]
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+[--foreground-scripts] [--ignore-scripts]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+Run "npm help audit" for more info

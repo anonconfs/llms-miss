@@ -1,0 +1,10 @@
+-a
+--all
+--digests
+-f
+--filter
+--format
+--no-trunc
+-q
+--quiet
+--tree

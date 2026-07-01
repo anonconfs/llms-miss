@@ -1,0 +1,7 @@
+--dry-run
+--include-workspace-root
+--json
+--pack-destination
+-w
+--workspace
+--workspaces

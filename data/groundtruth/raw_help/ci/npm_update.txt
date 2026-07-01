@@ -1,0 +1,19 @@
+Update packages
+
+Usage:
+npm update [<pkg>...]
+
+Options:
+[-S|--save|--no-save|--save-prod|--save-dev|--save-optional|--save-peer|--save-bundle]
+[-g|--global] [--install-strategy <hoisted|nested|shallow|linked>]
+[--legacy-bundling] [--global-style]
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+[--strict-peer-deps] [--no-package-lock] [--foreground-scripts]
+[--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund] [--dry-run]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+aliases: up, upgrade, udpate
+
+Run "npm help update" for more info

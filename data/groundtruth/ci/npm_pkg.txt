@@ -1,0 +1,6 @@
+-f
+--force
+--json
+-w
+--workspace
+--workspaces

@@ -1,0 +1,5 @@
+-p
+--password
+--password-stdin
+-u
+--username

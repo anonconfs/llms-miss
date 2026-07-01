@@ -1,0 +1,7 @@
+-a
+--all
+--first-only
+--help
+-t
+--tabs
+--version

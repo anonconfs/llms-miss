@@ -1,0 +1,6 @@
+--all
+-d
+-D
+--dry-run
+--force
+--verbose

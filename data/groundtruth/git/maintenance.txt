@@ -1,0 +1,6 @@
+--auto
+--quiet
+--schedule
+--scheduler
+--task
+--user

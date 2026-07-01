@@ -1,0 +1,17 @@
+--check-self-contained-and-connected
+--fix-thin
+--fsck-objects
+--index-version
+--keep
+--max-input-size
+--no-rev-index
+-o
+--object-format
+--progress-title
+--promisor
+--rev-index
+--stdin
+--strict
+--threads
+-v
+--verify

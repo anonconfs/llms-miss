@@ -1,0 +1,9 @@
+Log out of the registry
+
+Usage:
+npm logout
+
+Options:
+[--registry <registry>] [--scope <@scope>]
+
+Run "npm help logout" for more info

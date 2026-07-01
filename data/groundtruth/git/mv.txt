@@ -1,0 +1,13 @@
+--
+--dry-run
+-f
+--force
+-k
+-n
+--no-dry-run
+--no-force
+--no-sparse
+--no-verbose
+--sparse
+-v
+--verbose

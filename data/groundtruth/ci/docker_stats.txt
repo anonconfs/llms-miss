@@ -1,0 +1,5 @@
+-a
+--all
+--format
+--no-stream
+--no-trunc

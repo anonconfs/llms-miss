@@ -1,0 +1,11 @@
+-a
+--all
+--dry-run
+--filter
+--format
+--no-trunc
+--orphans
+-q
+--quiet
+--services
+--status

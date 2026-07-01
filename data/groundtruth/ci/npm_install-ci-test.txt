@@ -1,0 +1,17 @@
+--dry-run
+--foreground-scripts
+--global-style
+--ignore-scripts
+--include
+--include-workspace-root
+--install-links
+--install-strategy
+--legacy-bundling
+--no-audit
+--no-bin-links
+--no-fund
+--omit
+--strict-peer-deps
+-w
+--workspace
+--workspaces

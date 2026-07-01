@@ -1,0 +1,10 @@
+-g
+--gui
+--no-gui
+--no-prompt
+-O
+--prompt
+-t
+--tool
+--tool-help
+-y

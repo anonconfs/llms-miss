@@ -1,0 +1,14 @@
+--
+--advertise-refs
+--http-backend-info-refs
+--no-advertise-refs
+--no-http-backend-info-refs
+--no-quiet
+--no-reject-thin-pack-for-testing
+--no-skip-connectivity-check
+--no-stateless-rpc
+-q
+--quiet
+--reject-thin-pack-for-testing
+--skip-connectivity-check
+--stateless-rpc

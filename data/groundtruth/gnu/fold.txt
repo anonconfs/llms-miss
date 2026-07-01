@@ -1,0 +1,10 @@
+-b
+--bytes
+-c
+--characters
+--help
+-s
+--spaces
+--version
+-w
+--width

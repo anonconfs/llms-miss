@@ -1,0 +1,9 @@
+Browse an installed package
+
+Usage:
+npm explore <pkg> [ -- <command>]
+
+Options:
+[--shell <shell>]
+
+Run "npm help explore" for more info

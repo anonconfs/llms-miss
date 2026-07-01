@@ -1,0 +1,12 @@
+--dry-run
+-f
+--follow
+--index
+-n
+--no-color
+--no-log-prefix
+--since
+-t
+--tail
+--timestamps
+--until

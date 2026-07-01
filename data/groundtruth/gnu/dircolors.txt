@@ -1,0 +1,11 @@
+-b
+--bourne-shell
+-c
+--csh
+--c-shell
+--help
+-p
+--print-database
+--print-ls-colors
+--sh
+--version

@@ -1,0 +1,7 @@
+--browser
+--include-workspace-root
+--no-browser
+--registry
+-w
+--workspace
+--workspaces

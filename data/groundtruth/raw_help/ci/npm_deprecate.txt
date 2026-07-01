@@ -1,0 +1,9 @@
+Deprecate a version of a package
+
+Usage:
+npm deprecate <package-spec> <message>
+
+Options:
+[--registry <registry>] [--otp <otp>]
+
+Run "npm help deprecate" for more info

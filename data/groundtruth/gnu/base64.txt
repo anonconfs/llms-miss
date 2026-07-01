@@ -1,0 +1,8 @@
+-d
+--decode
+--help
+-i
+--ignore-garbage
+--version
+-w
+--wrap

@@ -1,0 +1,17 @@
+-b
+--binary
+-c
+--check
+--help
+--ignore-missing
+--quiet
+--status
+--strict
+-t
+--tag
+--text
+--version
+-w
+--warn
+-z
+--zero

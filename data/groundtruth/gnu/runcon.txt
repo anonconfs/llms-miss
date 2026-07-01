@@ -1,0 +1,12 @@
+-c
+--compute
+--help
+-l
+-r
+--range
+--role
+-t
+--type
+-u
+--user
+--version

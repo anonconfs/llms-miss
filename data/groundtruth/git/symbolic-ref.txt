@@ -1,0 +1,12 @@
+--
+-d
+--delete
+-m
+--no-delete
+--no-quiet
+--no-recurse
+--no-short
+-q
+--quiet
+--recurse
+--short

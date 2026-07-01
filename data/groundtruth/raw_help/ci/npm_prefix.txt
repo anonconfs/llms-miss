@@ -1,0 +1,9 @@
+Display prefix
+
+Usage:
+npm prefix [-g]
+
+Options:
+[-g|--global]
+
+Run "npm help prefix" for more info

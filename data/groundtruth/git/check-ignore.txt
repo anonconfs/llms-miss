@@ -1,0 +1,15 @@
+--
+--index
+-n
+--no-index
+--non-matching
+--no-non-matching
+--no-quiet
+--no-stdin
+--no-verbose
+-q
+--quiet
+--stdin
+-v
+--verbose
+-z

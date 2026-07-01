@@ -1,0 +1,14 @@
+--
+--curl
+-f
+--folder
+--list
+--no-curl
+--no-folder
+--no-list
+--no-quiet
+--no-verbose
+-q
+--quiet
+-v
+--verbose

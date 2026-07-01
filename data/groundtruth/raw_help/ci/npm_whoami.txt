@@ -1,0 +1,9 @@
+Display npm username
+
+Usage:
+npm whoami
+
+Options:
+[--registry <registry>]
+
+Run "npm help whoami" for more info

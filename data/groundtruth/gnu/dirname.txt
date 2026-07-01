@@ -1,0 +1,4 @@
+--help
+--version
+-z
+--zero

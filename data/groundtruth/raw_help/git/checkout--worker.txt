@@ -1,0 +1,10 @@
+===== git checkout--worker -h =====
+usage: git checkout--worker [<options>]
+
+    --[no-]prefix <string>
+                          when creating files, prepend <string>
+===== man option definition lines =====
+
+===== completion helper =====
+--prefix
+--no-prefix

@@ -1,0 +1,15 @@
+-e
+--echo
+--head-count
+--help
+-i
+--input-range
+-n
+-o
+--output
+-r
+--random-source
+--repeat
+--version
+-z
+--zero-terminated

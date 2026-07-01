@@ -1,0 +1,9 @@
+-a
+-c
+--index-pack-args
+--packfile
+--recover
+--stdin
+-t
+-v
+-w

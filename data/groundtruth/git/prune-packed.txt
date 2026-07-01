@@ -1,0 +1,7 @@
+--
+--dry-run
+-n
+--no-dry-run
+--no-quiet
+-q
+--quiet

@@ -1,0 +1,14 @@
+-b
+--bytes
+--help
+-i
+--ignore-initial
+-l
+-n
+--print-bytes
+--quiet
+-s
+--silent
+-v
+--verbose
+--version

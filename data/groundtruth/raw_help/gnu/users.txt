@@ -1,0 +1,14 @@
+Usage: users [OPTION]... [FILE]
+Output who is currently logged in according to FILE.
+If FILE is not specified, use /var/run/utmp.  /var/log/wtmp as FILE is common.
+
+      --help
+         display this help and exit
+      --version
+         output version information and exit
+
+Report bugs to: bug-coreutils@gnu.org
+GNU coreutils home page: <https://www.gnu.org/software/coreutils/>
+General help using GNU software: <https://www.gnu.org/gethelp/>
+Full documentation <https://www.gnu.org/software/coreutils/users>
+or available locally via: info '(coreutils) users invocation'

@@ -1,0 +1,13 @@
+Open documentation for a package in a web browser
+
+Usage:
+npm docs [<pkgname> [<pkgname> ...]]
+
+Options:
+[--no-browser|--browser <browser>] [--registry <registry>]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root]
+
+alias: home
+
+Run "npm help docs" for more info

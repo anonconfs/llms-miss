@@ -1,0 +1,15 @@
+-1
+-a
+--all
+-f
+--filter
+--format
+-l
+--last
+--latest
+-n
+--no-trunc
+-q
+--quiet
+-s
+--size

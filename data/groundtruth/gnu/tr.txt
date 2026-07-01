@@ -1,0 +1,11 @@
+-c
+-C
+--complement
+-d
+--delete
+--help
+-s
+--squeeze-repeats
+-t
+--truncate-set1
+--version
