@@ -1,0 +1,17 @@
+# AI-generated workflow - Docker scan and push
+# Source: Copilot for security scanning
+name: Scan and Push
+on:
+  push:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker build -t app:latest .
+      - run: docker run --rm app:latest echo "healthy"
+      - run: |
+          docker login -u ${{ secrets.USER }} -p ${{ secrets.PASS }}
+          docker push app:latest

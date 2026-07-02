@@ -1,0 +1,664 @@
+# SuperClaude CI Pipeline
+# Fail-fast quality gates for Python 3.10+
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: ['**']
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ============================================
+  # Quality Gate - Fast fail on style/lint issues
+  # ============================================
+  quality:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install quality tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy types-PyYAML types-requests types-aiofiles pyyaml
+
+      - name: Ruff lint check
+        run: ruff check . --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: MyPy type check (non-blocking)
+        run: mypy SuperClaude --ignore-missing-imports || echo "::warning::MyPy found type issues"
+        continue-on-error: true
+
+      - name: Validate agent frontmatter
+        run: python scripts/validate_agents.py --strict
+
+      - name: Validate agent JSON Schema
+        run: |
+          pip install jsonschema -q
+          python scripts/validate_schema.py
+
+  # ============================================
+  # Claude Code Review - Dual Provider (Bedrock + Anthropic)
+  # ============================================
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run on PRs, skip dependabot; ai-code-review.yml handles full PAL MCP review
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.actor != 'dependabot[bot]' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-ci-review')
+    needs: [quality]
+    continue-on-error: true
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+
+    env:
+      BEDROCK_CONFIGURED: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK != '' }}
+      ANTHROPIC_KEY_SET: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate provider configuration
+        id: validate_providers
+        run: |
+          if [[ "${{ env.BEDROCK_CONFIGURED }}" != "true" ]] && [[ "${{ env.ANTHROPIC_KEY_SET }}" != "true" ]]; then
+            echo "::warning::No Claude API provider configured (AWS Bedrock or Anthropic API). Skipping review."
+            echo "skip_review=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_review=false" >> $GITHUB_OUTPUT
+            echo "Provider check passed:"
+            echo "  - Bedrock: ${{ env.BEDROCK_CONFIGURED }}"
+            echo "  - Anthropic: ${{ env.ANTHROPIC_KEY_SET }}"
+          fi
+
+      - name: Get PR context
+        if: steps.validate_providers.outputs.skip_review != 'true'
+        id: pr_context
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+
+          # Get files changed count
+          FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l | tr -d ' ')
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+
+          # Get diff statistics
+          DIFF_STATS=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1)
+          echo "diff_stats=$DIFF_STATS" >> $GITHUB_OUTPUT
+
+          # Get list of Python files changed (first 20)
+          PYTHON_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | { grep '\.py$' || true; } | head -20 | tr '\n' ',' | sed 's/,$//')
+          echo "python_files=$PYTHON_FILES" >> $GITHUB_OUTPUT
+
+          # Check if tests were modified
+          TESTS_MODIFIED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | { grep '^tests/' || true; } | wc -l | tr -d ' ')
+          echo "tests_modified=${TESTS_MODIFIED:-0}" >> $GITHUB_OUTPUT
+
+      - name: Claude Review (AWS Bedrock - Primary)
+        if: steps.validate_providers.outputs.skip_review != 'true' && env.BEDROCK_CONFIGURED == 'true'
+        id: bedrock_review
+        continue-on-error: true
+        uses: anthropics/claude-code-action@58dbe8ed6879f0d3b02ac295b20d5fdfe7733e0c  # v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: "true"
+          show_full_output: true
+          max_turns: 20
+          prompt: |
+            # SuperClaude PR Code Review
+
+            **Repository**: ${{ github.repository }}
+            **PR Number**: #${{ steps.pr_context.outputs.pr_number }}
+            **PR Title**: ${{ steps.pr_context.outputs.pr_title }}
+            **Files Changed**: ${{ steps.pr_context.outputs.files_changed }}
+            **Diff Stats**: ${{ steps.pr_context.outputs.diff_stats }}
+            **Python Files**: ${{ steps.pr_context.outputs.python_files }}
+            **Tests Modified**: ${{ steps.pr_context.outputs.tests_modified }}
+
+            ## Review Instructions
+
+            1. First, get the full diff using: `gh pr diff ${{ steps.pr_context.outputs.pr_number }}`
+
+            2. Review the changes focusing on:
+               - **Code Quality**: Clarity, maintainability, best practices
+               - **Security**: Potential vulnerabilities, input validation
+               - **Performance**: Efficiency concerns, resource usage
+               - **Architecture**: Design patterns, SOLID principles
+
+            3. Post your findings as a PR comment using `gh pr comment` with this format:
+
+            ```markdown
+            ## Claude Code Review (via AWS Bedrock)
+
+            ### Overview
+            [Brief summary of changes reviewed]
+
+            ### Critical Issues
+            [Any blocking issues that must be fixed]
+
+            ### High Priority
+            [Important improvements recommended]
+
+            ### Medium Priority
+            [Suggested improvements]
+
+            ### Positive Observations
+            [Good patterns and practices observed]
+
+            ### Review Summary
+            | Category | Rating |
+            |----------|--------|
+            | Security | /5 |
+            | Code Quality | /5 |
+            | Architecture | /5 |
+            | Testing | /5 |
+
+            *Generated by Claude Code Review (AWS Bedrock)*
+            ```
+
+          claude_args: >-
+            --allowed-tools
+            "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          CLAUDE_CODE_USE_BEDROCK: "1"
+
+      - name: Claude Review (Anthropic API - Fallback)
+        if: steps.validate_providers.outputs.skip_review != 'true' && env.ANTHROPIC_KEY_SET == 'true' && (env.BEDROCK_CONFIGURED != 'true' || steps.bedrock_review.outcome != 'success')
+        id: anthropic_review
+        uses: anthropics/claude-code-action@58dbe8ed6879f0d3b02ac295b20d5fdfe7733e0c  # v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          show_full_output: true
+          max_turns: 20
+          prompt: |
+            # SuperClaude PR Code Review
+
+            **Repository**: ${{ github.repository }}
+            **PR Number**: #${{ steps.pr_context.outputs.pr_number }}
+            **PR Title**: ${{ steps.pr_context.outputs.pr_title }}
+            **Files Changed**: ${{ steps.pr_context.outputs.files_changed }}
+            **Diff Stats**: ${{ steps.pr_context.outputs.diff_stats }}
+            **Python Files**: ${{ steps.pr_context.outputs.python_files }}
+            **Tests Modified**: ${{ steps.pr_context.outputs.tests_modified }}
+
+            ## Review Instructions
+
+            1. First, get the full diff using: `gh pr diff ${{ steps.pr_context.outputs.pr_number }}`
+
+            2. Review the changes focusing on:
+               - **Code Quality**: Clarity, maintainability, best practices
+               - **Security**: Potential vulnerabilities, input validation
+               - **Performance**: Efficiency concerns, resource usage
+               - **Architecture**: Design patterns, SOLID principles
+
+            3. Post your findings as a PR comment using `gh pr comment` with this format:
+
+            ```markdown
+            ## Claude Code Review (via Anthropic API - Fallback)
+
+            ### Overview
+            [Brief summary of changes reviewed]
+
+            ### Critical Issues
+            [Any blocking issues that must be fixed]
+
+            ### High Priority
+            [Important improvements recommended]
+
+            ### Medium Priority
+            [Suggested improvements]
+
+            ### Positive Observations
+            [Good patterns and practices observed]
+
+            ### Review Summary
+            | Category | Rating |
+            |----------|--------|
+            | Security | /5 |
+            | Code Quality | /5 |
+            | Architecture | /5 |
+            | Testing | /5 |
+
+            *Generated by Claude Code Review (Anthropic API - Fallback)*
+            ```
+
+          claude_args: >-
+            --allowed-tools
+            "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
+
+      - name: Review status
+        if: always() && steps.validate_providers.outputs.skip_review != 'true'
+        run: |
+          echo "## Claude Code Review Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          BEDROCK_STATUS="${{ steps.bedrock_review.outcome || 'skipped' }}"
+          ANTHROPIC_STATUS="${{ steps.anthropic_review.outcome || 'skipped' }}"
+
+          echo "| Provider | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| AWS Bedrock (Primary) | $BEDROCK_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Anthropic API (Fallback) | $ANTHROPIC_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "$BEDROCK_STATUS" == "success" ]] || [[ "$ANTHROPIC_STATUS" == "success" ]]; then
+            echo "**Result**: Review completed successfully" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$BEDROCK_STATUS" == "skipped" ]] && [[ "$ANTHROPIC_STATUS" == "skipped" ]]; then
+            echo "**Result**: No providers configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Result**: Review failed (both providers)" >> $GITHUB_STEP_SUMMARY
+            # Note: Not exiting with error since continue-on-error: true makes this advisory-only
+          fi
+
+  # ============================================
+  # Test Matrix - Python 3.8 through 3.12
+  # ============================================
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[test]"
+          pip install pytest-cov pytest-asyncio
+
+      - name: Run tests with coverage
+        env:
+          SUPERCLAUDE_OFFLINE_MODE: "1"
+        run: |
+          pytest tests/ -m "not slow and not integration and not archived_sdk" \
+            --cov=SuperClaude \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --tb=short \
+            -v
+
+      - name: Upload coverage artifact
+        if: matrix.python-version == '3.10'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.10'
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ============================================
+  # Coverage Gate - Core module 90% threshold
+  # ============================================
+  coverage-gate:
+    name: Coverage Gate (core 90%)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[test]"
+          pip install pytest-cov pytest-asyncio
+
+      - name: Check coverage threshold
+        env:
+          SUPERCLAUDE_OFFLINE_MODE: "1"
+        run: |
+          # Coverage threshold for core module (v6 orchestration logic)
+          # SuperClaude/* modules are thin shims to archived SDK - not measured
+          # setup/* is installation CLI - large codebase, tested separately
+          # Only core/* is measured: loop orchestrator, quality gates, types
+          # Current core/ coverage: ~95% (achieved in v6.0.0 development)
+          pytest tests/core/ -m "not slow and not integration and not archived_sdk" \
+            --cov=core \
+            --cov-fail-under=90 \
+            --tb=short \
+            -q
+
+  # ============================================
+  # Build Verification - Ensure package builds
+  # ============================================
+  build:
+    name: Build Check
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package with twine
+        run: twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ============================================
+  # Artifact Install Test - Verify wheel installs correctly
+  # ============================================
+  artifact-install:
+    name: Artifact Install (${{ matrix.extra }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+        extra: ['base', 'runtime', 'cli', 'full', 'test', 'dev']
+        exclude:
+          # Only test base/full on all Python versions; others on 3.11 only
+          - python-version: '3.10'
+            extra: 'runtime'
+          - python-version: '3.10'
+            extra: 'cli'
+          - python-version: '3.10'
+            extra: 'test'
+          - python-version: '3.10'
+            extra: 'dev'
+          - python-version: '3.12'
+            extra: 'runtime'
+          - python-version: '3.12'
+            extra: 'cli'
+          - python-version: '3.12'
+            extra: 'test'
+          - python-version: '3.12'
+            extra: 'dev'
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Get wheel filename
+        id: wheel
+        run: |
+          WHEEL=$(ls dist/*.whl | head -1)
+          echo "filename=$WHEEL" >> $GITHUB_OUTPUT
+          echo "Found wheel: $WHEEL"
+
+      - name: Install from wheel (base)
+        if: matrix.extra == 'base'
+        run: pip install ${{ steps.wheel.outputs.filename }}
+
+      - name: Install from wheel (with extras)
+        if: matrix.extra != 'base'
+        run: |
+          # Use PEP 508 direct URL to wheel with extras
+          pip install "SuperClaude[${{ matrix.extra }}] @ file://${{ github.workspace }}/${{ steps.wheel.outputs.filename }}"
+
+      - name: Verify installation
+        run: |
+          pip show SuperClaude
+          pip freeze | grep -i superclaude || true
+
+      - name: Smoke test - import SuperClaude
+        run: python -c "import SuperClaude; print('SuperClaude imported successfully')"
+
+      - name: Smoke test - import __main__ and verify main()
+        run: |
+          python -c "
+          from SuperClaude.__main__ import main
+          assert callable(main), 'main() should be callable'
+          print('main() is callable')
+          "
+
+      - name: Smoke test - module execution
+        continue-on-error: true
+        run: |
+          # Test that python -m SuperClaude runs without crashing
+          python -m SuperClaude
+          echo "Module execution completed"
+
+      - name: Run tests (test/full extras only)
+        if: matrix.extra == 'test' || matrix.extra == 'full'
+        run: |
+          pip install pytest pytest-cov
+          # Checkout just for tests (wheel is already installed)
+          git clone --depth 1 https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} repo
+          cd repo
+          pytest tests/core/ -v --tb=short -x
+
+      - name: Test sdist install (full extra, Python 3.11 only)
+        if: matrix.extra == 'full' && matrix.python-version == '3.11'
+        run: |
+          # Create a fresh venv and install from sdist (--no-binary prevents wheel cache)
+          python -m venv sdist-test
+          source sdist-test/bin/activate
+          pip install --no-binary :all: dist/*.tar.gz
+          python -c "import SuperClaude; print('sdist install successful')"
+
+  # ============================================
+  # Benchmark Smoke Test
+  # ============================================
+  benchmark:
+    name: Benchmark Smoke
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[test]"
+
+      - name: Run benchmark smoke harness
+        run: python benchmarks/run_benchmarks.py --suite smoke
+        continue-on-error: true
+
+  # ============================================
+  # SonarCloud Analysis
+  # ============================================
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [quality, test]
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Check for SonarCloud token
+        id: check-token
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::SONAR_TOKEN not configured — skipping SonarCloud analysis"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        if: steps.check-token.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage report
+        if: steps.check-token.outputs.skip != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: coverage-report
+
+      - name: Set up Python
+        if: steps.check-token.outputs.skip != 'true'
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Generate Ruff report
+        if: steps.check-token.outputs.skip != 'true'
+        run: |
+          pip install ruff
+          ruff check . --output-format json > ruff-report.json || true
+
+      - name: Generate Bandit report
+        if: steps.check-token.outputs.skip != 'true'
+        run: |
+          pip install "bandit[toml]"
+          bandit -c pyproject.toml -r SuperClaude/ -f json -o bandit-report.json || true
+
+      - name: SonarCloud Scan
+        if: steps.check-token.outputs.skip != 'true'
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            ${{ github.event_name == 'pull_request' && format(
+              '-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}',
+              github.event.pull_request.number,
+              github.head_ref,
+              github.base_ref
+            ) || '' }}
+
+      - name: SonarCloud Quality Gate
+        if: steps.check-token.outputs.skip != 'true' && success()
+        continue-on-error: true
+        uses: SonarSource/sonarqube-quality-gate-action@d304d050d930b02a896b0f85935344f023928496  # v1
+        timeout-minutes: 5
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  # ============================================
+  # CI Summary - Aggregate status
+  # ============================================
+  ci-status:
+    name: CI Status
+    if: always()
+    needs: [quality, test, coverage-gate, build, artifact-install, sonarcloud]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check CI status
+        run: |
+          if [[ "${{ needs.quality.result }}" == "failure" ]] || \
+             [[ "${{ needs.test.result }}" == "failure" ]] || \
+             [[ "${{ needs.coverage-gate.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]] || \
+             [[ "${{ needs.artifact-install.result }}" == "failure" ]]; then
+            echo "CI failed"
+            exit 1
+          fi
+
+          # SonarCloud status (non-blocking in ci-status; quality gate action
+          # blocks the sonarcloud job itself when the project is configured)
+          if [ "${{ needs.sonarcloud.result }}" == "failure" ]; then
+            echo "::warning::SonarCloud analysis failed (check project configuration)"
+          elif [ "${{ needs.sonarcloud.result }}" == "success" ]; then
+            echo "SonarCloud quality gate passed"
+          elif [ "${{ needs.sonarcloud.result }}" == "skipped" ]; then
+            echo "SonarCloud skipped (dependabot or missing token)"
+          fi
+
+          echo "CI passed"

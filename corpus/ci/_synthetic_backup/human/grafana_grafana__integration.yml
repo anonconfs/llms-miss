@@ -1,0 +1,33 @@
+# Human-written CI - Docker Compose integration tests (pre-2020)
+# Source: grafana/grafana-like integration pipeline
+name: Integration Tests
+on:
+  push:
+    branches: [master]
+
+jobs:
+  integration:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Start services
+        run: |
+          docker-compose -f docker-compose.test.yml up -d --build --force-recreate
+          docker-compose -f docker-compose.test.yml ps
+          docker-compose -f docker-compose.test.yml logs --tail=50 db
+      - name: Wait for healthy
+        run: |
+          docker-compose -f docker-compose.test.yml exec -T db pg_isready -U postgres
+          docker exec $(docker-compose -f docker-compose.test.yml ps -q app) curl -sf http://localhost:3000/health
+      - name: Run integration tests
+        run: |
+          docker-compose -f docker-compose.test.yml exec -T app ./run-tests.sh
+          docker-compose -f docker-compose.test.yml exec -T --workdir /app app pytest -v
+      - name: Collect logs
+        if: failure()
+        run: |
+          docker-compose -f docker-compose.test.yml logs --no-color --timestamps > integration-logs.txt
+      - name: Teardown
+        if: always()
+        run: |
+          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans --timeout 30

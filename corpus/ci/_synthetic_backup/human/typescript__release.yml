@@ -1,0 +1,55 @@
+# Human-written CI - npm enterprise package management (pre-2020)
+# Source: microsoft/TypeScript-like
+name: TypeScript Release
+on:
+  push:
+    branches: [main, release-*]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - name: Install
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund --ignore-scripts
+          npm rebuild
+          npm ls --production --parseable --long > production-deps.txt
+      - name: Build
+        run: |
+          npm run build
+          npm run build:tests
+          npm pack --json > pack-info.json
+      - name: Test
+        run: |
+          npm test -- --ci --reporters=default --reporters=jest-junit
+          npm run test:baselines -- --accept
+          npm run lint -- --quiet --max-warnings=0
+      - name: Validate package
+        run: |
+          npm pkg get version name description
+          npm pkg set scripts.postinstall=""
+          npm pack --dry-run
+          npm view typescript versions --json | tail -10
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/heads/release-')
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci --prefer-offline
+      - run: npm run build
+      - run: npm publish --tag rc --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm dist-tag add typescript@$(npm pkg get version | tr -d '"') rc
+      - run: npm info typescript
+      - run: npm search typescript --long --parseable
+      - run: npm bugs typescript
+      - run: npm repo typescript

@@ -1,0 +1,43 @@
+# Human-written CI - npm performance monitoring (pre-2020)
+# Source: lighthouse/lighthouse-ci-like
+name: Performance CI
+on: [push, pull_request]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Install
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm ls --production --depth=0
+          npm ls --all --parseable | wc -l
+      - name: Build
+        run: |
+          npm run build -- --stats
+          npm run build:report
+      - name: Bundle size check
+        run: |
+          npm pack --json | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const j=JSON.parse(d);console.log(j[0].size)"
+          npm run size
+      - name: Start server
+        run: |
+          npm start -- --port 9222 &
+          npx wait-on http://localhost:9222
+      - name: Run Lighthouse
+        run: npm run lighthouse -- --output=json --output-path=./lhci-report.json
+      - name: Compare
+        run: |
+          npm run perf:compare -- --budget-path=./budget.json
+          npm run perf:assert
+      - name: Publish results
+        if: github.ref == 'refs/heads/master'
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          npm version patch --no-git-tag-version
+          npm publish --access public
+          npm config delete //registry.npmjs.org/:_authToken

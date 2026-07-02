@@ -1,0 +1,52 @@
+# Human-written CI - Docker production deployment (pre-2020)
+# Source: portainer/portainer-like container management
+name: Release Build
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64, linux/arm/v7]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          docker build --platform ${{ matrix.platform }} \
+            --build-arg GIT_TAG=${{ github.ref_name }} \
+            --build-arg BUILD_DATE=$(date -u +%FT%TZ) \
+            --compress --force-rm --pull --rm \
+            --output type=docker,dest=image.tar \
+            -t portainer:${{ github.ref_name }} .
+      - name: Load and test
+        run: |
+          docker load --input image.tar
+          docker run --rm --entrypoint /portainer portainer:${{ github.ref_name }} --version
+          docker create --name verify portainer:${{ github.ref_name }}
+          docker export verify > export.tar
+          docker rm verify
+          docker import export.tar portainer:verified
+      - name: Push
+        run: |
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+          docker push portainer:${{ github.ref_name }}
+          docker tag portainer:${{ github.ref_name }} portainer/portainer-ce:latest
+          docker push portainer/portainer-ce:latest
+          docker logout
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy
+        run: |
+          docker-compose -f deploy/docker-compose.prod.yml pull --quiet
+          docker-compose -f deploy/docker-compose.prod.yml up -d --no-build --force-recreate --remove-orphans
+          docker-compose -f deploy/docker-compose.prod.yml restart nginx
+          docker-compose -f deploy/docker-compose.prod.yml ps --services --filter "status=running"
+          docker-compose -f deploy/docker-compose.prod.yml wait portainer
+          docker-compose -f deploy/docker-compose.prod.yml exec -T portainer wget -q --spider http://localhost:9000

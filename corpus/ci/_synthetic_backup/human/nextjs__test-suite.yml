@@ -1,0 +1,51 @@
+# Human-written CI - npm workspace monorepo (pre-2020)
+# Source: vercel/next.js-like monorepo
+name: Test Suite
+on: [push, pull_request]
+
+jobs:
+  setup:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - name: Install
+        run: |
+          npm ci --prefer-offline --no-audit --ignore-scripts
+          npm rebuild node-sass
+          npm ls --depth=0 --json > deps.json
+          npm dedupe --dry-run
+          npm explain react
+      - name: Build
+        run: |
+          npm run build --workspace=packages/core --if-present
+          npm run build --workspaces --if-present
+          npm run typecheck --workspaces
+      - name: Unit tests
+        run: |
+          npm test --workspace=packages/core -- --ci --coverage
+          npm test --workspaces -- --ci --bail
+          npm run test:e2e -- --shard=1/4
+      - name: Lint & Audit
+        run: |
+          npm run lint --workspace=packages/core
+          npm audit --production --audit-level=high
+          npm audit signatures
+          npm outdated --long --parseable
+          npm fund --depth=1
+
+  canary:
+    needs: setup
+    if: github.ref == 'refs/heads/canary'
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci --prefer-offline
+      - run: npm version prerelease --preid=canary --no-git-tag-version --workspace=packages/core
+      - run: npm publish --workspace=packages/core --tag canary --access public
+      - run: npm dist-tag ls @next/core
+      - run: npm pack --workspace=packages/core --pack-destination ./artifacts
+      - run: npm shrinkwrap
+      - run: npm sbom --omit=dev --package-lock-only

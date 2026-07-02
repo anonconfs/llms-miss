@@ -1,0 +1,239 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  tui-bundle:
+    name: Build TUI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Build TUI bundle
+        run: cd tui && rm -rf node_modules package-lock.json && npm install --no-audit --no-fund && npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tui-bundle
+          path: tui/dist/tui.mjs
+
+  test:
+    name: Pre-release tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+      - name: Prepare desktop embed placeholder
+        run: |
+          mkdir -p desktop/frontend/dist
+          printf 'ci placeholder\n' > desktop/frontend/dist/.ci-placeholder
+      - name: Run tests
+        run: go test -race $(go list ./... | grep -v /desktop)
+
+  build:
+    name: Build CLI ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: [test, tui-bundle]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    goos: linux,  goarch: amd64 }
+          - { runner: ubuntu-24.04-arm, goos: linux,  goarch: arm64 }
+          - { runner: macos-latest,     goos: darwin, goarch: arm64 }
+          # darwin-amd64 (Intel Mac) CLI build dropped at v7.0.0:
+          # GitHub-hosted macos-13 runners (last Intel Mac image) deprecated
+          # by GitHub, scheduling priority lowered, jobs queue 30+ min during
+          # peak hours. Apple Silicon now ~95%+ of dev Mac fleet. Intel users
+          # can stay on v6.2.1 or request a v7.0.x patch with hand-built
+          # darwin-amd64 artifact uploaded via `gh release upload`.
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27'
+          elixir-version: '1.18.3'
+
+      - name: Prepare desktop embed
+        run: |
+          cd desktop/frontend
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
+          npm run build
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tui-bundle
+          path: tui/dist
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Defense in depth: regenerate the embedded FPF SQLite index from the
+      # current submodule SHA. The committed internal/cli/fpf.db should
+      # already match, but a developer who forgot to run `task fpf-refresh`
+      # before tagging would otherwise ship a stale corpus to users.
+      - name: Rebuild FPF index from submodule
+        run: |
+          go run ./cmd/indexer \
+            data/FPF/FPF-Spec.md \
+            internal/cli/fpf.db \
+            "$(git -C data/FPF rev-parse HEAD)"
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '1'
+        run: |
+          go build -trimpath \
+            -ldflags "-s -w \
+              -X github.com/m0n0x41d/haft/internal/cli.Version=${{ steps.version.outputs.version }} \
+              -X github.com/m0n0x41d/haft/internal/cli.Commit=$(git rev-parse --short HEAD) \
+              -X github.com/m0n0x41d/haft/internal/cli.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o haft ./cmd/haft/
+
+      - name: Build Open-Sleigh runtime
+        run: |
+          cd open-sleigh
+          MIX_ENV=prod mix deps.get --only prod
+          MIX_ENV=prod mix release --overwrite
+
+      - name: Package
+        run: |
+          mkdir -p _dist
+          cp tui/dist/tui.mjs .
+          mkdir -p runtimes/open-sleigh
+          cp -R open-sleigh/_build/prod/rel/open_sleigh/. runtimes/open-sleigh/
+          tar czf _dist/haft-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz \
+            haft tui.mjs runtimes README.md LICENSE CHANGELOG.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haft-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: _dist/*.tar.gz
+
+  desktop:
+    name: Desktop ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: [test]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - { runner: macos-latest,  goos: darwin, goarch: arm64, rust_target: aarch64-apple-darwin }
+          - { runner: macos-latest,  goos: darwin, goarch: amd64, rust_target: x86_64-apple-darwin }
+          - { runner: ubuntu-latest, goos: linux,  goarch: amd64, rust_target: x86_64-unknown-linux-gnu }
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-tauri/target
+          key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ hashFiles('desktop-tauri/Cargo.lock') }}
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Install Linux dependencies
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Build frontend
+        working-directory: desktop/frontend
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Build Tauri app
+        working-directory: desktop-tauri
+        run: cargo tauri build --target ${{ matrix.rust_target }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Package macOS app
+        if: matrix.goos == 'darwin'
+        run: |
+          mkdir -p _dist
+          cd desktop-tauri/target/${{ matrix.rust_target }}/release/bundle/macos
+          tar czf "$GITHUB_WORKSPACE/_dist/haft-desktop-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" Haft.app
+
+      - name: Package Linux binary
+        if: matrix.goos == 'linux'
+        run: |
+          mkdir -p _dist
+          cp desktop-tauri/target/${{ matrix.rust_target }}/release/haft-desktop .
+          tar czf _dist/haft-desktop-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz haft-desktop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haft-desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: _dist/*.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: cd _artifacts && sha256sum *.tar.gz > checksums.txt
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "Haft ${{ github.ref_name }}" \
+            --generate-notes \
+            _artifacts/*

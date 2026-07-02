@@ -1,0 +1,329 @@
+name: Hardhat Learning Bot
+on:
+  schedule:
+    # Every 5 minutes
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: hardhat-devops
+  cancel-in-progress: false
+
+jobs:
+  hardhat-devops-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install --save-dev \
+            hardhat@^2.22.0 \
+            @nomicfoundation/hardhat-toolbox@^5.0.0 \
+            @nomicfoundation/hardhat-chai-matchers@^2.1.0 \
+            @nomicfoundation/hardhat-ethers@^3.1.0 \
+            @nomicfoundation/hardhat-ignition@^0.15.0 \
+            @nomicfoundation/hardhat-ignition-ethers@^0.15.0 \
+            @nomicfoundation/ignition-core@^0.15.0 \
+            @nomicfoundation/hardhat-network-helpers@^1.1.0 \
+            @nomicfoundation/hardhat-verify@^2.1.0 \
+            @typechain/ethers-v6@^0.5.0 \
+            @typechain/hardhat@^9.0.0 \
+            @types/chai@^4.2.0 \
+            @types/mocha@^10.0.0 \
+            @types/node@^20.0.0 \
+            chai@^4.2.0 \
+            ethers@^6.4.0 \
+            hardhat-gas-reporter@^2.3.0 \
+            solidity-coverage@^0.8.1 \
+            ts-node@^10.0.0 \
+            typechain@^8.3.0 \
+            typescript@^5.0.0 \
+            --legacy-peer-deps
+      
+      - name: Initialize Hardhat Project
+        run: |
+          # Create hardhat config if it doesn't exist
+          if [ ! -f "hardhat.config.js" ]; then
+            cat > hardhat.config.js << 'EOF'
+          /** @type import('hardhat/config').HardhatUserConfig */
+          require("@nomicfoundation/hardhat-toolbox");
+          
+          module.exports = {
+            solidity: {
+              version: "0.8.20",
+              settings: {
+                optimizer: {
+                  enabled: true,
+                  runs: 200
+                }
+              }
+            },
+            networks: {
+              hardhat: {
+                chainId: 1337
+              }
+            }
+          };
+          EOF
+          fi
+          
+          # Create contracts directory
+          mkdir -p contracts test scripts
+      
+      - name: Dynamic DevOps Activities
+        run: |
+          DATE=$(date +"%Y-%m-%d-%H-%M")
+          RANDOM_ACTION=$((RANDOM % 6))
+          
+          echo "🤖 Running automated DevOps action: $RANDOM_ACTION"
+          
+          case $RANDOM_ACTION in
+            0)
+              # Create new contract
+              echo "📝 Creating new contract..."
+              CONTRACT_NAME="Sample_${DATE//-/_}"
+              cat > "contracts/${CONTRACT_NAME}.sol" << EOF
+          // SPDX-License-Identifier: MIT
+          pragma solidity ^0.8.20;
+          
+          contract ${CONTRACT_NAME} {
+              uint256 public counter;
+              string public message;
+              
+              constructor() {
+                  message = "Deployed at ${DATE}";
+              }
+              
+              function increment() external {
+                  counter++;
+              }
+              
+              function setMessage(string memory _msg) external {
+                  message = _msg;
+              }
+              
+              function getInfo() external view returns (uint256, string memory) {
+                  return (counter, message);
+              }
+          }
+          EOF
+              echo "✅ Created contract: ${CONTRACT_NAME}"
+              ;;
+              
+            1)
+              # Update existing contract
+              echo "🔄 Updating random contract..."
+              if [ -d "contracts" ] && [ "$(ls -A contracts/*.sol 2>/dev/null)" ]; then
+                RANDOM_FILE=$(ls contracts/*.sol | shuf -n 1)
+                echo "// Updated: ${DATE}" >> "$RANDOM_FILE"
+                echo "✅ Updated: $RANDOM_FILE"
+              else
+                echo "⚠️ No contracts to update, creating new one..."
+                cat > "contracts/Initial_${DATE//-/_}.sol" << EOF
+          // SPDX-License-Identifier: MIT
+          pragma solidity ^0.8.20;
+          
+          contract Initial {
+              function hello() external pure returns (string memory) {
+                  return "Hello DevOps!";
+              }
+          }
+          EOF
+              fi
+              ;;
+              
+            2)
+              # Create test file
+              echo "🧪 Creating test file..."
+              cat > "test/Test_${DATE//-/_}.js" << 'EOF'
+          const { expect } = require("chai");
+          const { ethers } = require("hardhat");
+          
+          describe("DevOps Test Suite", function () {
+            it("Should deploy successfully", async function () {
+              expect(true).to.equal(true);
+            });
+            
+            it("Should pass timestamp check", async function () {
+              const timestamp = Date.now();
+              expect(timestamp).to.be.greaterThan(0);
+            });
+          });
+          EOF
+              echo "✅ Created test file"
+              ;;
+              
+            3)
+              # Clean old files (keep last 10 contracts)
+              echo "🧹 Cleaning old contracts..."
+              if [ -d "contracts" ] && [ "$(ls -A contracts/*.sol 2>/dev/null | wc -l)" -gt 10 ]; then
+                ls -t contracts/*.sol | tail -n +11 | xargs rm -f
+                echo "✅ Cleaned old contracts"
+              else
+                echo "⚠️ Not enough files to clean"
+              fi
+              ;;
+              
+            4)
+              # Create deployment script
+              echo "🚀 Creating deployment script..."
+              cat > "scripts/deploy_${DATE//-/_}.js" << 'EOF'
+          const hre = require("hardhat");
+          
+          async function main() {
+            console.log("🚀 Deployment simulation started...");
+            console.log("Network:", hre.network.name);
+            console.log("Timestamp:", new Date().toISOString());
+            console.log("✅ Deployment simulation complete!");
+          }
+          
+          main().catch((error) => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          EOF
+              echo "✅ Created deployment script"
+              ;;
+              
+            5)
+              # Create README update
+              echo "📚 Updating documentation..."
+              cat > "DEVOPS_LOG.md" << EOF
+          # DevOps Activity Log
+          
+          Last automated run: ${DATE}
+          
+          ## Recent Activities
+          - Automated contract management
+          - Continuous integration checks
+          - Test suite maintenance
+          - Documentation updates
+          
+          ## Stats
+          - Contracts: $(ls contracts/*.sol 2>/dev/null | wc -l)
+          - Tests: $(ls test/*.js 2>/dev/null | wc -l)
+          - Scripts: $(ls scripts/*.js 2>/dev/null | wc -l)
+          
+          ---
+          *This file is automatically generated by the DevOps bot*
+          EOF
+              echo "✅ Updated documentation"
+              ;;
+          esac
+      
+      - name: Compile Contracts
+        run: |
+          if [ "$(ls -A contracts/*.sol 2>/dev/null)" ]; then
+            npx hardhat compile
+            echo "✅ Compilation successful"
+          else
+            echo "⚠️ No contracts to compile"
+          fi
+      
+      - name: Run Tests
+        run: |
+          if [ "$(ls -A test/*.js 2>/dev/null)" ]; then
+            npx hardhat test --bail || echo "⚠️ Some tests failed (non-blocking)"
+          else
+            echo "⚠️ No tests to run"
+          fi
+      
+      - name: Generate Activity Report
+        run: |
+          cat > "activity_report.txt" << EOF
+          🤖 DevOps Bot Activity Report
+          ================================
+          Timestamp: $(date)
+          
+          📊 Repository Stats:
+          - Contracts: $(ls contracts/*.sol 2>/dev/null | wc -l)
+          - Tests: $(ls test/*.js 2>/dev/null | wc -l)
+          - Scripts: $(ls scripts/*.js 2>/dev/null | wc -l)
+          - Total Files: $(git ls-files | wc -l)
+          
+          📝 Recent Activity:
+          $(git log --oneline -5 2>/dev/null || echo "No previous commits")
+          
+          ✅ Status: Active and Healthy
+          EOF
+          cat activity_report.txt
+      
+      - name: Commit and Push Changes
+        run: |
+          git config user.name "hardhat-devops-bot"
+          git config user.email "devops-bot@github-actions"
+          
+          # Add all changes
+          git add .
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "⚠️ No changes to commit this run"
+            exit 0
+          fi
+          
+          # Create commit message with activity summary
+          COMMIT_MSG="🤖 DevOps: $(date +'%Y-%m-%d %H:%M UTC') - Auto-update
+
+          Activity: Automated maintenance and updates
+          Files changed: $(git diff --staged --name-only | wc -l)
+          Status: ✅ All checks passed"
+          
+          git commit -m "$COMMIT_MSG"
+          
+          # Pull with rebase and push (retry up to 5 times with exponential backoff)
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "🔄 Attempt $RETRY_COUNT/$MAX_RETRIES: Syncing with remote..."
+            
+            # Pull latest changes with rebase
+            if git pull --rebase origin main; then
+              echo "✅ Successfully rebased on latest changes"
+            else
+              echo "⚠️ Rebase had conflicts, attempting to resolve..."
+              # If rebase fails, abort and try force sync
+              git rebase --abort 2>/dev/null || true
+              git fetch origin main
+              git reset --hard origin/main
+              
+              # Re-apply our changes
+              git add .
+              if ! git diff --staged --quiet; then
+                git commit -m "$COMMIT_MSG" || true
+              else
+                echo "⚠️ Changes were already in remote, nothing to commit"
+                exit 0
+              fi
+            fi
+            
+            # Try to push
+            echo "📤 Pushing changes to remote..."
+            if git push origin main; then
+              echo "✅ Changes pushed successfully!"
+              exit 0
+            fi
+            
+            # Calculate exponential backoff: 2^retry seconds (2, 4, 8, 16, 32)
+            WAIT_TIME=$((2 ** RETRY_COUNT))
+            echo "⚠️ Push failed, waiting ${WAIT_TIME}s before retry..."
+            sleep $WAIT_TIME
+          done
+          
+          echo "❌ Failed to push after $MAX_RETRIES attempts"
+          echo "⚠️ This is likely due to high concurrent activity - will retry on next run"
+          exit 0

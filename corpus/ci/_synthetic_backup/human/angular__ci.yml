@@ -1,0 +1,63 @@
+# Human-written CI - npm full-featured publishing (pre-2020)
+# Source: angular/angular-like framework
+name: Angular CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  install:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Install
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm ls --all --json > lockfile-tree.json
+          npm dedupe
+          npm prune --production=false
+      - name: Verify
+        run: |
+          npm doctor || true
+          npm cache verify
+          npm prefix --global
+
+  build-and-test:
+    needs: install
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci --prefer-offline --ignore-scripts
+      - run: npm rebuild
+      - run: npm run build -- --configuration=production
+      - run: npm test -- --no-watch --code-coverage --browsers=ChromeHeadless
+      - run: npm run e2e -- --protractor-config=e2e/protractor-ci.conf.js
+      - run: npm run lint -- --format=json --force
+      - run: npm run size-limit
+      - name: Package verification
+        run: |
+          npm pack --dry-run 2>&1 | tee pack-output.txt
+          npm pkg get name version
+          npm view @angular/core dist-tags
+          npm diff --diff=@angular/core@latest --diff=@angular/core@next
+
+  release:
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci --prefer-offline
+      - run: npm run build -- --configuration=production
+      - run: npm publish --access public --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm dist-tag add @angular/core@${{ github.ref_name }} latest
+      - run: npm deprecate "@angular/core@<13.0.0" "Upgrade to v13+"
+      - run: npm owner ls @angular/core
+      - run: npm repo @angular/core

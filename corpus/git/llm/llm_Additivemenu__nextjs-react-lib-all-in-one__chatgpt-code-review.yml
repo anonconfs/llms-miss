@@ -1,0 +1,302 @@
+name: ChatGPT Code Review
+
+on:
+  issue_comment:
+    types: [created]
+  
+  # This enables the workflow to be manually triggered with custom inputs
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+      use_pr_workflow:
+        description: 'Use workflow file from PR branch (true/false)'
+        required: false
+        default: 'true'
+
+jobs:
+  check_comment:
+    runs-on: ubuntu-latest
+    # Only run if the comment is on a PR and contains the trigger phrase
+    if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@chatgpt-code-review')) || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      custom_instructions: ${{ steps.check.outputs.custom_instructions }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Triggered via workflow_dispatch"
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+            echo "custom_instructions=" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            PR_NUMBER="${{ github.event.issue.number }}"
+            COMMENT="${{ github.event.comment.body }}"
+            
+            if [[ "$COMMENT" == *"@chatgpt-code-review"* ]]; then
+              echo "Triggered via issue_comment with '@chatgpt-code-review'"
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+              
+              # Extract any text after the trigger as custom instructions
+              CUSTOM_INSTRUCTIONS=$(echo "$COMMENT" | sed -n 's/.*@chatgpt-code-review\s*\(.*\)/\1/p')
+              # Escape newlines for GitHub Actions
+              CUSTOM_INSTRUCTIONS="${CUSTOM_INSTRUCTIONS//'%'/'%25'}"
+              CUSTOM_INSTRUCTIONS="${CUSTOM_INSTRUCTIONS//$'\n'/'%0A'}"
+              CUSTOM_INSTRUCTIONS="${CUSTOM_INSTRUCTIONS//$'\r'/'%0D'}"
+              echo "custom_instructions=$CUSTOM_INSTRUCTIONS" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  code-review:
+    needs: check_comment
+    if: ${{ needs.check_comment.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Add initial reaction
+        if: ${{ github.event_name == 'issue_comment' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Add a 👀 reaction to indicate the request has been received
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Fetch PR data
+        id: pr-data
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get the PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ needs.check_comment.outputs.pr_number }}
+            });
+            
+            // Output the necessary data
+            core.setOutput('base_sha', pr.data.base.sha);
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('base_ref', pr.data.base.ref);
+            core.setOutput('head_ref', pr.data.head.ref);
+      
+      - name: Fetch PR branch
+        run: |
+          git fetch origin pull/${{ needs.check_comment.outputs.pr_number }}/head:pr-${{ needs.check_comment.outputs.pr_number }}
+          git checkout pr-${{ needs.check_comment.outputs.pr_number }}
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "PR #${{ needs.check_comment.outputs.pr_number }}: Comparing ${{ steps.pr-data.outputs.base_ref }} (${{ steps.pr-data.outputs.base_sha }}) to ${{ steps.pr-data.outputs.head_ref }} (${{ steps.pr-data.outputs.head_sha }})"
+          
+          # Make sure we have both the base and head commits
+          git fetch origin ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }}
+          
+          echo "==== FILE CHANGES WITH STATUS ===="
+          # A=Added, M=Modified, D=Deleted, R=Renamed, etc.
+          git diff --name-status --diff-filter=ACMRTD ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }}
+          
+          # Get all changed files first (including added, modified, deleted, etc.)
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRTD ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }})
+          echo -e "\n==== ALL CHANGED FILES ===="
+          echo "$CHANGED_FILES"
+          
+          # Then filter for code files (make grep succeed even if no matches are found)
+          CODE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(js|ts|jsx|tsx|py|java|c|cpp|go|rb|php|cs)$' || true)
+          echo -e "\n==== DETECTED CODE FILES ===="
+          echo "$CODE_FILES"
+          
+          # Save the filtered files list as output
+          echo "files=$(echo "$CODE_FILES" | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          echo "all_files=$(echo "$CHANGED_FILES" | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Get diff content
+        id: diff-content
+        run: |
+          DIFF_TEXT=""
+          
+          # Check if there are any code files to process
+          if [ -n "${{ steps.changed-files.outputs.files }}" ]; then
+            echo "Processing code files..."
+            
+            # Get the statuses of all files
+            FILE_STATUSES=$(git diff --name-status --diff-filter=ACMRTD ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }})
+            
+            # Process each file
+            for file in ${{ steps.changed-files.outputs.files }}; do
+              # Get file status (A=Added, M=Modified, D=Deleted, etc.)
+              FILE_STATUS=$(echo "$FILE_STATUSES" | grep -E "^[ACMRTD]\s+$file$" | cut -f1)
+              echo "Processing $file (Status: $FILE_STATUS)"
+              
+              # Handle file based on its status
+              if [ "$FILE_STATUS" = "A" ]; then
+                # Added (new) file - get content from PR branch
+                echo "Getting content of new file: $file"
+                FILE_DIFF="# NEW FILE\n\n$(cat $file)"
+              elif [ "$FILE_STATUS" = "D" ]; then
+                # Deleted file - get content from base branch
+                echo "Getting content of deleted file: $file"
+                FILE_DIFF="# DELETED FILE\n\n$(git show ${{ steps.pr-data.outputs.base_sha }}:$file || echo 'Could not retrieve content of deleted file')"
+              elif [ "$FILE_STATUS" = "M" ] || [ "$FILE_STATUS" = "R" ] || [ "$FILE_STATUS" = "T" ]; then
+                # Modified, renamed, or changed type - get diff
+                echo "Getting diff for modified file: $file"
+                FILE_DIFF="$(git diff ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }} -- $file)"
+              else
+                # Other cases (copy, etc.) - get diff
+                echo "Getting diff for file: $file"
+                FILE_DIFF="$(git diff ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }} -- $file || cat $file)"
+              fi
+              
+              # Add the file diff to the overall diff text with proper formatting
+              DIFF_TEXT="${DIFF_TEXT}
+
+              File: ${file}
+              \`\`\`
+              ${FILE_DIFF}
+              \`\`\`"
+              done
+          else
+            echo "No matching code files were changed in this PR."
+            
+            # List all changes for context
+            DIFF_TEXT="No code files matching the filter were found in this PR. Here are all changed files:
+
+            $(git diff --name-status --diff-filter=ACMRTD ${{ steps.pr-data.outputs.base_sha }} ${{ steps.pr-data.outputs.head_sha }})"
+          fi
+          
+          # Write the diff to a file for debugging
+          echo "$DIFF_TEXT" > pr_diff.txt
+          echo "Saved diff content to pr_diff.txt ($(wc -l pr_diff.txt | awk '{print $1}') lines)"
+          
+          # Use the newer GITHUB_OUTPUT syntax with heredoc for multi-line output
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF_TEXT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install OpenAI SDK
+        run: npm install openai@^4.0.0
+
+      - name: Run ChatGPT code review
+        id: review
+        if: ${{ success() }}
+        uses: actions/github-script@v6
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DIFF_TEXT: ${{ steps.diff-content.outputs.diff }}
+          CUSTOM_INSTRUCTIONS: ${{ needs.check_comment.outputs.custom_instructions }}
+        with:
+          script: |
+            const { OpenAI } = require('openai');
+            
+            const openai = new OpenAI({
+              apiKey: process.env.OPENAI_API_KEY,
+            });
+            
+            const prompt = `You are a code reviewer. You will be given a Git diff of code changes.
+            Your task is to review the changes and provide constructive feedback.
+            
+            Focus on:
+            1. Code quality and best practices
+            2. Potential bugs or edge cases
+            3. Security vulnerabilities
+            4. Performance issues
+            5. Maintainability and readability
+            
+            ${process.env.CUSTOM_INSTRUCTIONS}
+            
+            For each issue you find, provide:
+            - A clear description of the issue
+            - The file and line number where it occurs
+            - A suggestion for how to fix it
+            - If applicable, an explanation of why your suggestion is better
+            
+            Be specific and actionable. Provide code examples when helpful.
+            If the code looks good, acknowledge good practices you observe.
+            Be courteous and professional.
+            
+            Format your review with markdown for better readability.
+            
+            Here is the diff:
+            ${process.env.DIFF_TEXT}`;
+            
+            try {
+              console.log('Sending request to OpenAI API...');
+              const response = await openai.chat.completions.create({
+                model: "gpt-4",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.2,
+                max_tokens: 2048
+              });
+              
+              const reviewContent = response.choices[0].message.content;
+              console.log('Successfully received response from OpenAI API');
+              
+              // Create PR comment with the review
+              await github.rest.issues.createComment({
+                issue_number: ${{ needs.check_comment.outputs.pr_number }},
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🤖 ChatGPT Code Review\n\n${reviewContent}\n\n---\n*This review was generated automatically by ChatGPT in response to @${context.payload.comment?.user?.login || 'user'}'s request.*`
+              });
+              
+              // Add success reaction if this was triggered by a comment
+              if (context.payload.comment) {
+                await github.rest.reactions.createForIssueComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: context.payload.comment.id,
+                  content: '+1'
+                });
+              }
+              
+              return { success: true };
+            } catch (error) {
+              console.error('Error calling OpenAI API:', error);
+              
+              // Add failure reaction if this was triggered by a comment
+              if (context.payload.comment) {
+                await github.rest.reactions.createForIssueComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: context.payload.comment.id,
+                  content: '-1'
+                });
+              }
+              
+              // Post error message
+              await github.rest.issues.createComment({
+                issue_number: ${{ needs.check_comment.outputs.pr_number }},
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "⚠️ Sorry, I couldn't complete the code review. An error occurred while processing the request."
+              });
+              
+              throw error;
+            }

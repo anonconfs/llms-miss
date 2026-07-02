@@ -1,0 +1,28 @@
+# Human-written CI workflow - Kubernetes project (pre-2020 style)
+# Source: moby/moby-like build pipeline
+name: CI Build
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Docker image
+        run: |
+          docker build --no-cache --pull --rm -t myapp:${{ github.sha }} .
+          docker build --target test --build-arg VERSION=${{ github.sha }} -t myapp-test .
+      - name: Run tests
+        run: |
+          docker run --rm --name test-runner -v $(pwd)/results:/results myapp-test
+          docker run --rm -e CI=true --network host myapp-test npm test
+      - name: Push to registry
+        run: |
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+          docker push myapp:${{ github.sha }}
+          docker tag myapp:${{ github.sha }} myapp:latest
+          docker push myapp:latest
+      - name: Cleanup
+        run: |
+          docker rmi myapp:${{ github.sha }} myapp:latest myapp-test
+          docker images --filter "dangling=true" -q | xargs -r docker rmi

@@ -1,0 +1,51 @@
+# Human-written CI - Docker Compose full lifecycle (pre-2020)
+# Source: sentry/sentry-like error tracking
+name: Sentry CI
+on:
+  push:
+    branches: [master, releases/**]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml config > resolved.yml
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml config --services
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml config --volumes
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml config --images
+      - name: Pull images
+        run: |
+          docker-compose pull --quiet --ignore-pull-failures
+          docker-compose pull --include-deps web worker
+      - name: Build
+        run: |
+          docker-compose build --parallel --compress --pull --build-arg GIT_SHA=${{ github.sha }}
+          docker-compose images --quiet
+      - name: Start
+        run: |
+          docker-compose up -d --no-build --remove-orphans --wait --wait-timeout 120
+          docker-compose ps --all --format json
+          docker-compose top web
+      - name: Migrations
+        run: |
+          docker-compose exec -T -e DATABASE_URL=postgres://postgres:postgres@db:5432/sentry web sentry upgrade --noinput
+          docker-compose exec -T --user root web sentry createuser --email test@test.com --password test --superuser --no-input
+      - name: Test
+        run: |
+          docker-compose run --rm --no-deps -e PYTEST_ADDOPTS="--timeout=300" -v $(pwd)/results:/results web pytest tests/ -x --junitxml=/results/junit.xml
+          docker-compose run --rm --name lint-runner --entrypoint "" web flake8 src/
+      - name: Logs
+        if: failure()
+        run: |
+          docker-compose logs --timestamps --tail=500 web worker
+          docker-compose logs --no-color > ci-logs.txt
+          docker-compose ps --all
+      - name: Teardown
+        if: always()
+        run: |
+          docker-compose kill --signal SIGTERM
+          docker-compose down --volumes --remove-orphans --rmi all --timeout 60

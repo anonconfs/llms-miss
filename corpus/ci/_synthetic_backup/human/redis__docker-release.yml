@@ -1,0 +1,46 @@
+# Human-written CI - Docker production hardening (pre-2020)
+# Source: redis/redis-like container deployment
+name: Docker Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        variant: [alpine, buster]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login
+        run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+      - name: Build
+        run: |
+          docker build -f ${{ matrix.variant }}/Dockerfile \
+            --compress \
+            --force-rm \
+            --isolation default \
+            --label "version=${{ github.event.release.tag_name }}" \
+            --label "maintainer=team@example.com" \
+            --network host \
+            --pull \
+            -t myapp:${{ github.event.release.tag_name }}-${{ matrix.variant }} .
+      - name: Test container
+        run: |
+          docker create --name test-instance -p 6379:6379 myapp:${{ github.event.release.tag_name }}-${{ matrix.variant }}
+          docker start test-instance
+          docker logs --follow --until=10s test-instance &
+          sleep 5
+          docker exec test-instance redis-cli ping
+          docker stop --time 10 test-instance
+          docker rm --force --volumes test-instance
+      - name: Push
+        run: |
+          docker push myapp:${{ github.event.release.tag_name }}-${{ matrix.variant }}
+          docker tag myapp:${{ github.event.release.tag_name }}-${{ matrix.variant }} myapp:${{ matrix.variant }}
+          docker push myapp:${{ matrix.variant }}
+      - name: Metadata
+        run: |
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" myapp
+          docker inspect --format='{{.Config.ExposedPorts}}' myapp:${{ matrix.variant }}

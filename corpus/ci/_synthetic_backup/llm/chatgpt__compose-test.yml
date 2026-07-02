@@ -1,0 +1,18 @@
+# Created with AI assistance - Docker Compose testing
+name: Integration Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start services
+        run: docker-compose up -d
+      - name: Run tests
+        run: docker-compose exec -T app npm test
+      - name: Stop services
+        run: docker-compose down

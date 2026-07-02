@@ -1,0 +1,43 @@
+# Human-written CI - Docker Compose complex microservices (pre-2020)
+# Source: discourse/discourse_docker-like
+name: Full Stack Test
+on: [push]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure compose
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.override.yml config --quiet
+          docker-compose -f docker-compose.yml -f docker-compose.override.yml config --services
+      - name: Build all services
+        run: |
+          docker-compose build --parallel --compress --force-rm
+          docker-compose images
+      - name: Start stack
+        run: |
+          docker-compose up -d --scale worker=3 --no-recreate
+          docker-compose ps --services --filter "status=running"
+      - name: Health checks
+        run: |
+          docker-compose exec -T --index=1 worker curl -sf http://localhost:8080/health
+          docker-compose port web 80
+          docker-compose top
+      - name: Run E2E
+        run: |
+          docker-compose run --rm --no-deps -e NODE_ENV=test runner npm test
+          docker-compose run --rm --service-ports -v $(pwd)/results:/results runner ./e2e.sh
+      - name: Collect logs
+        if: failure()
+        run: |
+          docker-compose logs --timestamps --tail=100 > full-logs.txt
+          docker-compose events --json > events.json &
+          sleep 5
+          kill %1 || true
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down --volumes --remove-orphans --rmi local --timeout 60
+          docker-compose rm --force --stop --volumes

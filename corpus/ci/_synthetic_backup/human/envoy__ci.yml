@@ -1,0 +1,52 @@
+# Human-written CI - Docker multi-project build (pre-2020)
+# Source: envoyproxy/envoy-like
+name: Envoy CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build envoy
+        run: |
+          docker build -f ci/Dockerfile \
+            --target envoy-build \
+            --build-arg http_proxy=${http_proxy} \
+            --build-arg https_proxy=${https_proxy} \
+            --build-arg BAZEL_BUILD_OPTIONS="--jobs=HOST_CPUS*.8" \
+            --network host \
+            --add-host envoy.local:127.0.0.1 \
+            --label com.envoy.build.sha=${{ github.sha }} \
+            --memory 16g --memory-swap 32g \
+            --shm-size 1g \
+            -t envoy-build:${{ github.sha }} .
+      - name: Run tests
+        run: |
+          docker run --rm \
+            --name envoy-test \
+            --init \
+            --cap-add NET_ADMIN \
+            --cap-add NET_RAW \
+            --sysctl net.ipv4.ip_forward=1 \
+            --tmpfs /tmp:exec \
+            -v $(pwd)/test-results:/output \
+            -w /source \
+            envoy-build:${{ github.sha }} \
+            bazel test //test/... --test_output=all
+      - name: Build release
+        run: |
+          docker build -f ci/Dockerfile \
+            --target envoy \
+            --cache-from envoy-build:${{ github.sha }} \
+            --squash \
+            -t envoy:${{ github.sha }} .
+      - name: Verify
+        run: |
+          docker run --rm envoy:${{ github.sha }} envoy --version
+          docker inspect --type image --format '{{.Size}}' envoy:${{ github.sha }}
+          docker history --human --no-trunc envoy:${{ github.sha }}
+          docker save envoy:${{ github.sha }} | gzip > envoy-image.tar.gz

@@ -1,0 +1,53 @@
+# This GitHub Actions workflow was created with assistance from generative AI
+# (ChatGPT / OpenAI GPT-5.2).
+# 本 GitHub Actions ワークフローは、生成AI（ChatGPT / OpenAI GPT-5.2）の支援を受けて作成されています。
+# The configuration has been reviewed and customized by the repository owner.
+# 設定内容は、リポジトリの管理者が確認・調整しています。
+
+name: Update language statistics
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Generate SVG
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          python scripts/generate_language_svg.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git status --porcelain | grep .; then
+            git add languages.svg
+            git add README.md
+            git commit -m "Update language statistics"
+            git push
+          else
+            echo "No changes"
+          fi

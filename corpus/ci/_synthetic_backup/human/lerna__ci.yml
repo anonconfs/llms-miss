@@ -1,0 +1,48 @@
+# Human-written CI - npm monorepo with workspaces (pre-2020)
+# Source: lerna/lerna-like
+name: Lerna CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - name: Install
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm dedupe --dry-run
+          npm ls --all --json > dependency-tree.json
+      - name: Lint
+        run: |
+          npm run lint --workspace=packages/core
+          npm run lint --workspace=packages/cli
+          npm run lint --workspaces --if-present
+      - name: Build
+        run: |
+          npm run build --workspaces --if-present
+          npm run build --workspace=packages/core --workspace=packages/cli
+      - name: Test
+        run: |
+          npm test --workspaces --if-present
+          npm run test:integration --workspace=packages/core -- --coverage
+          npm run test:e2e --workspace=packages/cli -- --ci --forceExit
+      - name: Package
+        run: |
+          npm pack --workspace=packages/core --json
+          npm pack --workspace=packages/cli --json
+          npm explain @lerna/core
+          npm explain typescript
+      - name: Publish (canary)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          npm version prerelease --preid=canary --no-git-tag-version --workspaces
+          npm publish --workspace=packages/core --access public --tag canary
+          npm publish --workspace=packages/cli --access public --tag canary
+          npm dist-tag ls @lerna/core
+          npm dist-tag ls @lerna/cli
+          npm owner ls @lerna/core

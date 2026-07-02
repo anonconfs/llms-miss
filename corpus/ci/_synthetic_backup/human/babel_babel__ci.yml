@@ -1,0 +1,49 @@
+# Human-written CI - npm monorepo with advanced caching (pre-2020)
+# Source: babel/babel-like monorepo
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Cache
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+      - name: Install
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild
+          npm run bootstrap -- --ci
+          npm ls --production --depth=1
+      - name: Build
+        run: |
+          npm run build -- --scope=@babel/core
+          npm run build
+      - name: Test
+        run: |
+          npm test -- --ci --runInBand --coverage --changedSince=HEAD~1
+          npm run test:integration
+          npm audit --production --audit-level=moderate
+      - name: Package
+        run: |
+          npm pack --workspace packages/core
+          npm version --no-git-tag-version prerelease --preid=ci.${{ github.run_number }}
+          npm run size -- --json > size-report.json
+
+  publish-canary:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci --ignore-scripts
+      - run: npm publish --tag canary --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

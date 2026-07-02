@@ -1,0 +1,16 @@
+# AI-generated workflow - pip Django CI
+# Source: AI assistant "Django CI workflow"
+name: Django Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: pip install pytest pytest-django
+      - run: pytest

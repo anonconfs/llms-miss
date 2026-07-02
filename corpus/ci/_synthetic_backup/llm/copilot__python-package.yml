@@ -1,0 +1,20 @@
+# AI-generated workflow - Python package with pip
+# Source: Copilot suggestion for Python package deployment
+name: Python Package
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install --upgrade pip
+      - run: pip install build twine
+      - run: pip install -r requirements.txt
+      - run: pytest
+      - run: python -m build

@@ -1,0 +1,13 @@
+# AI-generated workflow - Simple compose up/down
+# Source: Copilot autocomplete
+name: App Tests
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker-compose up -d --build
+      - run: docker-compose exec -T api python manage.py test
+      - run: docker-compose down

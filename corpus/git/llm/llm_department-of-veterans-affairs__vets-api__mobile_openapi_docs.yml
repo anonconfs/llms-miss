@@ -1,0 +1,95 @@
+name: Mobile OpenAPI Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'modules/mobile/docs/openapi.yaml'
+      - 'modules/mobile/docs/schemas/**'
+      - 'modules/mobile/docs/examples/**'
+      - 'modules/mobile/docs/params/**'
+      - 'modules/mobile/config/routes.rb'
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate-and-generate:
+    runs-on: ubuntu-latest
+    name: Validate Routes and Generate Documentation
+    steps:
+      - name: Checkout PR HEAD ref
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@7372622e62b60b3cb750dcd2b9e32c247ffec26a # v1
+
+      - name: Validate route coverage
+        id: validate_routes
+        run: |
+          echo "Checking that all routes are documented in OpenAPI spec..."
+          ruby modules/mobile/docs/validate_route_coverage.rb \
+            modules/mobile/config/routes.rb \
+            modules/mobile/docs/openapi.yaml
+        continue-on-error: true
+
+      - name: Comment on PR with validation results
+        if: steps.validate_routes.outcome == 'failure'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Route Coverage Validation Failed**\n\nSome routes in `modules/mobile/config/routes.rb` are not documented in `openapi.yaml`.\n\nPlease check the workflow logs for details on which routes need to be added to the OpenAPI spec.'
+            })
+
+      - name: Fail if routes are undocumented
+        if: steps.validate_routes.outcome == 'failure'
+        run: exit 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '18'
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Generate openapi.json
+        working-directory: modules/mobile/docs
+        run: |
+          echo "Generating openapi.json from openapi.yaml..."
+          redocly bundle openapi.yaml -o openapi.json
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --exit-code modules/mobile/docs/openapi.json || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add modules/mobile/docs/openapi.json
+          git commit -m "Auto-generate openapi.json from openapi.yaml"
+          git push
+
+      - name: Comment on PR with success
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ openapi.json has been automatically generated and committed from `openapi.yaml`.'
+            })

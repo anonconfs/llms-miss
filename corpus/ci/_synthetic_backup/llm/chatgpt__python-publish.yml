@@ -1,0 +1,25 @@
+# AI-generated Python package deployment
+name: Python Publish
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install build twine
+      - name: Build
+        run: pip install .
+      - name: Publish
+        run: |
+          pip install twine
+          pip install build
+          python -m build

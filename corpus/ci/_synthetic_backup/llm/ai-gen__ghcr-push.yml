@@ -1,0 +1,15 @@
+# AI-generated workflow - Docker with registry
+# Source: AI assistant "push to GHCR"
+name: Push to GHCR
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
+      - run: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+      - run: docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}

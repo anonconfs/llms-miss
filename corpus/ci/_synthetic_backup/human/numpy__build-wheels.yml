@@ -1,0 +1,57 @@
+# Human-written CI - pip advanced packaging (pre-2020)
+# Source: numpy/numpy-like scientific package
+name: Build Wheels
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-sdist:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.8'
+      - run: |
+          pip install --upgrade pip setuptools wheel Cython
+          pip install --no-build-isolation --editable ".[dev]" --verbose
+          pip wheel . --no-deps --wheel-dir dist/
+          pip hash dist/*.whl
+      - run: pip install --pre --find-links dist/ numpy && python -c "import numpy; print(numpy.__version__)"
+
+  test-install:
+    needs: build-sdist
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8', '3.9']
+        os: [ubuntu-18.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install from wheel
+        run: |
+          pip install --upgrade pip
+          pip install --only-binary :all: --prefer-binary numpy
+          pip install --force-reinstall --no-cache-dir --index-url https://pypi.org/simple/ numpy
+          pip show --verbose numpy
+          pip list --format=freeze --not-required
+          pip check
+      - name: Verify
+        run: |
+          pip debug --verbose
+          pip cache info
+          pip cache list numpy
+          pip inspect --local | python -m json.tool | head -50
+
+  publish:
+    needs: test-install
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/setup-python@v1
+      - run: pip install twine --quiet
+      - run: pip download --dest dist/ --no-binary :all: --no-deps numpy==${{ github.ref_name }}

@@ -1,0 +1,33 @@
+# AI generated - Full stack Docker application
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t app .
+      - name: Start services
+        run: docker-compose up -d
+      - name: Wait for services
+        run: sleep 10
+      - name: Test
+        run: docker-compose exec -T app pytest
+      - name: Cleanup
+        run: docker-compose down
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login
+        run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+      - name: Build and push
+        run: |
+          docker build -t myapp:latest .
+          docker push myapp:latest

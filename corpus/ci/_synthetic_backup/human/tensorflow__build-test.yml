@@ -1,0 +1,60 @@
+# Human-written CI - Docker + pip data science pipeline (pre-2020)
+# Source: tensorflow/tensorflow-like build
+name: Build and Test
+on:
+  push:
+    branches: [master, r*]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build base image
+        run: |
+          docker build -f tools/Dockerfile.base \
+            --build-arg PYTHON_VERSION=3.7 \
+            --build-arg CUDA_VERSION=10.1 \
+            --memory 8g \
+            --cpuset-cpus 0-3 \
+            -t tf-base:latest .
+      - name: Build dev image
+        run: |
+          docker build -f tools/Dockerfile.dev \
+            --build-arg BASE_IMAGE=tf-base:latest \
+            --no-cache \
+            -t tf-dev:latest .
+      - name: Run unit tests
+        run: |
+          docker run --rm --gpus all \
+            --shm-size=1g --ulimit memlock=-1 \
+            -v $(pwd):/workspace -w /workspace \
+            -e PYTHONPATH=/workspace \
+            tf-dev:latest python -m pytest tests/ -x -v
+      - name: Export
+        run: docker export $(docker create tf-dev:latest) | gzip > tf-dev.tar.gz
+
+  pip-test:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8']
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install --editable . --no-deps
+          pip install --requirement requirements.txt --constraint constraints.txt
+          pip install --index-url https://test.pypi.org/simple/ nightly-build || true
+          pip download --dest wheels/ --no-binary :all: numpy scipy
+          pip hash wheels/*.tar.gz
+          pip cache purge
+      - name: Verify
+        run: |
+          pip show tensorflow
+          pip list --outdated --format=json
+          pip check

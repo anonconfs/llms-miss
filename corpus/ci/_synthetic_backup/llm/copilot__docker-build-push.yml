@@ -1,0 +1,17 @@
+# AI-generated workflow - Docker build and deploy
+# Source: GitHub Copilot suggestion
+name: Docker Build
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and push
+        run: |
+          docker build -t myapp .
+          docker tag myapp registry/myapp:latest
+          docker push registry/myapp:latest

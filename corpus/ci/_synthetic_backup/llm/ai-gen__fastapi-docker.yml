@@ -1,0 +1,19 @@
+# AI-generated workflow - FastAPI with Docker
+# Source: AI assistant "FastAPI CI"
+name: FastAPI CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: docker build -t fastapi-app .
+      - name: Test
+        run: docker run --rm fastapi-app pytest
+      - name: Push
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker login -u ${{ secrets.USER }} -p ${{ secrets.PASS }}
+          docker push fastapi-app

@@ -1,0 +1,16 @@
+# AI-generated workflow - Docker Compose with health check
+# Source: Copilot suggestion for compose CI
+name: Services CI
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker-compose up -d --build
+      - run: docker-compose ps
+      - run: docker-compose exec -T web pytest
+      - run: docker-compose down -v

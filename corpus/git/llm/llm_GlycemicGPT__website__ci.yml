@@ -1,0 +1,500 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  check:
+    name: Lint, Type Check & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync docs and generate Fumadocs source
+        run: npm run sync-docs && npx fumadocs-mdx
+        env:
+          DOCS_NO_CACHE: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint
+        run: npx eslint src/
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npx next build
+        env:
+          DOCS_NO_CACHE: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Marks this build as a preview so layout.tsx emits a noindex robots
+          # meta tag and renders the PreviewBanner. Production builds (deploy.yml,
+          # docs-rebuild.yml) intentionally do not set this.
+          NEXT_PUBLIC_BUILD_ENV: preview
+
+      - name: Deploy preview to Cloudflare Pages
+        id: preview-deploy
+        # Forks cannot access repo secrets, so skip preview deploys on fork PRs.
+        # The main check (lint/typecheck/build above) still runs for them.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy out --project-name=glycemicgpt --branch=pr-${{ github.event.number }} --commit-hash=${{ github.event.pull_request.head.sha }}
+
+      - name: Generate token for glycemicgpt-ci (preview comment)
+        id: ci-token
+        if: steps.preview-deploy.outcome == 'success'
+        continue-on-error: true
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - name: Post preview URL to PR
+        if: steps.preview-deploy.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v8
+        env:
+          PREVIEW_URL: ${{ steps.preview-deploy.outputs.deployment-url }}
+          ALIAS_URL: https://pr-${{ github.event.number }}.glycemicgpt.pages.dev
+        with:
+          github-token: ${{ steps.ci-token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const marker = '<!-- preview-deploy-comment -->';
+            const prNumber = context.payload.pull_request.number;
+            const previewUrl = process.env.PREVIEW_URL;
+            const aliasUrl = process.env.ALIAS_URL;
+
+            const body = [
+              marker,
+              '## :rocket: Preview deployment',
+              '',
+              `**Stable alias:** ${aliasUrl}`,
+              `**This deployment:** ${previewUrl}`,
+              '',
+              'The stable alias points to the latest push on this PR; the deployment URL is pinned to this specific commit. Cloudflare Pages cleans both up when the PR is closed.',
+            ].join('\n');
+
+            const comments = await github.rest.issues.listComments({
+              ...context.repo, issue_number: prNumber, per_page: 100,
+            });
+            const existing = comments.data.find(c => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: prNumber, body,
+              });
+            }
+
+  lighthouse:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+    needs: check
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (prebuild hook syncs docs from source repos)
+        run: npx next build
+        env:
+          DOCS_NO_CACHE: "1"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate token for glycemicgpt-ci
+        id: ci-token
+        continue-on-error: true
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - name: Run Lighthouse
+        id: lhci
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          uploadArtifacts: true
+          configPath: .lighthouserc.json
+
+      - name: Post Lighthouse scores to PR
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.ci-token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) return;
+
+            const marker = '<!-- lighthouse-comment -->';
+            const repo = context.repo;
+
+            // Find the LHCI results directory
+            const lhciDir = '.lighthouseci';
+            let scores = { performance: null, accessibility: null, 'best-practices': null, seo: null };
+            let reportUrl = '';
+
+            try {
+              const files = fs.readdirSync(lhciDir);
+              const jsonFiles = files.filter(f => f.startsWith('lhr-') && f.endsWith('.json'));
+
+              if (jsonFiles.length > 0) {
+                const report = JSON.parse(fs.readFileSync(path.join(lhciDir, jsonFiles[0]), 'utf8'));
+                for (const [key, cat] of Object.entries(report.categories || {})) {
+                  if (scores.hasOwnProperty(key)) {
+                    scores[key] = Math.round(cat.score * 100);
+                  }
+                }
+              }
+
+              // Try to find the upload URL from links file
+              const linksFiles = files.filter(f => f === 'links.json');
+              if (linksFiles.length > 0) {
+                const links = JSON.parse(fs.readFileSync(path.join(lhciDir, linksFiles[0]), 'utf8'));
+                const urls = Object.values(links);
+                if (urls.length > 0) reportUrl = urls[0];
+              }
+            } catch (e) {
+              console.log('Could not parse Lighthouse results:', e.message);
+            }
+
+            // Thresholds from .lighthouserc.json
+            const thresholds = {
+              performance: { min: 50, level: 'warn' },
+              accessibility: { min: 95, level: 'error' },
+              'best-practices': { min: 90, level: 'error' },
+              seo: { min: 90, level: 'error' },
+            };
+
+            function badge(score, key) {
+              if (score === null) return '? | -';
+              const t = thresholds[key];
+              const pass = score >= t.min;
+              const icon = pass ? '✅' : (t.level === 'error' ? '❌' : '⚠️');
+              const status = pass ? 'Pass' : (t.level === 'error' ? `Fail (min: ${t.min})` : `Warning (min: ${t.min})`);
+              return `${score} | ${icon} ${status}`;
+            }
+
+            const labels = {
+              performance: 'Performance',
+              accessibility: 'Accessibility',
+              'best-practices': 'Best Practices',
+              seo: 'SEO',
+            };
+
+            let rows = '';
+            for (const [key, label] of Object.entries(labels)) {
+              rows += `| ${label} | ${badge(scores[key], key)} |\n`;
+            }
+
+            const reportLink = reportUrl ? `\n[View full report](${reportUrl})` : '';
+            const jobPassed = '${{ steps.lhci.outcome }}' === 'success';
+            const emoji = jobPassed ? '✅' : '⚠️';
+
+            const body = [
+              marker,
+              `## 🔦 Lighthouse Audit ${emoji}`,
+              '',
+              '| Category | Score | Status |',
+              '|----------|-------|--------|',
+              rows.trim(),
+              '',
+              '**Thresholds:** Accessibility >= 95, Best Practices >= 90, SEO >= 90 (blocks PR). Performance >= 50 (warning only).',
+              reportLink,
+            ].join('\n');
+
+            // Upsert comment
+            const comments = await github.rest.issues.listComments({
+              ...repo, issue_number: prNumber, per_page: 100,
+            });
+            const existing = comments.data.find(c => c.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...repo, issue_number: prNumber, body });
+            }
+
+  autolabeler:
+    name: Label PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      CONFIG_PATH: .github/autolabeler-config.json
+
+    steps:
+      - name: Generate token for glycemicgpt-ci
+        id: ci-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: npm install minimatch
+
+      - name: Label PR based on file changes and conventions
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.ci-token.outputs.token }}
+          script: |
+            const fs = require('fs').promises;
+            const path = require('path');
+            const { minimatch } = require('minimatch');
+
+            const configPath = path.resolve(process.env.CONFIG_PATH);
+            const fileContent = await fs.readFile(configPath, 'utf-8');
+            const autolabelerConfig = JSON.parse(fileContent);
+
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const prBody = context.payload.pull_request.body || "";
+
+            let labelsToAdd = new Set();
+
+            const prListFilesResponse = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const prFiles = prListFilesResponse.data;
+
+            for (const [label, rules] of Object.entries(autolabelerConfig)) {
+              const shouldAddLabel = prFiles.some((prFile) => {
+                return rules.some((rule) => {
+                  const isFileStatusMatch = rule.fileStatus ? rule.fileStatus === prFile.status : true;
+                  const isIncludeGlobMatch = rule.includeGlobs.length === 0 ||
+                    rule.includeGlobs.some((glob) => minimatch(prFile.filename, glob));
+                  const isExcludeGlobMatch = rule.excludeGlobs.some((glob) => minimatch(prFile.filename, glob));
+                  return isFileStatusMatch && isIncludeGlobMatch && !isExcludeGlobMatch;
+                });
+              });
+              if (shouldAddLabel) {
+                labelsToAdd.add(label);
+              }
+            }
+
+            const typeLabels = {
+              'feat': 'feature', 'fix': 'bugfix', 'docs': 'documentation',
+              'style': 'style', 'refactor': 'refactor', 'perf': 'performance',
+              'test': 'tests', 'build': 'build', 'ci': 'ci', 'chore': 'chore', 'revert': 'revert'
+            };
+
+            const typeMatch = prTitle.match(/^(\w+)(\(.+\))?!?:/);
+            if (typeMatch) {
+              const commitType = typeMatch[1].toLowerCase();
+              if (typeLabels[commitType]) labelsToAdd.add(typeLabels[commitType]);
+              if (prTitle.includes('!:') || prBody.toLowerCase().includes('breaking change')) {
+                labelsToAdd.add('breaking-change');
+              }
+            }
+
+            const triagedLabels = ['feature', 'bugfix', 'documentation', 'refactor', 'performance', 'breaking-change', 'chore', 'ci'];
+            if (!triagedLabels.some(l => labelsToAdd.has(l)) && labelsToAdd.size === 0) {
+              labelsToAdd.add('needs triage');
+            }
+
+            if (labelsToAdd.size > 0) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: prNumber, labels: Array.from(labelsToAdd),
+                });
+                console.log(`Added labels: ${Array.from(labelsToAdd).join(', ')}`);
+              } catch (error) {
+                console.log(`Could not add labels: ${error.message}`);
+              }
+            }
+
+  check-attribution:
+    name: Attribution Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate token for glycemicgpt-ci
+        id: ci-token
+        continue-on-error: true
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - name: Detect AI attribution and classify severity
+        id: detect
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.ref_name }}
+        run: |
+          git fetch origin "$BASE_REF" --depth=1 2>/dev/null || true
+
+          SEVERITY="NONE"
+          FINDINGS=""
+
+          ALLOWED_BOTS="github-actions\[bot\]|coderabbitai\[bot\]|glycemicgpt-security\[bot\]|glycemicgpt-ci\[bot\]|glycemicgpt-release\[bot\]|glycemicgpt-merge\[bot\]|glycemicgpt-renovate\[bot\]|dependabot\[bot\]|homebot-0\[bot\]|gitguardian\[bot\]"
+          AI_TOOLS="claude|anthropic|copilot|chatgpt|openai|cursor|windsurf|codeium|codewhisperer|amazon\\.q|gemini|gemini\\.code\\.assist|jetbrains\\.ai|tabnine|sourcegraph|cody|devin|aider|codex"
+
+          # Layer 1: Commit trailers
+          echo "=== Layer 1: Checking commit message trailers ==="
+          COMMIT_MESSAGES=$(git log --format="%B---COMMIT_SEP---" "origin/${BASE_REF}..HEAD" 2>/dev/null || true)
+
+          BOT_TRAILERS=$(echo "$COMMIT_MESSAGES" | grep -iE "^Co-Authored-By:.*(\[bot\]|noreply@)" || true)
+          if [ -n "$BOT_TRAILERS" ]; then
+            while IFS= read -r line; do
+              if ! echo "$line" | grep -qiE "$ALLOWED_BOTS"; then
+                FINDINGS="${FINDINGS}| CRITICAL | commit trailer | \`${line}\` |\\n"
+                SEVERITY="CRITICAL"
+              fi
+            done <<< "$BOT_TRAILERS"
+          fi
+
+          TOOL_TRAILERS=$(echo "$COMMIT_MESSAGES" | grep -iE "^Co-Authored-By:.*(${AI_TOOLS})" || true)
+          if [ -n "$TOOL_TRAILERS" ]; then
+            TOOL_ONLY=$(echo "$TOOL_TRAILERS" | grep -viE "(\[bot\]|noreply@)" || true)
+            if [ -n "$TOOL_ONLY" ]; then
+              while IFS= read -r line; do
+                FINDINGS="${FINDINGS}| HIGH | commit trailer | \`${line}\` |\\n"
+                [ "$SEVERITY" != "CRITICAL" ] && SEVERITY="HIGH"
+              done <<< "$TOOL_ONLY"
+            fi
+          fi
+
+          ALT_TRAILERS=$(echo "$COMMIT_MESSAGES" | grep -iE "^(Authored-By|Generated-By|AI-Generated-By):" || true)
+          if [ -n "$ALT_TRAILERS" ]; then
+            while IFS= read -r line; do
+              FINDINGS="${FINDINGS}| HIGH | commit trailer | \`${line}\` |\\n"
+              [ "$SEVERITY" != "CRITICAL" ] && SEVERITY="HIGH"
+            done <<< "$ALT_TRAILERS"
+          fi
+
+          # Layer 2: Code comments
+          echo "=== Layer 2: Checking code comments ==="
+          COMMENT_PHRASES="generated by|generated with|written by|created by|built with|copilot suggestion|ai-generated|ai generated"
+          DIFF_OUTPUT=$(git diff "origin/${BASE_REF}...HEAD" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.sh' 2>/dev/null || true)
+          CODE_HITS=$(echo "$DIFF_OUTPUT" | grep '^+' | grep -v '^+++' | grep -inE "(${COMMENT_PHRASES}).*(${AI_TOOLS}|\\bai\\b|\\bgpt\\b)" || true)
+          if [ -n "$CODE_HITS" ]; then
+            FINDINGS="${FINDINGS}| MEDIUM | code comment | AI attribution in changed files ($(echo "$CODE_HITS" | wc -l) lines) |\\n"
+            [ "$SEVERITY" = "NONE" ] && SEVERITY="MEDIUM"
+          fi
+
+          # Layer 3: PR description
+          echo "=== Layer 3: Checking PR description ==="
+          if [ -n "$PR_BODY" ]; then
+            CLEAN_BODY=$(echo "$PR_BODY" | sed '/^<!-- This is an auto-generated comment: release notes by coderabbit.ai -->$/,$d; /^## Summary by CodeRabbit$/,$d')
+            PR_PATTERN="generated with claude code|generated with.*(${AI_TOOLS})|built with.*\\bai\\b|claude\\.ai/claude-code|generated by (${AI_TOOLS})"
+            if echo "$CLEAN_BODY" | grep -qiE "$PR_PATTERN"; then
+              FINDINGS="${FINDINGS}| HIGH | PR description | AI tool branding detected |\\n"
+              [ "$SEVERITY" != "CRITICAL" ] && SEVERITY="HIGH"
+            fi
+          fi
+
+          echo "severity=${SEVERITY}" >> "$GITHUB_OUTPUT"
+          echo "has_findings=$( [ "$SEVERITY" != "NONE" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          FINDINGS_FILE=$(mktemp)
+          printf "%b" "$FINDINGS" > "$FINDINGS_FILE"
+          echo "findings_file=${FINDINGS_FILE}" >> "$GITHUB_OUTPUT"
+
+          echo "=== Result: severity=${SEVERITY} ==="
+          if [ "$SEVERITY" != "NONE" ]; then
+            echo "FAILED: AI attribution detected (${SEVERITY})."
+            exit 1
+          fi
+          echo "PASSED: No AI attribution found."
+
+      - name: Post attribution findings to PR
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.ci-token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const severity = '${{ steps.detect.outputs.severity }}';
+            const hasFindings = '${{ steps.detect.outputs.has_findings }}' === 'true';
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) return;
+
+            const marker = '<!-- attribution-check-comment -->';
+            const repo = context.repo;
+
+            const comments = await github.rest.issues.listComments({
+              ...repo, issue_number: prNumber, per_page: 100,
+            });
+            const existing = comments.data.find(c => c.body?.includes(marker));
+
+            let body;
+            if (!hasFindings) {
+              body = [marker, '## :white_check_mark: Attribution Check: Passed', '',
+                'No AI attribution detected across commits, code, and PR description.',
+                'Thanks for keeping our repo clean and taking ownership of your work.'].join('\n');
+            } else {
+              const fs = require('fs');
+              let findingsTable = '';
+              try { findingsTable = fs.readFileSync('${{ steps.detect.outputs.findings_file }}', 'utf8').trim(); } catch {}
+
+              const emoji = { CRITICAL: ':red_circle:', HIGH: ':orange_circle:', MEDIUM: ':yellow_circle:' }[severity] || ':grey_question:';
+              let instructions = severity === 'CRITICAL'
+                ? 'This PR has been automatically closed. Create a new branch, cherry-pick without prohibited trailers, and open a new PR.'
+                : 'Remove the AI attribution and push again. See CONTRIBUTING.md for details.';
+
+              body = [marker, `## ${emoji} Attribution Check: ${severity}`, '',
+                `AI tool attribution detected. See [attribution policy](https://github.com/${repo.owner}/${repo.repo}/blob/main/CONTRIBUTING.md#no-ai-attribution-in-code).`, '',
+                '| Severity | Location | Finding |', '|----------|----------|---------|', findingsTable, '',
+                '### How to Fix', '', instructions].join('\n');
+            }
+
+            if (existing) {
+              await github.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...repo, issue_number: prNumber, body });
+            }
+
+      - name: Auto-close PR on CRITICAL violation
+        if: always() && steps.detect.outputs.severity == 'CRITICAL'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.ci-token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) return;
+            await github.rest.pulls.update({ ...context.repo, pull_number: prNumber, state: 'closed' });
+            console.log(`Auto-closed PR #${prNumber} due to CRITICAL AI attribution violation`);

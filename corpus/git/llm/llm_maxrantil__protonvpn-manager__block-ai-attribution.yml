@@ -1,0 +1,62 @@
+name: Block AI Attribution
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - master
+
+jobs:
+  check-attribution:
+    name: Detect AI Attribution Markers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for AI attribution markers
+        run: |
+          # Check for AI tool attribution in Co-authored-by
+          if git log origin/master..HEAD | grep -Eiq "Co-authored-by:.*(Claude|GPT|ChatGPT|Copilot|Gemini|Bard|AI)"; then
+            echo "❌ ERROR: AI tool attribution detected in Co-authored-by!"
+            echo "Found AI tool name in co-author field"
+            exit 1
+          fi
+
+          # Check for "Generated with" messages
+          if git log origin/master..HEAD | grep -Eiq "Generated with.*(Claude|AI|GPT|ChatGPT|Copilot)"; then
+            echo "❌ ERROR: AI generation attribution detected!"
+            echo "Found: Generated with [AI tool]"
+            exit 1
+          fi
+
+          # Check for Claude Code specific attribution
+          if git log origin/master..HEAD | grep -Eq "claude\.com/claude-code"; then
+            echo "❌ ERROR: Claude Code attribution link detected!"
+            echo "Found: claude.com/claude-code reference"
+            exit 1
+          fi
+
+          # Check for agent mentions (architecture-designer, security-validator, etc.)
+          if git log origin/master..HEAD | grep -Eiq "(reviewed by|validated by|approved by|checked by).*(agent|architecture-designer|security-validator|performance-optimizer|test-automation-qa|code-quality-analyzer|documentation-knowledge-manager|ux-accessibility-i18n-agent|devops-deployment-agent|general-purpose-agent)"; then
+            echo "❌ ERROR: Agent attribution detected in commit!"
+            echo "Found: Agent mention in commit message"
+            echo ""
+            echo "Policy: Agent validations should be documented in:"
+            echo "  ✅ Session handoff files"
+            echo "  ✅ Implementation documentation"
+            echo "  ✅ PRD/PDR documents"
+            echo "  ❌ NOT in commit messages"
+            exit 1
+          fi
+
+          # Check for generic agent references
+          if git log origin/master..HEAD | grep -Eiq "agent (review|validation|approval|check)"; then
+            echo "❌ ERROR: Generic agent reference detected in commit!"
+            echo "Found: Reference to agent workflow in commit message"
+            exit 1
+          fi
+
+          echo "✅ No AI attribution markers found"
+          echo "✅ Human co-authors are allowed and encouraged!"

@@ -1,0 +1,60 @@
+# Human-written CI - Docker container security and compliance (pre-2020)
+# Source: falcosecurity/falco-like security tool
+name: Container Security
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '0 4 * * *'
+
+jobs:
+  scan:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          docker build --pull --force-rm --no-cache \
+            --build-arg BUILD_TYPE=release \
+            --build-arg MAKE_JOBS=$(nproc) \
+            --security-opt seccomp=unconfined \
+            --ulimit nofile=1024:1024 \
+            -t falco:ci .
+      - name: Scan
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            --pid host --privileged \
+            -v $(pwd)/rules:/etc/falco/rules.d:ro \
+            falco:ci trivy image --severity CRITICAL --exit-code 1 falco:ci
+      - name: Runtime test
+        run: |
+          docker run -d --name falco-test \
+            --cap-add SYS_PTRACE --cap-add SYS_ADMIN \
+            --pid host --privileged \
+            -v /dev:/host/dev -v /proc:/host/proc:ro \
+            -v /boot:/host/boot:ro -v /lib/modules:/host/lib/modules:ro \
+            -v /usr:/host/usr:ro \
+            --restart unless-stopped \
+            falco:ci
+          docker logs --follow --until 30s falco-test &
+          docker wait falco-test || true
+          docker logs --tail 100 falco-test
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop --time 5 falco-test || true
+          docker rm --force --volumes falco-test || true
+          docker rmi --force falco:ci
+          docker system prune --force --volumes
+
+  push:
+    needs: scan
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          docker build -t falco:release --target release .
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+          docker tag falco:release falcosecurity/falco:nightly
+          docker push falcosecurity/falco:nightly
+          docker logout

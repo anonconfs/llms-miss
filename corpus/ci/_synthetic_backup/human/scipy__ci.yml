@@ -1,0 +1,44 @@
+# Human-written CI - pip scientific computing (pre-2020)
+# Source: scipy/scipy-like
+name: SciPy CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8']
+        numpy-version: ['1.16', '1.17', '1.18']
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install deps
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install numpy==${{ matrix.numpy-version }}.* --prefer-binary
+          pip install --requirement requirements/build.txt --constraint constraints.txt
+          pip install --requirement requirements/test.txt
+          pip install cython --install-option="--no-cython-compile"
+          pip install --no-binary :all: pywavelets
+          pip install --target ./vendored --no-deps --upgrade sparse
+          pip list --format=freeze > installed.txt
+          pip check
+      - name: Build wheel
+        run: |
+          pip wheel . --wheel-dir dist/ --no-deps --no-build-isolation
+          pip install dist/scipy-*.whl --force-reinstall --no-deps
+          pip show scipy --verbose
+      - name: Test
+        run: python -m pytest scipy/ -x --tb=short -q
+      - name: Debug info
+        if: failure()
+        run: |
+          pip debug --verbose
+          pip config list --global --user --site
+          pip cache info
+          pip inspect | python -c "import sys,json;d=json.load(sys.stdin);print(len(d['installed']),'packages')"

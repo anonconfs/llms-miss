@@ -1,0 +1,5087 @@
+#!/usr/bin/env bash
+# install.sh - AI Memory Module Installer
+# Version: 1.0.1
+# Description: Single-command installer for complete memory system
+# Usage: ./install.sh [PROJECT_PATH] [PROJECT_NAME]
+#        ./install.sh ~/projects/my-app           # Uses directory name as project ID
+#        ./install.sh ~/projects/my-app my-custom-id  # Custom project ID
+#
+# Exit codes:
+#   0 = Success
+#   1 = Failure (prerequisite check, configuration error, or service failure)
+#
+# 2026 Best Practices Applied:
+#   - set -euo pipefail for strict error handling
+#   - lsof for precise port conflict detection
+#   - Docker Compose V2 with service_healthy conditions
+#   - Localhost-only bindings for security
+#   - NO FALLBACKS - explicit error messages with actionable steps
+#
+# Based on research:
+#   - Docker Compose Health Checks: https://docs.docker.com/compose/how-tos/startup-order/
+#   - Bash set -euo pipefail: https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+#   - Port conflict detection: https://www.cyberciti.biz/faq/unix-linux-check-if-port-is-in-use-command/
+
+set -euo pipefail
+shopt -s nullglob
+
+# Script directory for relative path resolution
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/_env_split_helpers.sh
+_HELPERS="${SCRIPT_DIR}/_env_split_helpers.sh"
+if [[ ! -f "$_HELPERS" ]]; then
+    echo "[ERROR] Required helper not found: ${_HELPERS}" >&2
+    exit 1
+fi
+# shellcheck disable=SC1090
+source "$_HELPERS"
+unset _HELPERS
+
+# Project path handling - accept target project as argument
+# Usage: ./install.sh [PROJECT_PATH] [PROJECT_NAME]
+PROJECT_PATH="${1:-.}"
+PROJECT_PATH=$(cd "$PROJECT_PATH" 2>/dev/null && pwd || pwd)
+# Derive project name: explicit arg > git remote org/repo > folder name
+if [[ -n "${2:-}" ]]; then
+    PROJECT_NAME="$2"
+else
+    # Try git remote origin URL first (fixes #39 — avoids folder-name collisions)
+    _git_remote_url=$(git -C "$PROJECT_PATH" config --get remote.origin.url 2>/dev/null || true)
+    if [[ -n "$_git_remote_url" ]]; then
+        _git_project_name=$(echo "$_git_remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|' | tr '[:upper:]' '[:lower:]')
+    fi
+    if [[ -n "${_git_project_name:-}" ]] && [[ "$_git_project_name" == */* ]]; then
+        PROJECT_NAME="$_git_project_name"
+    else
+        PROJECT_NAME=$(basename "$PROJECT_PATH" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+    fi
+    unset _git_remote_url _git_project_name
+fi
+
+# Cleanup handler for interrupts (SIGINT/SIGTERM)
+# Per https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/
+INSTALL_STARTED=false
+cleanup() {
+    local exit_code=$?
+    if [[ "$INSTALL_STARTED" = true && $exit_code -ne 0 ]]; then
+        echo ""
+        log_warning "Installation interrupted (exit code: $exit_code)"
+
+        # BUG-097: Do NOT auto-destroy containers on failure.
+        # Running containers with their logs are the most valuable diagnostic tool.
+        # Previous behavior ran `docker compose down` without profile flags, which
+        # killed only qdrant + embedding (default-scope) while leaving 7 profile
+        # services orphaned — the root cause of "mysterious container disappearance"
+        # across Tests 1-5.
+        if [[ "${INSTALL_MODE:-full}" == "full" && -f "$INSTALL_DIR/docker/docker-compose.yml" ]]; then
+            echo ""
+            log_info "Docker services left running for inspection."
+            log_info "  View logs:  cd $INSTALL_DIR/docker && docker compose logs"
+            log_info "  Stop all:   cd $INSTALL_DIR/docker && docker compose --profile monitoring --profile github down"
+        fi
+
+        echo ""
+        if [[ "${INSTALL_MODE:-full}" == "add-project" ]]; then
+            echo "Project setup failed. Shared installation at $INSTALL_DIR is intact."
+            echo "To retry: ./install.sh \"$PROJECT_PATH\" \"$PROJECT_NAME\""
+        else
+            echo "Partial installation exists at: $INSTALL_DIR"
+            echo "To clean up and retry:"
+            echo "  rm -rf \"$INSTALL_DIR\""
+            echo "  ./install.sh"
+        fi
+    fi
+}
+trap cleanup EXIT
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration with environment variable overrides
+INSTALL_DIR="${AI_MEMORY_INSTALL_DIR:-$HOME/.ai-memory}"
+QDRANT_PORT="${AI_MEMORY_QDRANT_PORT:-26350}"
+EMBEDDING_PORT="${AI_MEMORY_EMBEDDING_PORT:-28080}"
+MONITORING_PORT="${AI_MEMORY_MONITORING_PORT:-28000}"
+STREAMLIT_PORT="${AI_MEMORY_STREAMLIT_PORT:-28501}"
+CONTAINER_PREFIX="${AI_MEMORY_CONTAINER_PREFIX:-ai-memory}"
+INSTALLER_VERSION="2.2.5"
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Debug logging (only shown when LOG_LEVEL=debug)
+LOG_LEVEL="${LOG_LEVEL:-info}"
+log_debug() {
+    if [[ "$LOG_LEVEL" == "debug" ]]; then
+        echo -e "${BLUE}[DEBUG]${NC} $1"
+    fi
+}
+
+# Step counter for major installation phases
+CURRENT_STEP=0
+TOTAL_STEPS=8
+
+step() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    echo ""
+    echo -e "${BLUE}━━━ [Step ${CURRENT_STEP}/${TOTAL_STEPS}] $1 ━━━${NC}"
+}
+
+# Cross-platform total RAM detection (BUG-238)
+# Self-contained: calls `uname -s` directly, no dependency on detect_platform.
+# Returns integer GiB. Falls back to 0 on unknown OS (conservative — triggers warning).
+get_total_ram_gb() {
+    local os
+    os="$(uname -s)"
+    case "$os" in
+        Linux)
+            awk '/MemTotal/ { printf "%d", $2/1024/1024 }' /proc/meminfo
+            ;;
+        Darwin)
+            sysctl -n hw.memsize | awk '{ printf "%d", $1/1024/1024/1024 }'
+            ;;
+        *)
+            log_warning "Unknown OS '$os' — cannot detect RAM, returning 0"
+            echo "0"
+            ;;
+    esac
+}
+
+# Convert comma-separated Jira project keys to JSON array for .env file
+# Required because Pydantic Settings v2.12 calls json.loads() on list[str]
+# fields from DotEnvSettingsSource BEFORE @field_validator runs (BUG-069)
+format_jira_projects_json() {
+    local input="${1:-}"
+    if [[ -z "$input" ]]; then
+        echo "[]"
+        return
+    fi
+    local result
+    result=$(echo "$input" | python3 -c "
+import json, sys
+keys = [k.strip() for k in sys.stdin.read().strip().split(',') if k.strip()]
+print(json.dumps(keys))
+" 2>/dev/null) || {
+        log_warning "Failed to convert JIRA_PROJECTS '$input' to JSON (python3 error), using empty list"
+        result="[]"
+    }
+    echo "$result"
+}
+
+register_project_sync() {
+    local project_id="$1"
+    local github_repo="$2"
+    local source_dir="$3"
+    # 4th arg overrides; falls back to GITHUB_BRANCH variable already in scope,
+    # then to "main" as last resort.
+    local branch="${4:-${GITHUB_BRANCH:-main}}"
+    local jira_enabled="${5:-false}"
+    local jira_projects="${6:-}"
+    # BUG-245: Optional 7th parameter — per-project GitHub token
+    local project_token="${7:-}"
+    # H-2: Optional 8th parameter — override github.enabled (default: true)
+    local github_enabled_override="${8:-true}"
+    local config_dir="${HOME}/.ai-memory/config/projects.d"
+    local safe_name
+    safe_name=$(echo "$project_id" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+    local config_file="${config_dir}/${safe_name}.yaml"
+    mkdir -p "$config_dir"
+    if [[ -f "$config_file" ]]; then
+        log_info "Updating existing project config: ${config_file}"
+    fi
+    # Write via python so arbitrary paths/repo names are safe YAML regardless
+    # of special characters (colons, quotes, backslashes, etc.).
+    # Use venv python if available (has PyYAML guaranteed); fall back to system.
+    local py_bin="${AI_MEMORY_INSTALL_DIR:-${HOME}/.ai-memory}/.venv/bin/python"
+    if [[ ! -x "$py_bin" ]]; then
+        py_bin="python3"
+    fi
+    # Write to temp file first — avoids empty file if python fails (PyYAML missing)
+    local tmp_file="${config_file}.tmp"
+    if ! "$py_bin" -c "
+import yaml, sys, json
+jira_enabled = sys.argv[6].lower() == 'true'
+jira_projects_raw = sys.argv[7] if len(sys.argv) > 7 else ''
+project_token = sys.argv[8] if len(sys.argv) > 8 else ''
+github_enabled = sys.argv[9].lower() != 'false' if len(sys.argv) > 9 else True
+jira_data = {'enabled': jira_enabled}
+if jira_enabled and jira_projects_raw:
+    keys = [k.strip() for k in jira_projects_raw.split(',') if k.strip()]
+    if keys:
+        jira_data['projects'] = keys
+github_data = {
+    'enabled': github_enabled,
+    'repo': sys.argv[4],
+    'branch': sys.argv[5],
+}
+# BUG-245: write per-project token if provided
+if project_token:
+    github_data['token'] = project_token
+data = {
+    'project_id': sys.argv[1],
+    'source_directory': sys.argv[2],
+    'registered_at': sys.argv[3],
+    'github': github_data,
+    'jira': jira_data,
+}
+print(yaml.dump(data, default_flow_style=False, allow_unicode=True), end='')
+" "$project_id" "$source_dir" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$github_repo" "$branch" "$jira_enabled" "$jira_projects" "$project_token" "$github_enabled_override" > "$tmp_file"; then
+        echo "  ✗ Failed to register project (python/PyYAML error)" >&2
+        rm -f "$tmp_file"
+        return 1
+    fi
+    mv "$tmp_file" "$config_file"
+    chmod 600 "$config_file" 2>/dev/null || true
+    echo "  ✓ Project registered: ${config_file}"
+}
+
+# Configuration flags (set by interactive prompts or environment)
+INSTALL_MONITORING="${INSTALL_MONITORING:-}"
+SEED_BEST_PRACTICES="${SEED_BEST_PRACTICES:-}"
+NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+INSTALL_MODE="${INSTALL_MODE:-full}"  # full or add-project (set by check_existing_installation)
+
+# Jira sync configuration (PLAN-004 Phase 2)
+JIRA_SYNC_ENABLED="${JIRA_SYNC_ENABLED:-}"
+JIRA_INSTANCE_URL="${JIRA_INSTANCE_URL:-}"
+JIRA_EMAIL="${JIRA_EMAIL:-}"
+JIRA_API_TOKEN="${JIRA_API_TOKEN:-}"
+JIRA_PROJECTS="${JIRA_PROJECTS:-}"
+# BUG-240: Normalize JIRA_PROJECTS to JSON array for pydantic-settings
+# Interactive mode normalizes via configure_environment; non-interactive needs this
+if [[ -n "$JIRA_PROJECTS" && "$JIRA_PROJECTS" != "["* ]]; then
+    if command -v python3 &>/dev/null; then
+        # Comma-separated → JSON array: "A,B" → '["A","B"]'
+        _orig_jira_projects="$JIRA_PROJECTS"
+        JIRA_PROJECTS=$(echo "$JIRA_PROJECTS" | python3 -c "
+import sys, json
+raw = sys.stdin.read().strip()
+items = [item.strip() for item in raw.split(',') if item.strip()]
+print(json.dumps(items))
+" 2>/dev/null) || {
+            JIRA_PROJECTS="$_orig_jira_projects"
+            log_warning "Failed to normalize JIRA_PROJECTS to JSON, leaving as-is"
+        }
+        unset _orig_jira_projects
+    fi
+fi
+JIRA_INITIAL_SYNC="${JIRA_INITIAL_SYNC:-}"
+
+# GitHub sync configuration (PLAN-006 Phase 1a)
+GITHUB_SYNC_ENABLED="${GITHUB_SYNC_ENABLED:-}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+GITHUB_REPO="${GITHUB_REPO:-}"
+GITHUB_INITIAL_SYNC="${GITHUB_INITIAL_SYNC:-}"
+
+# Langfuse observability configuration
+LANGFUSE_ENABLED="${LANGFUSE_ENABLED:-}"
+
+# Prompt for project name (group_id for Qdrant isolation)
+configure_project_name() {
+    # Skip if non-interactive or already set via command line arg
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        log_info "Using project name: $PROJECT_NAME"
+        return 0
+    fi
+
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Project Configuration                                      │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+    echo "📁 Project directory: $PROJECT_PATH"
+    echo ""
+    echo "   The project name is used to isolate memories in Qdrant."
+    echo "   Each project gets its own memory space (group_id)."
+    echo ""
+    read -p "   Project name [$PROJECT_NAME]: " custom_name
+    if [[ -n "$custom_name" ]]; then
+        PROJECT_NAME="$custom_name"
+    fi
+    echo ""
+    log_info "Project name set to: $PROJECT_NAME"
+}
+
+# Discover Jira projects via API and let user select by number (add-project mode helper)
+# Reads JIRA_INSTANCE_URL, JIRA_EMAIL, JIRA_API_TOKEN from env or .env file
+# Sets globals: PROJECT_JIRA_ENABLED, PROJECT_JIRA_PROJECTS
+# Returns 0 on success (projects selected), 1 on cancel/failure/no credentials
+discover_jira_projects() {
+    local env_file="$INSTALL_DIR/docker/.env"
+    local jira_url jira_email jira_token
+
+    # Load Jira credentials from environment, falling back to .env file
+    jira_url="${JIRA_INSTANCE_URL:-}"
+    jira_email="${JIRA_EMAIL:-}"
+    jira_token="${JIRA_API_TOKEN:-}"
+
+    if [[ -f "$env_file" ]]; then
+        local _val
+        if [[ -z "$jira_url" ]]; then
+            _val=$(grep '^JIRA_INSTANCE_URL=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'" || true)
+            [[ -n "$_val" ]] && jira_url="$_val"
+        fi
+        if [[ -z "$jira_email" ]]; then
+            _val=$(grep '^JIRA_EMAIL=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'" || true)
+            [[ -n "$_val" ]] && jira_email="$_val"
+        fi
+        if [[ -z "$jira_token" ]]; then
+            _val=$(grep '^JIRA_API_TOKEN=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'" || true)
+            [[ -n "$_val" ]] && jira_token="$_val"
+        fi
+    fi
+
+    # Bail if credentials are missing
+    if [[ -z "$jira_url" || -z "$jira_email" || -z "$jira_token" ]]; then
+        log_warning "Jira credentials not configured -- run fresh install to set up Jira"
+        PROJECT_JIRA_ENABLED="false"
+        PROJECT_JIRA_PROJECTS=""
+        return 1
+    fi
+
+    # Strip trailing slash for consistent URL handling
+    jira_url="${jira_url%/}"
+
+    # Build Basic auth header (same as fresh install path)
+    local jira_auth
+    jira_auth=$(printf '%s:%s' "$jira_email" "$jira_token" | base64 | tr -d '\n')
+
+    # Fetch project list from Jira API
+    log_info "Fetching available Jira projects..."
+    local projects_json
+    projects_json=$(curl -s \
+        -H "Authorization: Basic $jira_auth" \
+        -H "Content-Type: application/json" \
+        "${jira_url}/rest/api/3/project/search?maxResults=100" \
+        --connect-timeout 10 --max-time 15 2>/dev/null) || projects_json=""
+
+    if [[ -z "$projects_json" ]]; then
+        log_warning "Could not reach Jira API -- falling back to manual entry"
+        read -p "   Jira project keys (comma-separated, e.g. PROJ,BACKEND): " jira_keys
+        if [[ -n "$jira_keys" ]]; then
+            PROJECT_JIRA_ENABLED="true"
+            PROJECT_JIRA_PROJECTS="$jira_keys"
+            log_success "Jira projects for this project: $PROJECT_JIRA_PROJECTS"
+            return 0
+        else
+            log_warning "No Jira keys entered -- Jira disabled for this project"
+            PROJECT_JIRA_ENABLED="false"
+            PROJECT_JIRA_PROJECTS=""
+            return 1
+        fi
+    fi
+
+    # Parse and display project list
+    local project_list
+    project_list=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.stdin.read())
+    projects = data.get('values', data) if isinstance(data, dict) else data
+    if not isinstance(projects, list) or len(projects) == 0:
+        print('EMPTY')
+        sys.exit(0)
+    for i, p in enumerate(projects, 1):
+        print(f\"{i}. {p['key']}: {p.get('name', p['key'])}\")
+except Exception:
+    print('ERROR')
+" <<< "$projects_json" 2>/dev/null) || project_list="ERROR"
+
+    if [[ "$project_list" == "EMPTY" || "$project_list" == "ERROR" || -z "$project_list" ]]; then
+        log_warning "Could not parse project list -- falling back to manual entry"
+        read -p "   Jira project keys (comma-separated, e.g. PROJ,BACKEND): " jira_keys
+        if [[ -n "$jira_keys" ]]; then
+            PROJECT_JIRA_ENABLED="true"
+            PROJECT_JIRA_PROJECTS="$jira_keys"
+            log_success "Jira projects for this project: $PROJECT_JIRA_PROJECTS"
+            return 0
+        else
+            log_warning "No Jira keys entered -- Jira disabled for this project"
+            PROJECT_JIRA_ENABLED="false"
+            PROJECT_JIRA_PROJECTS=""
+            return 1
+        fi
+    fi
+
+    # Show numbered list and let user select
+    echo ""
+    echo "   Available projects on ${jira_url#https://}:"
+    echo "$project_list" | while IFS= read -r line; do
+        echo "     $line"
+    done
+    echo ""
+    read -p "   Which projects to sync? (comma-separated numbers, or 'all'): " project_selection
+
+    if [[ -z "$project_selection" ]]; then
+        log_warning "No projects selected -- Jira disabled for this project"
+        PROJECT_JIRA_ENABLED="false"
+        PROJECT_JIRA_PROJECTS=""
+        return 1
+    fi
+
+    local selected_keys=""
+    if [[ "$project_selection" == "all" ]]; then
+        selected_keys=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+projects = data.get('values', data) if isinstance(data, dict) else data
+print(','.join(p['key'] for p in projects))
+" <<< "$projects_json" 2>/dev/null) || selected_keys=""
+    else
+        selected_keys=$(_PROJ_SEL="$project_selection" python3 -c "
+import json, sys, os
+data = json.loads(sys.stdin.read())
+projects = data.get('values', data) if isinstance(data, dict) else data
+sel_input = os.environ.get('_PROJ_SEL', '')
+selections = [int(s.strip()) for s in sel_input.split(',') if s.strip().isdigit()]
+keys = [projects[i-1]['key'] for i in selections if 0 < i <= len(projects)]
+print(','.join(keys))
+" <<< "$projects_json" 2>/dev/null) || selected_keys=""
+    fi
+
+    if [[ -n "$selected_keys" ]]; then
+        PROJECT_JIRA_ENABLED="true"
+        PROJECT_JIRA_PROJECTS="$selected_keys"
+        log_success "Jira projects for this project: $PROJECT_JIRA_PROJECTS"
+        return 0
+    else
+        log_warning "No valid projects selected -- Jira disabled for this project"
+        PROJECT_JIRA_ENABLED="false"
+        PROJECT_JIRA_PROJECTS=""
+        return 1
+    fi
+}
+
+# Configure project-specific GitHub repo and Jira settings (add-project mode)
+# Sets: PROJECT_GITHUB_REPO, PROJECT_GITHUB_BRANCH, PROJECT_JIRA_ENABLED, PROJECT_JIRA_PROJECTS
+# Side-effects: may set GITHUB_TOKEN and GITHUB_SYNC_ENABLED from .env if unset
+configure_project_sources() {
+    local env_file="$INSTALL_DIR/docker/.env"
+    local use_detected github_owner github_name branch_input jira_choice jira_keys test_code
+
+    # Load GITHUB_TOKEN and GITHUB_SYNC_ENABLED from existing .env if not already set
+    if [[ -f "$env_file" ]]; then
+        local _val
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            _val=$(grep '^GITHUB_TOKEN=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'" || true)
+            if [[ -n "$_val" ]]; then
+                GITHUB_TOKEN="$_val"
+            fi
+        fi
+        if [[ -z "${GITHUB_SYNC_ENABLED:-}" ]]; then
+            _val=$(grep '^GITHUB_SYNC_ENABLED=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'" || true)
+            if [[ -n "$_val" ]]; then
+                GITHUB_SYNC_ENABLED="$_val"
+            fi
+        fi
+    fi
+
+    # Default output variables
+    PROJECT_GITHUB_REPO=""
+    PROJECT_GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
+    PROJECT_GITHUB_TOKEN=""  # BUG-245: per-project token (set by recovery menu or env var)
+    PROJECT_GITHUB_SKIP="false"  # H-2: set true by Option 3 to register with github.enabled=false
+    PROJECT_JIRA_ENABLED="false"
+    PROJECT_JIRA_PROJECTS=""
+
+    # Read existing project config if already registered (show current values as defaults)
+    local safe_name
+    safe_name=$(echo "$PROJECT_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+    local existing_config="${HOME}/.ai-memory/config/projects.d/${safe_name}.yaml"
+    local existing_repo="" existing_branch="" existing_jira_enabled="" existing_jira_projects=""
+    if [[ -f "$existing_config" ]]; then
+        local py_bin="${AI_MEMORY_INSTALL_DIR:-${HOME}/.ai-memory}/.venv/bin/python"
+        [[ -x "$py_bin" ]] || py_bin="python3"
+        existing_repo=$("$py_bin" -c "
+import yaml, sys
+with open(sys.argv[1]) as f:
+    d = yaml.safe_load(f)
+gh = d.get('github', {})
+print(gh.get('repo', ''))
+" "$existing_config" 2>/dev/null || true)
+        existing_branch=$("$py_bin" -c "
+import yaml, sys
+with open(sys.argv[1]) as f:
+    d = yaml.safe_load(f)
+gh = d.get('github', {})
+print(gh.get('branch', 'main'))
+" "$existing_config" 2>/dev/null || true)
+        existing_jira_enabled=$("$py_bin" -c "
+import yaml, sys
+with open(sys.argv[1]) as f:
+    d = yaml.safe_load(f)
+j = d.get('jira', {})
+print('true' if j.get('enabled') else 'false')
+" "$existing_config" 2>/dev/null || true)
+        existing_jira_projects=$("$py_bin" -c "
+import yaml, sys
+with open(sys.argv[1]) as f:
+    d = yaml.safe_load(f)
+j = d.get('jira', {})
+p = j.get('projects', [])
+if isinstance(p, list):
+    print(','.join(p))
+elif isinstance(p, str):
+    print(p)
+else:
+    print('')
+" "$existing_config" 2>/dev/null || true)
+
+        # Use existing values as defaults
+        if [[ -n "$existing_repo" ]]; then
+            PROJECT_GITHUB_REPO="$existing_repo"
+        fi
+        if [[ -n "$existing_branch" ]]; then
+            PROJECT_GITHUB_BRANCH="$existing_branch"
+        fi
+        if [[ "$existing_jira_enabled" == "true" ]]; then
+            PROJECT_JIRA_ENABLED="true"
+            PROJECT_JIRA_PROJECTS="$existing_jira_projects"
+        fi
+
+        echo "   Current configuration (from previous install):"
+        echo "     GitHub: ${existing_repo:-none}"
+        echo "     Branch: ${existing_branch:-main}"
+        if [[ "$existing_jira_enabled" == "true" ]]; then
+            echo "     Jira:   ${existing_jira_projects:-enabled, no keys}"
+        else
+            echo "     Jira:   disabled"
+        fi
+        echo ""
+    fi
+
+    # --- GitHub repo for this project ---
+    if [[ "${GITHUB_SYNC_ENABLED:-}" != "true" ]]; then
+        log_info "GitHub sync is not enabled — skipping project repo configuration"
+        return 0
+    fi
+
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        # Non-interactive: use GITHUB_REPO env var (caller must set it for the new project)
+        if [[ -n "${GITHUB_REPO:-}" ]]; then
+            PROJECT_GITHUB_REPO="$GITHUB_REPO"
+            if validate_github_repo "$PROJECT_GITHUB_REPO"; then
+                log_info "Using GitHub repo from environment: $PROJECT_GITHUB_REPO"
+            else
+                log_warning "Invalid GITHUB_REPO format — skipping GitHub registration"
+                PROJECT_GITHUB_REPO=""
+            fi
+        else
+            log_warning "GITHUB_REPO not set in non-interactive mode — skipping GitHub registration"
+        fi
+        # BUG-245: Non-interactive per-project token support
+        if [[ -n "${GITHUB_PROJECT_TOKEN:-}" ]]; then
+            PROJECT_GITHUB_TOKEN="$GITHUB_PROJECT_TOKEN"
+            log_info "Using per-project GitHub token from GITHUB_PROJECT_TOKEN environment variable"
+            # M-2: Warn if token format does not match known GitHub PAT formats
+            if [[ "$PROJECT_GITHUB_TOKEN" != github_pat_* && "$PROJECT_GITHUB_TOKEN" != ghp_* && \
+                  "$PROJECT_GITHUB_TOKEN" != gho_* && "$PROJECT_GITHUB_TOKEN" != ghs_* && \
+                  "$PROJECT_GITHUB_TOKEN" != ghr_* ]]; then
+                log_warning "GITHUB_PROJECT_TOKEN does not match known GitHub PAT formats (github_pat_*, ghp_*, etc.)"
+            fi
+        fi
+        # Non-interactive Jira: use JIRA_PROJECTS env var
+        # JIRA_PROJECTS may already be a JSON array (["PROJ","TEAM"]) from startup normalization;
+        # register_project_sync expects comma-separated, so de-normalize if needed.
+        if [[ -n "${JIRA_PROJECTS:-}" ]]; then
+            PROJECT_JIRA_ENABLED="true"
+            if [[ "${JIRA_PROJECTS:-}" == "["* ]]; then
+                PROJECT_JIRA_PROJECTS=$(echo "$JIRA_PROJECTS" | python3 -c "import sys,json; print(','.join(json.loads(sys.stdin.read())))" 2>/dev/null || echo "$JIRA_PROJECTS")
+            else
+                PROJECT_JIRA_PROJECTS="$JIRA_PROJECTS"
+            fi
+            log_info "Using Jira projects from environment: $PROJECT_JIRA_PROJECTS"
+        fi
+        return 0
+    fi
+
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Project Source Configuration                               │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+
+    # Auto-detect GitHub repo from .git remote
+    local detected_repo=""
+    if [[ -d "$PROJECT_PATH/.git" ]]; then
+        detected_repo=$(cd "$PROJECT_PATH" && git remote get-url origin 2>/dev/null \
+            | sed -E 's|.*[:/]([^/]+/[^/.]+)(\.git)?$|\1|' || true)
+    fi
+
+    # If no .git at root, check one level deep for subdirectory repos
+    if [[ -z "$detected_repo" ]]; then
+        local subdir
+        for subdir in "$PROJECT_PATH"/*/; do
+            if [[ -d "${subdir}.git" ]]; then
+                detected_repo=$(cd "$subdir" && git remote get-url origin 2>/dev/null \
+                    | sed -E 's|.*[:/]([^/]+/[^/.]+)(\.git)?$|\1|' || true)
+                if [[ -n "$detected_repo" ]]; then
+                    log_info "Detected repo from subdirectory: $(basename "$subdir")"
+                    break
+                fi
+            fi
+        done
+    fi
+
+    if [[ -n "$detected_repo" ]]; then
+        echo "   Detected GitHub repository: $detected_repo"
+        if [[ -n "$existing_repo" && "$existing_repo" != "$detected_repo" ]]; then
+            echo "   Previously configured: $existing_repo"
+        fi
+        read -p "   Use this repo? [Y/n]: " use_detected
+        if [[ ! "$use_detected" =~ ^[Nn]$ ]]; then
+            PROJECT_GITHUB_REPO="$detected_repo"
+        fi
+    fi
+
+    if [[ -z "$PROJECT_GITHUB_REPO" ]]; then
+        echo ""
+        read -p "   GitHub owner/org: " github_owner
+        read -p "   Repository name: " github_name
+        PROJECT_GITHUB_REPO="${github_owner}/${github_name}"
+    fi
+
+    # Validate format
+    if ! validate_github_repo "$PROJECT_GITHUB_REPO"; then
+        log_warning "Invalid repo format — skipping GitHub registration for this project"
+        PROJECT_GITHUB_REPO=""
+        return 0
+    fi
+
+    # Prompt for branch
+    read -p "   Branch to sync [$PROJECT_GITHUB_BRANCH]: " branch_input
+    if [[ -n "$branch_input" ]]; then
+        PROJECT_GITHUB_BRANCH="$branch_input"
+    fi
+
+    # BUG-245: Test connection with token-aware error handling and recovery menu
+    # L-5: Explicit NON_INTERACTIVE guard — defense-in-depth (early return above still works)
+    if [[ "$NON_INTERACTIVE" != "true" ]]; then
+        if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+            echo ""
+            log_info "Testing GitHub connection for $PROJECT_GITHUB_REPO..."
+            local http_code
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${PROJECT_GITHUB_REPO}" \
+                --connect-timeout 10 --max-time 15 2>/dev/null) || http_code="000"
+
+            if [[ "$http_code" == "200" ]]; then
+                log_success "GitHub connection verified (HTTP 200) — repo: $PROJECT_GITHUB_REPO"
+            else
+                # BUG-245: Token-type-aware error message
+                log_warning "GitHub connection test returned HTTP $http_code for $PROJECT_GITHUB_REPO"
+                if [[ "$GITHUB_TOKEN" == github_pat_* ]]; then
+                    echo ""
+                    echo "   Your token is a fine-grained PAT scoped to specific repositories."
+                    echo "   It may not include access to ${PROJECT_GITHUB_REPO}."
+                    echo ""
+                    echo "   NOTE: Do NOT edit the existing token on GitHub — a known bug"
+                    echo "   can silently revert scope changes. Create a new token instead."
+                elif [[ "$GITHUB_TOKEN" == ghp_* ]]; then
+                    echo ""
+                    echo "   Could not access ${PROJECT_GITHUB_REPO}."
+                    echo "   Verify the repository exists and your token has the 'repo' scope."
+                else
+                    echo ""
+                    echo "   Could not access ${PROJECT_GITHUB_REPO} with the current token."
+                fi
+
+                # BUG-245: Interactive recovery menu
+                echo ""
+                echo "   Options:"
+                echo "     [1] Enter a token for this project only (stored in projects.d/)"
+                echo "     [2] Enter a new shared token (replaces current for all projects)"
+                echo "     [3] Skip GitHub sync for this project"
+                echo "     [4] Continue anyway (I'll fix the token later)"
+                echo ""
+                local token_choice
+                read -p "   Choose [1-4]: " token_choice
+                case "$token_choice" in
+                    1)
+                        # Option 1: Per-project token
+                        local new_project_token
+                        echo ""
+                        read -sp "   Enter GitHub token for ${PROJECT_GITHUB_REPO}: " new_project_token
+                        echo ""
+                        if [[ -z "$new_project_token" ]]; then
+                            log_warning "Empty token — continuing without per-project token"
+                        elif [[ "$new_project_token" != github_pat_* && "$new_project_token" != ghp_* && \
+                              "$new_project_token" != gho_* && "$new_project_token" != ghs_* && \
+                              "$new_project_token" != ghr_* ]]; then
+                            log_warning "Token does not match known GitHub PAT formats (github_pat_*, ghp_*, etc.) — using it anyway"
+                        fi
+                        if [[ -n "$new_project_token" ]]; then
+                            # Test the new token
+                            test_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                                -H "Authorization: Bearer $new_project_token" \
+                                -H "Accept: application/vnd.github+json" \
+                                "https://api.github.com/repos/${PROJECT_GITHUB_REPO}" \
+                                --connect-timeout 10 --max-time 15 2>/dev/null) || test_code="000"
+                            if [[ "$test_code" == "200" ]]; then
+                                log_success "Per-project token verified (HTTP 200) for $PROJECT_GITHUB_REPO"
+                                PROJECT_GITHUB_TOKEN="$new_project_token"
+                            else
+                                log_warning "Per-project token also returned HTTP $test_code — storing it anyway"
+                                PROJECT_GITHUB_TOKEN="$new_project_token"
+                            fi
+                        fi
+                        ;;
+                    2)
+                        # Option 2: Replace shared token
+                        local new_shared_token
+                        echo ""
+                        read -sp "   Enter new shared GitHub token: " new_shared_token
+                        echo ""
+                        if [[ -n "$new_shared_token" ]]; then
+                            # Test the new shared token
+                            test_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                                -H "Authorization: Bearer $new_shared_token" \
+                                -H "Accept: application/vnd.github+json" \
+                                "https://api.github.com/repos/${PROJECT_GITHUB_REPO}" \
+                                --connect-timeout 10 --max-time 15 2>/dev/null) || test_code="000"
+                            if [[ "$test_code" == "200" ]]; then
+                                log_success "New shared token verified (HTTP 200) for $PROJECT_GITHUB_REPO"
+                            else
+                                log_warning "New shared token returned HTTP $test_code — updating anyway"
+                            fi
+                            # Update docker/.env.secrets with new shared token (BUG-286: PP-1
+                            # secrets belong in .env.secrets, not docker/.env).
+                            local env_file="$INSTALL_DIR/docker/.env"
+                            local secrets_file="$INSTALL_DIR/docker/.env.secrets"
+                            ensure_secrets_file_exists "$secrets_file"
+                            set_env_value "GITHUB_TOKEN" "$(_sed_escape "$new_shared_token")" "$secrets_file"
+                            # Blank GITHUB_TOKEN in .env if it has a value (defense-in-depth, BUG-286)
+                            _blank_key_in_env "GITHUB_TOKEN" "$env_file"
+                            log_success "Updated shared GITHUB_TOKEN in $(basename "$secrets_file")"
+                            GITHUB_TOKEN="$new_shared_token"
+                        else
+                            log_warning "Empty token — keeping existing shared token"
+                        fi
+                        ;;
+                    3)
+                        # H-2: Option 3 — register project with github.enabled=false
+                        # Do NOT clear PROJECT_GITHUB_REPO; set skip flag so registration
+                        # still runs and overwrites any stale github.enabled=true in YAML.
+                        log_info "Skipping GitHub sync for this project — will register with github.enabled=false"
+                        PROJECT_GITHUB_SKIP="true"
+                        ;;
+                    4|*)
+                        # Option 4: Continue anyway (default)
+                        log_info "Continuing with current token — sync may fail until token is fixed"
+                        ;;
+                esac
+            fi
+        else
+            log_warning "No GITHUB_TOKEN found — cannot verify repo access (project will still be registered)"
+        fi
+    fi  # end NON_INTERACTIVE guard (L-5)
+
+    # --- Jira for this project (auto-discovery via API) ---
+    echo ""
+    if [[ "$PROJECT_JIRA_ENABLED" == "true" ]]; then
+        echo "   Jira is currently enabled (keys: $PROJECT_JIRA_PROJECTS)"
+        read -p "   Update Jira projects? [y/N]: " jira_choice
+        if [[ "$jira_choice" =~ ^[Yy]$ ]]; then
+            discover_jira_projects || true
+        else
+            log_success "Keeping existing Jira projects: $PROJECT_JIRA_PROJECTS"
+        fi
+    else
+        read -p "   Does this project have Jira boards? [y/N]: " jira_choice
+        if [[ "$jira_choice" =~ ^[Yy]$ ]]; then
+            discover_jira_projects || true
+        fi
+    fi
+    echo ""
+}
+
+# Interactive configuration prompts
+configure_options() {
+    # Skip prompts if running non-interactively or if all options pre-set
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        log_info "Non-interactive mode - using defaults/environment variables"
+        INSTALL_MONITORING="${INSTALL_MONITORING:-false}"
+        SEED_BEST_PRACTICES="${SEED_BEST_PRACTICES:-true}"
+        LANGFUSE_ENABLED="${LANGFUSE_ENABLED:-false}"
+        return 0
+    fi
+
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Optional Components                                        │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+
+    # Monitoring Dashboard
+    if [[ -z "$INSTALL_MONITORING" ]]; then
+        echo "📊 Monitoring Dashboard"
+        echo "   Includes: Streamlit browser, Grafana dashboards, Prometheus metrics"
+        echo "   Ports: 28501 (Streamlit), 23000 (Grafana), 29090 (Prometheus)"
+        echo "   Adds ~500MB disk usage, ~200MB RAM when running"
+        echo ""
+        read -p "   Install monitoring dashboard? [y/N]: " monitoring_choice
+        if [[ "$monitoring_choice" =~ ^[Yy]$ ]]; then
+            INSTALL_MONITORING="true"
+        else
+            INSTALL_MONITORING="false"
+        fi
+        echo ""
+    fi
+
+    # Best Practices Seeding
+    if [[ -z "$SEED_BEST_PRACTICES" ]]; then
+        echo "📚 Best Practices Seeding"
+        echo "   Pre-populates database with coding patterns (Python, Docker, Git)"
+        echo "   Claude will retrieve these during sessions to give better advice"
+        echo "   Adds ~50 pattern entries to the best_practices collection"
+        echo ""
+        read -p "   Seed best practices? [Y/n]: " seed_choice
+        if [[ "$seed_choice" =~ ^[Nn]$ ]]; then
+            SEED_BEST_PRACTICES="false"
+        else
+            SEED_BEST_PRACTICES="true"
+        fi
+        echo ""
+    fi
+
+    # Jira Cloud Integration (PLAN-004 Phase 2)
+    if [[ -z "$JIRA_SYNC_ENABLED" ]]; then
+        echo "🔗 Jira Cloud Integration (Optional)"
+        echo "   Syncs issues and comments to memory for semantic search"
+        echo "   Enables Claude to retrieve work context from Jira"
+        echo ""
+        read -p "   Enable Jira sync? [y/N]: " jira_choice
+
+        if [[ "$jira_choice" =~ ^[Yy]$ ]]; then
+            JIRA_SYNC_ENABLED="true"
+
+            # Collect credentials
+            echo ""
+            read -p "   Jira instance URL (e.g., https://company.atlassian.net): " jira_url
+            JIRA_INSTANCE_URL="$jira_url"
+
+            read -p "   Jira email: " jira_email
+            JIRA_EMAIL="$jira_email"
+
+            echo "   Generate API token: https://id.atlassian.com/manage-profile/security/api-tokens"
+            read -sp "   Jira API token (hidden): " jira_token
+            JIRA_API_TOKEN="$jira_token"
+            echo ""
+
+            # Strip trailing slash for consistent URL handling (matches JiraClient behavior)
+            JIRA_INSTANCE_URL="${JIRA_INSTANCE_URL%/}"
+
+            # Validate credentials via curl smoke test (BP-053: Two-Phase Validation)
+            # Full Python validation runs later in validate_external_services()
+            echo ""
+            log_info "Testing Jira connection..."
+
+            # Jira Cloud REST API v3 Basic Auth: base64(email:api_token)
+            local jira_auth
+            jira_auth=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64 | tr -d '\n')
+
+            local http_code
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Basic $jira_auth" \
+                -H "Content-Type: application/json" \
+                "${JIRA_INSTANCE_URL}/rest/api/3/myself" \
+                --connect-timeout 10 --max-time 15 2>/dev/null)
+
+            if [[ "$http_code" == "200" ]]; then
+                log_success "Jira connection verified (HTTP 200)"
+
+                # Auto-discover Jira projects (BUG-068: replaces manual key entry)
+                log_info "Fetching available Jira projects..."
+                local projects_json
+                projects_json=$(curl -s \
+                    -H "Authorization: Basic $jira_auth" \
+                    -H "Content-Type: application/json" \
+                    "${JIRA_INSTANCE_URL}/rest/api/3/project/search?maxResults=100" \
+                    --connect-timeout 10 --max-time 15 2>/dev/null) || projects_json=""
+
+                if [[ -n "$projects_json" ]]; then
+                    # Parse project keys and names using system python3
+                    local project_list
+                    project_list=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.stdin.read())
+    projects = data.get('values', data) if isinstance(data, dict) else data
+    if not isinstance(projects, list) or len(projects) == 0:
+        print('EMPTY')
+        sys.exit(0)
+    for i, p in enumerate(projects, 1):
+        print(f\"{i}. {p['key']}: {p.get('name', p['key'])}\")
+except Exception:
+    print('ERROR')
+" <<< "$projects_json" 2>/dev/null) || project_list="ERROR"
+
+                    if [[ "$project_list" != "EMPTY" && "$project_list" != "ERROR" && -n "$project_list" ]]; then
+                        echo ""
+                        echo "   Available projects on ${JIRA_INSTANCE_URL#https://}:"
+                        echo "$project_list" | while IFS= read -r line; do
+                            echo "     $line"
+                        done
+                        echo ""
+                        read -p "   Which projects to sync? (comma-separated numbers, or 'all'): " project_selection
+
+                        if [[ "$project_selection" == "all" ]]; then
+                            JIRA_PROJECTS=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+projects = data.get('values', data) if isinstance(data, dict) else data
+print(','.join(p['key'] for p in projects))
+" <<< "$projects_json" 2>/dev/null) || JIRA_PROJECTS=""
+                        else
+                            JIRA_PROJECTS=$(_PROJ_SEL="$project_selection" python3 -c "
+import json, sys, os
+data = json.loads(sys.stdin.read())
+projects = data.get('values', data) if isinstance(data, dict) else data
+sel_input = os.environ.get('_PROJ_SEL', '')
+selections = [int(s.strip()) for s in sel_input.split(',') if s.strip().isdigit()]
+keys = [projects[i-1]['key'] for i in selections if 0 < i <= len(projects)]
+print(','.join(keys))
+" <<< "$projects_json" 2>/dev/null) || JIRA_PROJECTS=""
+                        fi
+
+                        if [[ -n "$JIRA_PROJECTS" ]]; then
+                            log_success "Selected projects: $JIRA_PROJECTS"
+                        else
+                            log_error "No valid projects selected — Jira sync disabled"
+                            JIRA_SYNC_ENABLED="false"
+                        fi
+                    else
+                        log_warning "Could not fetch project list — enter keys manually"
+                        read -p "   Project keys (comma-separated): " jira_projects
+                        JIRA_PROJECTS="$jira_projects"
+                        if [[ -z "$JIRA_PROJECTS" ]]; then
+                            log_error "No projects entered — Jira sync disabled"
+                            JIRA_SYNC_ENABLED="false"
+                        fi
+                    fi
+                else
+                    log_warning "Could not fetch project list — enter keys manually"
+                    read -p "   Project keys (comma-separated): " jira_projects
+                    JIRA_PROJECTS="$jira_projects"
+                    if [[ -z "$JIRA_PROJECTS" ]]; then
+                        log_error "No projects entered — Jira sync disabled"
+                        JIRA_SYNC_ENABLED="false"
+                    fi
+                fi
+
+                # Prompt for initial sync
+                echo ""
+                echo "   Initial sync can take 5-10 minutes for large projects"
+                read -p "   Run initial sync now? [y/N]: " initial_sync
+                if [[ "$initial_sync" =~ ^[Yy]$ ]]; then
+                    JIRA_INITIAL_SYNC="true"
+                else
+                    JIRA_INITIAL_SYNC="false"
+                fi
+            else
+                log_error "Jira connection test failed (HTTP $http_code) - sync will be disabled"
+                log_info "Verify: URL, email, and API token at https://id.atlassian.com/manage-profile/security/api-tokens"
+                JIRA_SYNC_ENABLED="false"
+            fi
+        else
+            JIRA_SYNC_ENABLED="false"
+        fi
+        echo ""
+    fi
+
+    # GitHub Integration (PLAN-006 Phase 1a)
+    if [[ -z "$GITHUB_SYNC_ENABLED" ]]; then
+        echo "GitHub Integration (Optional)"
+        echo "   Syncs issues, PRs, commits, and code to memory for semantic search"
+        echo "   Enables Claude to retrieve development context from GitHub"
+        echo ""
+        read -p "   Enable GitHub sync? [y/N]: " github_choice
+
+        if [[ "$github_choice" =~ ^[Yy]$ ]]; then
+            GITHUB_SYNC_ENABLED="true"
+
+            # PAT guidance
+            echo ""
+            echo "   GitHub Personal Access Token (PAT) Setup:"
+            echo "   - Use FINE-GRAINED tokens (not classic): https://github.com/settings/tokens?type=beta"
+            echo "   - Minimum scopes: Contents (read), Issues (read), Pull Requests (read), Actions (read)"
+            echo "   - Set expiration (90 days recommended)"
+            echo ""
+            echo "   IMPORTANT: Enter the FULL token exactly as shown by GitHub."
+            echo "   Fine-grained tokens start with: github_pat_..."
+            echo "   Classic tokens start with: ghp_..."
+            echo "   Include the entire string including the prefix."
+            echo ""
+
+            read -sp "   GitHub PAT (hidden): " github_token
+            GITHUB_TOKEN="$github_token"
+            echo ""
+
+            # Validate PAT format
+            if [[ ! "$GITHUB_TOKEN" =~ ^(github_pat_|ghp_|gho_|ghs_|ghr_) ]]; then
+                log_warning "Token doesn't match known GitHub PAT formats (github_pat_*, ghp_*, etc.)"
+                log_warning "Make sure you entered the FULL token including the prefix"
+            fi
+
+            # Auto-detect repo from .git remote
+            local detected_repo=""
+            if [[ -d "$PROJECT_PATH/.git" ]]; then
+                detected_repo=$(cd "$PROJECT_PATH" && git remote get-url origin 2>/dev/null | sed -E 's|.*github\.com[:/](.+/[^.]+)(\.git)?$|\1|' || true)
+            fi
+
+            if [[ -n "$detected_repo" ]]; then
+                echo "   Detected repository: $detected_repo"
+                read -p "   Use this repo? [Y/n]: " use_detected
+                if [[ ! "$use_detected" =~ ^[Nn]$ ]]; then
+                    GITHUB_REPO="$detected_repo"
+                else
+                    echo ""
+                    read -p "   GitHub username or organization: " github_owner
+                    read -p "   Repository name: " github_name
+                    GITHUB_REPO="${github_owner}/${github_name}"
+                fi
+            else
+                echo ""
+                read -p "   GitHub username or organization: " github_owner
+                read -p "   Repository name: " github_name
+                GITHUB_REPO="${github_owner}/${github_name}"
+            fi
+
+            # BUG-242: Validate GITHUB_REPO format before calling API
+            validate_github_repo "$GITHUB_REPO" || GITHUB_SYNC_ENABLED="false"
+
+            # Validate PAT via GitHub API
+            echo ""
+            log_info "Testing GitHub connection..."
+
+            local http_code
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${GITHUB_REPO}" \
+                --connect-timeout 10 --max-time 15 2>/dev/null)
+
+            if [[ "$http_code" == "200" ]]; then
+                log_success "GitHub connection verified (HTTP 200) — repo: $GITHUB_REPO"
+
+                # Prompt for initial sync
+                echo ""
+                echo "   Initial sync can take 5-30 minutes depending on repo size"
+                read -p "   Run initial sync after install? [y/N]: " initial_sync
+                if [[ "$initial_sync" =~ ^[Yy]$ ]]; then
+                    GITHUB_INITIAL_SYNC="true"
+                else
+                    GITHUB_INITIAL_SYNC="false"
+                fi
+            else
+                log_error "GitHub connection test failed (HTTP $http_code)"
+                log_info "Verify: PAT scopes and repository access"
+                GITHUB_SYNC_ENABLED="false"
+            fi
+        else
+            GITHUB_SYNC_ENABLED="false"
+        fi
+        echo ""
+    fi
+
+    # Langfuse LLM Observability (optional)
+    if [[ -z "$LANGFUSE_ENABLED" ]]; then
+        echo ""
+        echo "📊 Langfuse LLM Observability (Optional)"
+        echo "   AI Memory runs on 16 GiB RAM (4 cores minimum)."
+        echo "   Adding the optional Langfuse LLM observability module increases"
+        echo "   the requirement to 32 GiB RAM (8 cores recommended)."
+        echo ""
+        read -r -p "   Enable Langfuse LLM observability? [y/N]: " langfuse_choice
+
+        if [[ "$langfuse_choice" =~ ^[Yy]$ ]]; then
+            LANGFUSE_ENABLED="true"
+        else
+            LANGFUSE_ENABLED="false"
+        fi
+    fi
+
+    # RAM check when Langfuse is selected
+    if [[ "$LANGFUSE_ENABLED" == "true" ]]; then
+        TOTAL_RAM_GIB=$(get_total_ram_gb) || TOTAL_RAM_GIB=0
+        [[ -z "$TOTAL_RAM_GIB" ]] && TOTAL_RAM_GIB=0
+        if [[ "$TOTAL_RAM_GIB" -lt 32 ]]; then
+            echo ""
+            log_warning "Langfuse recommends 32 GiB RAM. Detected: ${TOTAL_RAM_GIB} GiB total."
+            echo "   Langfuse may perform poorly or fail to start."
+            read -r -p "   Continue with Langfuse installation anyway? [y/N]: " ram_confirm
+            if [[ ! "$ram_confirm" =~ ^[Yy]$ ]]; then
+                log_info "Skipping Langfuse installation. Can be added later with: ./scripts/langfuse_setup.sh"
+                LANGFUSE_ENABLED="false"
+            fi
+        fi
+    fi
+
+    # Summary
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Installation Summary                                       │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│  Core Services (always installed):                          │"
+    echo "│    ✓ Qdrant vector database (port $QDRANT_PORT)                   │"
+    echo "│    ✓ Embedding service (port $EMBEDDING_PORT)                     │"
+    echo "│    ✓ Claude Code hooks (session_start, post_tool, stop)     │"
+    echo "│                                                             │"
+    if [[ "$INSTALL_MONITORING" == "true" ]]; then
+        echo "│  Optional Components:                                       │"
+        echo "│    ✓ Monitoring dashboard (Streamlit, Grafana, Prometheus)  │"
+    fi
+    if [[ "$SEED_BEST_PRACTICES" == "true" ]]; then
+        echo "│    ✓ Best practices patterns (Python, Docker, Git)          │"
+    fi
+    if [[ "$JIRA_SYNC_ENABLED" == "true" ]]; then
+        echo "│    ✓ Jira Cloud sync (${JIRA_PROJECTS})                     │"
+    fi
+    if [[ "$GITHUB_SYNC_ENABLED" == "true" ]]; then
+        echo "│    ✓ GitHub sync (${GITHUB_REPO})                     │"
+    fi
+    if [[ "$LANGFUSE_ENABLED" == "true" ]]; then
+        echo "│    ✓ Langfuse LLM Observability                            │"
+    fi
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+
+    read -p "Proceed with installation? [Y/n]: " proceed_choice
+    if [[ "$proceed_choice" =~ ^[Nn]$ ]]; then
+        echo ""
+        log_info "Installation cancelled by user"
+        exit 0
+    fi
+    echo ""
+}
+
+# Configure secrets storage backend (SPEC-011)
+configure_secrets_backend() {
+    # Skip if non-interactive mode
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        SECRETS_BACKEND="${SECRETS_BACKEND:-env-file}"
+        log_info "Non-interactive mode - using secrets backend: $SECRETS_BACKEND"
+        return 0
+    fi
+
+    echo ""
+    echo "=== Secrets Storage ==="
+    echo ""
+    echo "How would you like to store API keys and tokens?"
+    echo ""
+
+    # Check SOPS+age availability before presenting options
+    local sops_available=false
+    if command -v sops &>/dev/null && command -v age-keygen &>/dev/null; then
+        sops_available=true
+        echo "  [1] SOPS+age encryption (Recommended)"
+        echo "      Secrets encrypted in Git."
+    else
+        echo "  [1] SOPS+age encryption (NOT INSTALLED)"
+        echo "      Requires: sops, age — install with: brew install sops age"
+        echo "      Or: sudo apt install sops age"
+    fi
+    echo ""
+    echo "  [2] System keyring (OS-level encryption)"
+    echo "      Uses macOS Keychain / GNOME Keyring / Windows Credential Locker"
+    echo ""
+    echo "  [3] .env file (Minimum security)"
+    echo "      Plaintext on disk. NOT recommended for shared machines."
+    echo ""
+    read -r -p "Choose [1/2/3] (default: 3): " SECRETS_CHOICE
+
+    case "${SECRETS_CHOICE:-3}" in
+        1)
+            SECRETS_BACKEND="sops-age"
+            if [[ "$sops_available" == "true" ]]; then
+                log_info "sops and age found. Running setup..."
+                bash "$SCRIPT_DIR/setup-secrets.sh"
+            else
+                log_warning "sops and/or age not found."
+                echo "Install: brew install sops age  OR  sudo apt install sops age"
+                echo "Then run: ./scripts/setup-secrets.sh"
+                echo "Falling back to .env file for now."
+                SECRETS_BACKEND="env-file"
+            fi
+            ;;
+        2)
+            SECRETS_BACKEND="keyring"
+            if "$INSTALL_DIR/.venv/bin/pip" install keyring 2>/dev/null; then
+                log_success "keyring installed successfully"
+            else
+                log_warning "Failed to install keyring. Falling back to .env file."
+                SECRETS_BACKEND="env-file"
+            fi
+            ;;
+        3|*)
+            SECRETS_BACKEND="env-file"
+            log_warning "Using plaintext .env file. Consider upgrading to SOPS+age."
+            ;;
+    esac
+
+    # Store backend choice in .env
+    local docker_env="$INSTALL_DIR/docker/.env"
+    if grep -q "^AI_MEMORY_SECRETS_BACKEND=" "$docker_env" 2>/dev/null; then
+        sed -i.bak "s|^AI_MEMORY_SECRETS_BACKEND=.*|AI_MEMORY_SECRETS_BACKEND=$SECRETS_BACKEND|" "$docker_env" && rm -f "$docker_env.bak"
+    else
+        echo "" >> "$docker_env"
+        echo "# Secrets Backend (SPEC-011)" >> "$docker_env"
+        echo "AI_MEMORY_SECRETS_BACKEND=$SECRETS_BACKEND" >> "$docker_env"
+    fi
+    log_success "Secrets backend set to: $SECRETS_BACKEND"
+    echo ""
+}
+
+# Main orchestration function
+main() {
+    INSTALL_STARTED=true  # Enable cleanup handler
+
+    # Persistent install logging — captures ALL output to a log file
+    # Essential for diagnosing issues like P1 (container disappearance)
+    mkdir -p "$INSTALL_DIR/logs" 2>/dev/null || true
+    INSTALL_LOG="$INSTALL_DIR/logs/install-$(date +%Y%m%d-%H%M%S).log"
+    exec > >(tee -a "$INSTALL_LOG") 2>&1
+    log_info "Install log: $INSTALL_LOG"
+
+    echo ""
+    echo "========================================"
+    echo "  AI Memory Module Installer"
+    echo "========================================"
+    echo ""
+    echo "Target project: $PROJECT_PATH"
+    echo "Project name: $PROJECT_NAME"
+    echo "Shared installation: $INSTALL_DIR"
+    echo "Qdrant port: $QDRANT_PORT"
+    echo "Embedding port: $EMBEDDING_PORT"
+    echo ""
+
+    # NFR-I5: Idempotent installation - safe to run multiple times
+    # Now supports add-project mode for multi-project installations
+    # IMPORTANT: Must run BEFORE check_prerequisites to skip port checks in add-project mode
+    check_existing_installation
+
+    # Adjust step counter based on install mode
+    if [[ "$INSTALL_MODE" == "add-project" ]]; then
+        TOTAL_STEPS=2
+    elif [[ "${SKIP_DOCKER_CHECKS:-}" == "true" ]]; then
+        TOTAL_STEPS=6
+    fi
+
+    # Prompt for project name (allows custom group_id for Qdrant isolation)
+    configure_project_name
+
+    step "Prerequisites & Validation"
+    check_prerequisites
+    detect_platform
+
+    # Full install steps - create shared infrastructure
+    if [[ "$INSTALL_MODE" == "full" ]]; then
+        # Interactive configuration (unless non-interactive mode)
+        configure_options
+
+        step "Directory Structure"
+        create_directories
+        step "File Deployment"
+        copy_files
+        import_user_env
+        persist_user_choices_to_env
+        step "Python Environment"
+        install_python_dependencies
+        step "Environment Configuration"
+        migrate_existing_env_secrets
+        configure_environment
+        validate_external_services
+        configure_secrets_backend
+
+        # Skip Docker-related steps if SKIP_DOCKER_CHECKS is set (for CI without Docker)
+        if [[ "${SKIP_DOCKER_CHECKS:-}" == "true" ]]; then
+            log_info "Skipping Docker services (SKIP_DOCKER_CHECKS=true)"
+            copy_env_template
+        else
+            setup_langfuse_keys
+            step "Starting Docker Services"
+            start_services
+            wait_for_services
+            copy_env_template
+            step "Health Verification"
+            run_health_check
+            verify_embedding_readiness
+            seed_best_practices
+            run_initial_jira_sync
+            setup_jira_cron
+            # BUG-242: Validate GITHUB_REPO format (non-interactive path)
+            validate_github_repo "$GITHUB_REPO" || { log_warning "Disabling GitHub sync due to invalid GITHUB_REPO"; GITHUB_SYNC_ENABLED="false"; }
+            setup_github_indexes
+            run_initial_github_sync
+            setup_langfuse
+
+            # BUG-125: Drain queued events that failed during service startup
+            drain_pending_queue
+        fi
+    else
+        log_info "Skipping shared infrastructure setup (add-project mode)"
+        # BUG-241: Detect stale .env from prior project
+        # SOURCE_DIR not set in add-project mode (copy_files skipped), derive from SCRIPT_DIR
+        SOURCE_DIR="${SOURCE_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+        if [[ -f "$INSTALL_DIR/docker/.env" ]]; then
+            local installed_for
+            installed_for=$(grep '^# AIM_INSTALLED_FOR=' "$INSTALL_DIR/docker/.env" | cut -d= -f2- || true)
+            if [[ -n "$installed_for" && "$installed_for" != "$SOURCE_DIR" ]]; then
+                log_warning "Existing .env was configured for '$installed_for'"
+                log_warning "You are now installing for '$SOURCE_DIR'"
+                log_warning "Review GITHUB_REPO, AI_MEMORY_PROJECT_ID in ~/.ai-memory/docker/.env"
+            fi
+        fi
+        # BUG-028: Update shared scripts to ensure compatibility with this installer version
+        update_shared_scripts
+        # Verify services are running in add-project mode
+        verify_services_running
+        # Prompt for project-specific GitHub repo and Jira config
+        configure_project_sources
+    fi
+
+    # Project-level setup - runs for both modes
+    step "Project Configuration"
+    create_project_symlinks
+    configure_project_hooks
+    verify_project_hooks
+    setup_audit_directory
+
+    # Parzival session agent (optional, SPEC-015)
+    setup_parzival
+
+    # FEATURE-001: Multi-IDE support — detect and configure Gemini/Cursor/Codex
+    configure_multi_ide "$PROJECT_PATH" "$INSTALL_DIR" "$PROJECT_NAME" "${IDE_FLAG:-}" "${FORCE_IDE:-false}"
+
+    # BUG-243: Register project for GitHub sync — parity between interactive and non-interactive
+    if [[ "$INSTALL_MODE" == "add-project" && "$GITHUB_SYNC_ENABLED" == "true" && "${PROJECT_GITHUB_SKIP:-false}" == "true" ]]; then
+        # H-2: Option 3 path — register project with github.enabled=false so stale YAML is updated
+        register_project_sync "$PROJECT_NAME" "${PROJECT_GITHUB_REPO:-}" "$PROJECT_PATH" \
+            "${PROJECT_GITHUB_BRANCH:-main}" "${PROJECT_JIRA_ENABLED:-false}" "${PROJECT_JIRA_PROJECTS:-}" \
+            "" "false"
+        log_info "Registered project with github.enabled=false (GitHub sync skipped for this project)"
+    elif [[ "$INSTALL_MODE" == "add-project" && "$GITHUB_SYNC_ENABLED" == "true" && -n "${PROJECT_GITHUB_REPO:-}" ]]; then
+        # Add-project mode: use project-specific repo/Jira from configure_project_sources
+        # BUG-245: Pass per-project token (7th arg) if set by recovery menu or env var
+        register_project_sync "$PROJECT_NAME" "$PROJECT_GITHUB_REPO" "$PROJECT_PATH" \
+            "${PROJECT_GITHUB_BRANCH:-main}" "${PROJECT_JIRA_ENABLED:-false}" "${PROJECT_JIRA_PROJECTS:-}" \
+            "${PROJECT_GITHUB_TOKEN:-}"
+        # Restart github-sync container to pick up new project config
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "github-sync"; then
+            log_info "Restarting github-sync to pick up new project..."
+            docker restart "${CONTAINER_PREFIX}-github-sync" 2>/dev/null || true
+        fi
+    elif [[ "$GITHUB_SYNC_ENABLED" == "true" && -n "$GITHUB_REPO" ]]; then
+        # Full install mode: use global GITHUB_REPO
+        register_project_sync "$PROJECT_NAME" "$GITHUB_REPO" "$PROJECT_PATH" "${GITHUB_BRANCH:-main}"
+    fi
+
+    # Verify env split invariants post-install (BUG-277 doctor check)
+    if [[ "$INSTALL_MODE" == "full" ]]; then
+        if "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/verify_env_split.py" \
+                --install-dir "$INSTALL_DIR"; then
+            log_success "Env split verification passed"
+        else
+            log_error "Env split verification failed — secrets may not be in docker/.env.secrets"
+            log_info "Run: python $INSTALL_DIR/scripts/verify_env_split.py --install-dir $INSTALL_DIR"
+            exit 1
+        fi
+    fi
+
+    # Record project in manifest for cross-filesystem recovery discovery
+    record_installed_project
+
+    show_success_message
+}
+
+# Idempotency check - detect existing installation (NFR-I5)
+# Now supports both full install and add-project mode (TECH-DEBT-013)
+check_existing_installation() {
+    local existing=false
+    local services_running=false
+
+    # Check if shared installation directory exists with key files
+    if [[ -d "$INSTALL_DIR" && -f "$INSTALL_DIR/docker/docker-compose.yml" ]]; then
+        existing=true
+        log_info "Existing AI Memory installation detected at $INSTALL_DIR"
+    fi
+
+    # Check if Docker services are already running
+    if command -v docker &> /dev/null && docker info &> /dev/null; then
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "ai-memory\|qdrant"; then
+            services_running=true
+            log_info "AI Memory services are currently running"
+        fi
+    fi
+
+    # Handle existing installation - offer add-project mode
+    if [[ "$existing" = true ]]; then
+        echo ""
+        log_info "Found existing AI Memory installation"
+        echo ""
+        echo "Options:"
+        echo "  1. Add project to existing installation (recommended)"
+        echo "     - Reuses shared Docker services"
+        echo "     - Creates project-level hooks via symlinks"
+        echo "  2. Reinstall shared infrastructure (stop services, update files, restart)"
+        echo "  3. Abort installation"
+        echo ""
+
+        # Check for non-interactive mode
+        if [[ "${AI_MEMORY_ADD_PROJECT_MODE:-}" = "true" ]]; then
+            log_info "AI_MEMORY_ADD_PROJECT_MODE=true - using add-project mode"
+            INSTALL_MODE="add-project"
+            return 0
+        elif [[ "${AI_MEMORY_FORCE_REINSTALL:-}" = "true" ]]; then
+            log_info "AI_MEMORY_FORCE_REINSTALL=true - proceeding with full reinstall"
+            INSTALL_MODE="full"
+            handle_reinstall "$services_running"
+            return 0
+        fi
+
+        # Non-interactive fallback: default to add-project mode
+        if [[ "$NON_INTERACTIVE" == "true" ]]; then
+            log_info "Non-interactive mode - defaulting to add-project mode"
+            INSTALL_MODE="add-project"
+            return 0
+        fi
+
+        # Interactive prompt
+        read -r -p "Choose [1/2/3]: " choice
+        case "$choice" in
+            1)
+                log_info "Adding project to existing installation..."
+                INSTALL_MODE="add-project"
+                ;;
+            2)
+                log_info "Reinstalling shared infrastructure..."
+                INSTALL_MODE="full"
+                handle_reinstall "$services_running"
+                ;;
+            3|*)
+                log_info "Installation aborted by user"
+                exit 0
+                ;;
+        esac
+    else
+        # No existing installation - do full install
+        INSTALL_MODE="full"
+        log_info "No existing installation found - will perform full install"
+    fi
+}
+
+# Handle reinstallation - stop services, clean up if needed
+handle_reinstall() {
+    local services_running=$1
+
+    if [[ "$services_running" = true ]]; then
+        log_info "Stopping existing services..."
+        if [[ -f "$INSTALL_DIR/docker/docker-compose.yml" ]]; then
+            # TD-331: Read profile flags from existing docker/.env so profiled
+            # services (monitoring, github-sync) are also stopped on reinstall.
+            # Safe default: no flags if .env is missing or vars are unset.
+            local reinstall_env="$INSTALL_DIR/docker/.env"
+            local reinstall_profile_args=()
+            if [[ -f "$reinstall_env" ]]; then
+                local _monitoring_enabled _github_sync_enabled
+                _monitoring_enabled=$(grep '^MONITORING_ENABLED=' "$reinstall_env" | head -1 | cut -d= -f2- | tr -d '"'"'" 2>/dev/null || true)
+                _github_sync_enabled=$(grep '^GITHUB_SYNC_ENABLED=' "$reinstall_env" | head -1 | cut -d= -f2- | tr -d '"'"'" 2>/dev/null || true)
+                if [[ "$_monitoring_enabled" == "true" ]]; then
+                    reinstall_profile_args+=(--profile monitoring)
+                fi
+                if [[ "$_github_sync_enabled" == "true" ]]; then
+                    reinstall_profile_args+=(--profile github)
+                fi
+            fi
+            # BUG-279: pass .env + .env.secrets via --env-file flags so secret
+            # interpolations resolve during reinstall down. Inline (not _compose)
+            # because this runs in a subshell before start_services defines it.
+            (cd "$INSTALL_DIR/docker" && {
+                _envflags=(--env-file .env)
+                [[ -f .env.secrets ]] && _envflags+=(--env-file .env.secrets)
+                docker compose "${_envflags[@]}" "${reinstall_profile_args[@]}" down 2>/dev/null
+            }) || true
+        fi
+        log_success "Services stopped"
+    fi
+
+    log_info "Proceeding with reinstallation..."
+}
+
+# BUG-244: Shared file sync function for both fresh install (copy_files) and
+# Option 1 add-project (update_shared_scripts). Previously these two paths diverged:
+# copy_files() synced 13+ directories but update_shared_scripts() only synced 4,
+# causing Option 1 upgrades to miss monitoring/, templates/, evaluators/, .claude/skills/,
+# CHANGELOG.md, docs/, and others — leading to crashes from stale requirements.txt.
+sync_installed_files() {
+    local src_dir="$1"
+    local dst_dir="$2"
+
+    log_debug "Syncing installed files from $src_dir to $dst_dir..."
+
+    # src/memory/ — core Python modules (critical)
+    log_debug "Copying Python memory modules..."
+    mkdir -p "$dst_dir/src/memory"
+    cp -r "$src_dir/src/memory/"* "$dst_dir/src/memory/" || { log_error "Failed to copy Python memory modules"; exit 1; }
+
+    # scripts/ — installer, utilities, hooks (critical)
+    log_debug "Copying scripts..."
+    mkdir -p "$dst_dir/scripts"
+    mkdir -p "$dst_dir/scripts/memory"
+    cp -r "$src_dir/scripts/"* "$dst_dir/scripts/" || { log_error "Failed to copy scripts"; exit 1; }
+    # Remove __pycache__ directories from target (clean install)
+    find "$dst_dir/scripts" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+    # monitoring/ — monitoring module (optional)
+    if [[ -d "$src_dir/monitoring" ]]; then
+        log_debug "Copying monitoring module..."
+        mkdir -p "$dst_dir/monitoring"
+        cp -r "$src_dir/monitoring/"* "$dst_dir/monitoring/"
+    fi
+
+    # .claude/hooks/ — Claude Code hooks (critical)
+    log_debug "Copying Claude Code hooks..."
+    mkdir -p "$dst_dir/.claude/hooks/scripts"
+    cp -r "$src_dir/.claude/hooks/"* "$dst_dir/.claude/hooks/" || { log_error "Failed to copy Claude Code hooks"; exit 1; }
+
+    # .claude/skills/ — Claude Code skills (optional)
+    if [[ -d "$src_dir/.claude/skills" ]]; then
+        log_debug "Copying Claude Code skills..."
+        cp -r "$src_dir/.claude/skills/"* "$dst_dir/.claude/skills/" 2>/dev/null || true
+    fi
+
+    # .claude/agents/ — Claude Code agents (optional)
+    if [[ -d "$src_dir/.claude/agents" ]]; then
+        log_debug "Copying Claude Code agents..."
+        cp -r "$src_dir/.claude/agents/"* "$dst_dir/.claude/agents/" 2>/dev/null || true
+    fi
+
+    # .claude/commands/ — Claude Code commands (optional, BUG-107)
+    if [[ -d "$src_dir/.claude/commands" ]]; then
+        log_debug "Copying Claude Code commands..."
+        mkdir -p "$dst_dir/.claude/commands"
+        cp -r "$src_dir/.claude/commands/"* "$dst_dir/.claude/commands/" 2>/dev/null || true
+    fi
+
+    # _ai-memory/ — deployable package (full replace: removes stale files not in source)
+    # INSTALL_DIR/_ai-memory/ is an installer-owned package cache — no user data lives here
+    if [[ -d "$src_dir/_ai-memory" ]]; then
+        log_debug "Copying _ai-memory/ deployable package..."
+        rm -rf "$dst_dir/_ai-memory"
+        mkdir -p "$dst_dir/_ai-memory"
+        if compgen -G "$src_dir/_ai-memory/*" > /dev/null 2>&1; then
+            cp -r "$src_dir/_ai-memory/"* "$dst_dir/_ai-memory/"
+            find "$dst_dir/_ai-memory" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+            log_debug "Synced _ai-memory/ package"
+        fi
+    fi
+
+    # templates/ — best practices seeding templates (optional)
+    if [[ -d "$src_dir/templates" ]]; then
+        log_debug "Copying templates..."
+        mkdir -p "$dst_dir/templates"
+        cp -r "$src_dir/templates/"* "$dst_dir/templates/"
+    fi
+
+    # evaluator_config.yaml + evaluators/ — evaluator definitions (optional, S-16.5, DEC-110)
+    # Required by evaluator-scheduler container at runtime
+    log_debug "Copying evaluator configuration..."
+    if [[ -f "$src_dir/evaluator_config.yaml" ]]; then
+        cp "$src_dir/evaluator_config.yaml" "$dst_dir/evaluator_config.yaml" || log_warning "Failed to copy evaluator_config.yaml"
+    fi
+    if [[ -d "$src_dir/evaluators" ]]; then
+        mkdir -p "$dst_dir/evaluators"
+        cp -r "$src_dir/evaluators/"* "$dst_dir/evaluators/" 2>/dev/null || log_warning "Failed to copy evaluators directory"
+    fi
+
+    # CHANGELOG.md — release notes reference (optional, TD-170)
+    if [[ -f "$src_dir/CHANGELOG.md" ]]; then
+        cp "$src_dir/CHANGELOG.md" "$dst_dir/" || log_warning "Failed to copy CHANGELOG.md"
+    fi
+
+    # docs/ — documentation (optional)
+    if [[ -d "$src_dir/docs" ]]; then
+        log_debug "Copying documentation..."
+        mkdir -p "$dst_dir/docs"
+        cp -r "$src_dir/docs/"* "$dst_dir/docs/"
+    fi
+
+    # Make scripts executable (both .py and .sh files)
+    log_debug "Making scripts executable..."
+    chmod +x "$dst_dir/scripts/"*.{py,sh} 2>/dev/null || true
+    chmod +x "$dst_dir/.claude/hooks/scripts/"*.py 2>/dev/null || true
+    # F14/TD-240: chmod subdirectories missed by top-level glob
+    find "$dst_dir/scripts/memory" -name "*.py" -exec chmod +x {} + 2>/dev/null || true
+    find "$dst_dir/scripts/monitoring" -name "*.py" -exec chmod +x {} + 2>/dev/null || true
+
+    log_debug "File sync complete"
+}
+
+# Update shared scripts for add-project mode compatibility (BUG-028, BUG-034)
+# When adding a project to an existing installation, ensure the shared
+# scripts AND hook scripts are compatible with the installer version being used.
+update_shared_scripts() {
+    log_info "Updating shared scripts for compatibility..."
+
+    # Ensure critical directories exist before sync
+    mkdir -p "$INSTALL_DIR/src/memory"
+    mkdir -p "$INSTALL_DIR/scripts"
+    mkdir -p "$INSTALL_DIR/scripts/memory"
+    mkdir -p "$INSTALL_DIR/.claude/hooks/scripts"
+
+    # BUG-244: Use shared sync function for all non-Docker file syncing
+    # SOURCE_DIR is set by main() in the add-project branch (derived from SCRIPT_DIR) before this function is called
+    sync_installed_files "$SOURCE_DIR" "$INSTALL_DIR"
+
+    # BUG-034: Archive stale hooks not in source (unique to Option 1 add-project)
+    local hooks_source="$SOURCE_DIR/.claude/hooks/scripts"
+    local archived_count=0
+    if [[ -d "$hooks_source" ]]; then
+        # Build list of source hook names for stale detection
+        local source_hooks=()
+        for hook in "$hooks_source"/*.py; do
+            if [[ -f "$hook" ]]; then
+                source_hooks+=("$(basename "$hook")")
+            fi
+        done
+
+        # Archive stale hooks not in source (BUG-034 cleanup)
+        local hooks_dest="$INSTALL_DIR/.claude/hooks/scripts"
+        local archive_dir="$INSTALL_DIR/.claude/hooks/scripts/.archived"
+        for existing in "$hooks_dest"/*.py; do
+            if [[ -f "$existing" ]]; then
+                local basename_hook
+                basename_hook=$(basename "$existing")
+                local is_source=false
+                for src in "${source_hooks[@]}"; do
+                    if [[ "$src" == "$basename_hook" ]]; then
+                        is_source=true
+                        break
+                    fi
+                done
+                if [[ "$is_source" == false ]]; then
+                    mkdir -p "$archive_dir"
+                    mv "$existing" "$archive_dir/"
+                    archived_count=$((archived_count + 1))
+                fi
+            fi
+        done
+    fi
+    if [[ $archived_count -gt 0 ]]; then
+        log_info "Archived $archived_count stale hook scripts to .archived/"
+    fi
+
+    # Sync Docker files (Dockerfiles, main.py, requirements.txt, docker-compose.yml, etc.)
+    # In add-project mode, copy_files() is skipped — Docker changes must be synced here
+    local docker_source="$SOURCE_DIR/docker"
+    if [[ -d "$docker_source" ]]; then
+        mkdir -p "$INSTALL_DIR/docker"
+
+        # TD-198: Back up existing docker/.env BEFORE bulk copy to prevent overwrite
+        local _env_backup=""
+        if [[ -f "$INSTALL_DIR/docker/.env" ]]; then
+            _env_backup="$(mktemp)"
+            cp -p "$INSTALL_DIR/docker/.env" "$_env_backup"
+            log_debug "Backed up existing docker/.env before bulk copy"
+        fi
+
+        log_info "Syncing Docker files to installation..."
+        cp -r "$docker_source/"* "$INSTALL_DIR/docker/" || { log_error "Failed to copy docker files"; return 1; }
+        # BUG-227: Update .env.example on Option 1 (add-project) installs
+        if [[ -f "$docker_source/.env.example" ]]; then
+            cp "$docker_source/.env.example" "$INSTALL_DIR/docker/.env.example" \
+                || log_warning "Failed to copy docker/.env.example (non-fatal)"
+            log_debug "Updated docker/.env.example"
+        else
+            log_warning "docker/.env.example not found in source — skipping"
+        fi
+        find "$INSTALL_DIR/docker" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+        # Restore docker/.env if it was backed up (bulk cp may have overwritten with template)
+        if [[ -n "$_env_backup" ]]; then
+            cp -p "$_env_backup" "$INSTALL_DIR/docker/.env"
+            rm -f "$_env_backup"
+            log_debug "Restored docker/.env after bulk copy"
+        fi
+
+        # Merge new keys from .env.example into restored .env (TD-198)
+        if [[ -f "$docker_source/.env.example" ]] && [[ -f "$INSTALL_DIR/docker/.env" ]]; then
+            local _new_keys=0
+            # Note: commented-out keys in .env.example are intentionally skipped —
+            # they are optional settings the user adds manually when needed.
+            while IFS= read -r line; do
+                # Skip comments and empty lines
+                [[ "$line" =~ ^[[:space:]]*# ]] && continue
+                [[ -z "${line// }" ]] && continue
+                # Extract key (everything before first =)
+                key="${line%%=*}"
+                [[ -z "$key" ]] && continue
+                # Only append if key doesn't already exist in installed .env
+                if ! grep -q "^${key}=" "$INSTALL_DIR/docker/.env"; then
+                    echo "$line" >> "$INSTALL_DIR/docker/.env"
+                    _new_keys=$((_new_keys + 1))
+                fi
+            done < "$docker_source/.env.example"
+            if [[ $_new_keys -gt 0 ]]; then
+                log_debug "Merged $_new_keys new key(s) from .env.example into docker/.env"
+            fi
+        fi
+
+        log_debug "Synced Docker files to INSTALL_DIR"
+    fi
+
+    # Sync requirements.txt and pyproject.toml (needed by Docker builds)
+    # Always overwrite — new dependencies (e.g. croniter) must reach containers
+    if [[ -f "$SOURCE_DIR/requirements.txt" ]]; then
+        cp "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/requirements.txt" || log_warning "Failed to copy requirements.txt"
+        log_debug "Updated requirements.txt"
+    fi
+    if [[ -f "$SOURCE_DIR/pyproject.toml" ]]; then
+        cp "$SOURCE_DIR/pyproject.toml" "$INSTALL_DIR/pyproject.toml" || log_warning "Failed to copy pyproject.toml"
+        log_debug "Updated pyproject.toml"
+    fi
+
+    # DEPRECATED: import_user_env() is now a no-op (warns if legacy root .env exists)
+    # New env vars must be added manually to $INSTALL_DIR/docker/.env
+    import_user_env
+
+    # Re-install Python deps in venv to pick up new/updated packages (e.g. croniter)
+    # Option 1 skips install_python_dependencies() — this ensures the venv stays current
+    local venv_dir="$INSTALL_DIR/.venv"
+    if [[ -d "$venv_dir" ]] && [[ -f "$INSTALL_DIR/pyproject.toml" ]]; then
+        log_info "Updating Python dependencies in venv..."
+        if "$venv_dir/bin/pip" install --retries 3 --timeout 120 -q -e "${INSTALL_DIR}[dev]" 2>/dev/null; then
+            log_success "Python dependencies updated"
+        else
+            log_warning "Python dependency update failed — run manually: $venv_dir/bin/pip install -e \"${INSTALL_DIR}[dev]\""
+        fi
+    fi
+
+    log_success "Updated shared scripts and files"
+}
+
+# Prerequisite checking (AC 7.1.3)
+check_prerequisites() {
+    log_info "Checking prerequisites..."
+
+    local failed=false
+
+    # SKIP_DOCKER_CHECKS: For CI environments without Docker (e.g., macOS GitHub Actions)
+    if [[ "${SKIP_DOCKER_CHECKS:-}" == "true" ]]; then
+        log_debug "Skipping Docker checks (SKIP_DOCKER_CHECKS=true)"
+    else
+        # Check Docker installation
+        if ! command -v docker &> /dev/null; then
+            log_error "Docker is not installed."
+            echo ""
+            echo "Please install Docker first:"
+            echo "  Ubuntu/Debian: sudo apt install docker.io docker-compose-plugin"
+            echo "  macOS: brew install --cask docker"
+            echo "  Windows: Install Docker Desktop with WSL2 backend"
+            echo ""
+            echo "For more information: https://docs.docker.com/engine/install/"
+            failed=true
+        fi
+
+        # Check Docker daemon is running
+        if command -v docker &> /dev/null && ! docker info &> /dev/null; then
+            show_docker_not_running_error
+        fi
+
+        # Check Docker Compose V2 (REQUIRED for condition: service_healthy)
+        if ! docker compose version &> /dev/null; then
+            log_error "Docker Compose V2 is not available."
+            echo ""
+            echo "Please install Docker Compose V2:"
+            echo "  Ubuntu/Debian: sudo apt install docker-compose-plugin"
+            echo "  macOS: Included with Docker Desktop"
+            echo ""
+            echo "NOTE: V2 is REQUIRED for proper health check support (condition: service_healthy)"
+            echo "      V1 (docker-compose) is not supported."
+            echo ""
+            echo "For more information: https://docs.docker.com/compose/install/"
+            failed=true
+        fi
+    fi
+
+    # Check curl (REQUIRED for health checks and API validation)
+    if ! command -v curl &> /dev/null; then
+        log_error "curl is not installed (required for health checks and API validation)"
+        echo ""
+        echo "Please install curl:"
+        echo "  Ubuntu/Debian: sudo apt install curl"
+        echo "  macOS: brew install curl"
+        echo ""
+        failed=true
+    fi
+
+    # Check Python 3.10+ (REQUIRED for async support and improved type hints)
+    if ! command -v python3 &> /dev/null; then
+        log_error "Python 3 is not installed."
+        echo ""
+        echo "Please install Python 3.10 or higher:"
+        echo "  Ubuntu/Debian: sudo apt install python3"
+        echo "  macOS: brew install python@3.10"
+        echo ""
+        failed=true
+    else
+        # Extract Python version using python itself (more reliable than bc)
+        PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+
+        # Compare version (requires Python 3.10+)
+        if python3 -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)" &> /dev/null; then
+            log_info "Python $PYTHON_VERSION detected"
+        else
+            show_python_version_error "$PYTHON_VERSION"
+        fi
+    fi
+
+    # Check Claude Code CLI (WARNING not ERROR - hooks won't work until installed)
+    if ! command -v claude &> /dev/null; then
+        log_warning "Claude Code CLI not found."
+        log_warning "Hooks will be configured but won't work until Claude Code is installed."
+        log_warning "Install from: https://claude.ai/code"
+    fi
+
+    # Check port availability using ss (primary) or lsof (fallback)
+    # Per 2025/2026 best practices: ss is faster and more universally available
+    # SKIP in add-project mode - ports are expected to be in use by existing services
+    # SKIP when SKIP_DOCKER_CHECKS is set (no services to bind ports)
+    if [[ "${SKIP_DOCKER_CHECKS:-}" == "true" ]]; then
+        log_debug "Skipping port checks (SKIP_DOCKER_CHECKS=true)"
+    elif [[ "${INSTALL_MODE:-full}" == "full" ]]; then
+        check_port_available "$QDRANT_PORT" "Qdrant"
+        check_port_available "$EMBEDDING_PORT" "Embedding Service"
+        check_port_available "$MONITORING_PORT" "Monitoring API"
+        check_port_available "$STREAMLIT_PORT" "Streamlit Dashboard"
+    else
+        log_debug "Skipping port checks (add-project mode - reusing existing services)"
+    fi
+
+    # Check disk space (requires ~10GB: Qdrant 1GB, Nomic model 7GB, Docker images 2GB)
+    check_disk_space
+
+    # Fail immediately if any prerequisite missing (NO FALLBACKS as requested)
+    if [ "$failed" = true ]; then
+        log_error "Prerequisites not met. Aborting installation."
+        echo ""
+        echo "NO FALLBACK: This installer follows strict fail-fast principles."
+        echo "You must resolve all prerequisite issues before proceeding."
+        exit 1
+    fi
+
+    log_success "All prerequisites satisfied"
+}
+
+# Port availability check using ss (primary) or lsof (fallback) - 2026 best practice
+# Per https://serveravatar.com/netstat-ss-and-lsof/ - ss is faster and more universally available
+check_port_available() {
+    local port=$1
+    local service=$2
+    local port_in_use=false
+
+    # Primary: Use ss (faster, more universally available per 2025/2026 best practices)
+    if command -v ss &> /dev/null; then
+        if ss -tulpn 2>/dev/null | grep -q ":${port} "; then
+            port_in_use=true
+        fi
+    # Fallback: Use lsof if ss not available
+    elif command -v lsof &> /dev/null; then
+        if lsof -i :"$port" &> /dev/null; then
+            port_in_use=true
+        fi
+    else
+        log_warning "Neither ss nor lsof available - skipping port $port check"
+        return 0
+    fi
+
+    if [ "$port_in_use" = true ]; then
+        show_port_conflict_error "$port" "$service"
+    fi
+}
+
+# Disk space check - requires at least 5GB free (AC 7.1.8)
+# Full installation needs: Qdrant ~1GB, Nomic Embed Code ~7GB, Docker images ~2GB
+check_disk_space() {
+    local required_gb=5
+    local install_path="${INSTALL_DIR:-$HOME}"
+
+    # Use parent directory if INSTALL_DIR doesn't exist yet
+    if [[ ! -d "$install_path" ]]; then
+        install_path="$(dirname "$install_path")"
+    fi
+
+    # Get available space in GB (portable across Linux/macOS)
+    local available_kb
+    available_kb=$(df -k "$install_path" 2>/dev/null | tail -1 | awk '{print $4}')
+
+    if [[ -z "$available_kb" ]]; then
+        log_warning "Could not determine disk space - proceeding anyway"
+        return 0
+    fi
+
+    # Convert KB to GB (integer division)
+    local available_gb=$((available_kb / 1024 / 1024))
+
+    if [[ $available_gb -lt $required_gb ]]; then
+        show_disk_space_error
+    else
+        log_info "Disk space: ${available_gb}GB available (${required_gb}GB required)"
+    fi
+}
+
+# Platform detection (AC 7.1.4)
+detect_platform() {
+    log_debug "Detecting platform..."
+
+    PLATFORM="unknown"
+    ARCH=$(uname -m)
+
+    case "$(uname -s)" in
+        Linux*)
+            # Check for WSL2 by examining /proc/version
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                PLATFORM="wsl"
+                log_info "Detected: WSL2 on Windows ($ARCH)"
+            else
+                PLATFORM="linux"
+                log_info "Detected: Linux ($ARCH)"
+            fi
+            ;;
+        Darwin*)
+            PLATFORM="macos"
+            if [[ "$ARCH" == "arm64" ]]; then
+                log_info "Detected: macOS (Apple Silicon)"
+            else
+                log_info "Detected: macOS (Intel)"
+            fi
+            ;;
+        *)
+            log_error "Unsupported platform: $(uname -s)"
+            echo ""
+            echo "Supported platforms:"
+            echo "  - Linux (x86_64, arm64)"
+            echo "  - macOS (Intel, Apple Silicon)"
+            echo "  - WSL2 on Windows"
+            echo ""
+            echo "NO FALLBACK: This installer does not support $(uname -s)."
+            exit 1
+            ;;
+    esac
+
+    # Export for use in other functions
+    export PLATFORM ARCH
+}
+
+# Directory structure creation (AC 7.1.5)
+create_directories() {
+    log_info "Creating directory structure..."
+
+    # Skip confirmation in non-interactive mode
+    if [[ "$NON_INTERACTIVE" != "true" ]]; then
+        echo ""
+        echo "The installer will create the following directories:"
+        echo "  📁 $INSTALL_DIR/"
+        echo "     ├── docker/              (Docker Compose configs)"
+        echo "     ├── src/memory/          (Python memory modules)"
+        echo "     ├── scripts/             (Management scripts)"
+        echo "     ├── .claude/hooks/scripts/ (Hook implementations)"
+        echo "     ├── .locks/              (Process lock files)"
+        echo "     └── logs/                (Application logs)"
+        echo ""
+        echo "  📁 \$INSTALL_DIR/queue/    (Private queue, chmod 700)"
+        echo ""
+        read -p "Proceed with directory creation? [Y/n]: " confirm
+        if [[ "$confirm" =~ ^[Nn]$ ]]; then
+            echo ""
+            log_info "Installation cancelled by user"
+            exit 0
+        fi
+        echo ""
+    fi
+
+    # Create main installation directory and subdirectories
+    # BUG-281: pre-create config/projects.d + github-state/logs so the
+    # github-sync container's volume mounts find existing parzival-owned dirs
+    # instead of triggering Docker-daemon auto-create (which runs as root and
+    # leaves host paths root-owned, locking out subsequent install.sh writes
+    # from register_project_sync).
+    mkdir -p "$INSTALL_DIR"/{docker,src/memory,scripts,.claude/hooks/scripts,.claude/skills,.claude/agents,.claude/commands,logs,queue,.locks,trace_buffer,_ai-memory,config/projects.d,github-state/logs}
+
+    # Create queue directory with restricted permissions (security best practice 2026)
+    # Queue is shared across all projects - single classifier worker processes all
+    chmod 700 "$INSTALL_DIR/queue"  # Private queue directory (already created above)
+
+    log_success "Directory structure created at $INSTALL_DIR"
+    log_info "Private queue directory: $INSTALL_DIR/queue (chmod 700)"
+}
+
+# Python dependency installation (BUG-054)
+# Installs Python dependencies using pip, handling venv detection and PEP 668 compliance
+install_python_dependencies() {
+    log_info "Installing Python dependencies..."
+
+    # Determine source directory for pyproject.toml
+    local source_dir
+    if [[ -f "$SCRIPT_DIR/../pyproject.toml" ]]; then
+        source_dir="$(cd "$SCRIPT_DIR/.." && pwd)"
+    elif [[ -f "./pyproject.toml" ]]; then
+        source_dir="$(pwd)"
+    else
+        log_warning "pyproject.toml not found - skipping Python dependencies"
+        log_info "You can install manually later: pip install -e \".[dev]\""
+        return 0
+    fi
+
+    # Copy pyproject.toml and requirements.txt to install directory
+    # Always overwrite — updated deps (e.g. croniter) must reach Docker builds
+    if [[ -f "$source_dir/pyproject.toml" ]]; then
+        cp "$source_dir/pyproject.toml" "$INSTALL_DIR/"
+        log_debug "Copied pyproject.toml to $INSTALL_DIR"
+    fi
+    if [[ -f "$source_dir/requirements.txt" ]]; then
+        cp "$source_dir/requirements.txt" "$INSTALL_DIR/"
+        log_debug "Copied requirements.txt to $INSTALL_DIR"
+    fi
+
+    # ============================================
+    # Always create venv at INSTALL_DIR/.venv
+    # (TECH-DEBT-135: hooks require this path)
+    # ============================================
+    local venv_dir="$INSTALL_DIR/.venv"
+
+    # Check for existing user venv (informational only)
+    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+        log_debug "User venv detected at $VIRTUAL_ENV (will create isolated venv for hooks)"
+    fi
+
+    # Create or reuse installation venv
+    if [[ -d "$venv_dir" ]]; then
+        log_debug "Using existing venv at $venv_dir"
+    else
+        log_info "Creating virtual environment at $venv_dir..."
+        if ! python3 -m venv "$venv_dir"; then
+            log_warning "Failed to create virtual environment"
+            log_warning "Python dependencies NOT installed"
+            log_info "To install manually:"
+            log_info "  python3 -m venv $venv_dir"
+            log_info "  source $venv_dir/bin/activate"
+            log_info "  pip install -e \"${INSTALL_DIR}[dev]\""
+            return 0  # Don't fail install
+        fi
+        log_success "Virtual environment created"
+    fi
+
+    # Install in the installation venv (not user's venv)
+    log_info "Installing with pip install -e \".[dev]\"..."
+    if "$venv_dir/bin/pip" install --retries 3 --timeout 120 -e "${INSTALL_DIR}[dev]"; then
+        log_success "Python dependencies installed successfully"
+        log_info "Hooks will use: $venv_dir/bin/python"
+    fi
+
+    # Download SpaCy NER model (SPEC-009 Layer 3 PII detection)
+    log_info "Downloading SpaCy en_core_web_sm model..."
+    if "$venv_dir/bin/python" -m spacy download en_core_web_sm; then
+        log_success "SpaCy NER model ready"
+    else
+        log_warning "SpaCy model download failed — Layer 3 NER will fall back to L1+L2"
+    fi
+
+    # ============================================
+    # Venv Verification (TECH-DEBT-136)
+    # ============================================
+    echo ""
+    log_debug "Verifying venv installation..."
+
+    VENV_PYTHON="$venv_dir/bin/python"
+
+    # Check venv Python exists
+    if [ ! -f "$VENV_PYTHON" ]; then
+        log_error "Venv Python not found at $VENV_PYTHON"
+        log_error "Venv creation failed. Please check permissions and disk space."
+        exit 1
+    fi
+
+    # Verify critical packages are importable
+    log_debug "Checking critical dependencies..."
+
+    CRITICAL_PACKAGES=(
+        "qdrant_client:Qdrant client for memory storage"
+        "prometheus_client:Prometheus metrics"
+        "httpx:HTTP client for embedding service"
+        "pydantic:Configuration validation"
+        "structlog:Logging"
+        "tiktoken:Token counting for chunking"
+        "anthropic:Claude API client"
+        "langfuse:Observability tracing"
+        "numpy:Embedding operations"
+    )
+
+    FAILED_PACKAGES=()
+
+    for pkg_info in "${CRITICAL_PACKAGES[@]}"; do
+        pkg_name="${pkg_info%%:*}"
+        pkg_desc="${pkg_info##*:}"
+
+        if ! "$VENV_PYTHON" -c "import $pkg_name" 2>/dev/null; then
+            echo "  ✗ $pkg_name ($pkg_desc) - FAILED"
+            FAILED_PACKAGES+=("$pkg_name")
+        else
+            echo "  ✓ $pkg_name"
+        fi
+    done
+
+    if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+        echo ""
+        log_error "Critical packages failed to import: ${FAILED_PACKAGES[*]}"
+        log_error "Installation cannot continue. Please check:"
+        echo "  1. Network connectivity (packages may not have downloaded)"
+        echo "  2. Disk space"
+        echo "  3. Python version compatibility"
+        exit 1
+    fi
+
+    # Check optional packages (warn but don't fail)
+    log_debug "Checking optional dependencies..."
+
+    OPTIONAL_PACKAGES=(
+        "tree_sitter:AST-based code chunking"
+        "tree_sitter_python:Python code parsing"
+        "tree_sitter_javascript:JavaScript code parsing"
+        "tree_sitter_typescript:TypeScript code parsing"
+        "tree_sitter_go:Go code parsing"
+        "tree_sitter_rust:Rust code parsing"
+        "spacy:NER-based PII detection (Layer 3)"
+    )
+
+    for pkg_info in "${OPTIONAL_PACKAGES[@]}"; do
+        pkg_name="${pkg_info%%:*}"
+        pkg_desc="${pkg_info##*:}"
+
+        if ! "$VENV_PYTHON" -c "import $pkg_name" 2>/dev/null; then
+            echo "  ⚠ $pkg_name ($pkg_desc) - Not available (optional feature disabled)"
+        else
+            echo "  ✓ $pkg_name"
+        fi
+    done
+
+    log_success "Venv verification passed. All critical packages available."
+
+    return 0  # Always return success - don't fail entire install
+}
+
+# File copying (AC 7.1.6)
+copy_files() {
+    log_info "Copying files..."
+
+    # Determine source directory (script location or current directory)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # Try script directory first (for installed scripts)
+    if [[ -f "$SCRIPT_DIR/../docker/docker-compose.yml" ]]; then
+        SOURCE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+        log_debug "Using source directory: $SOURCE_DIR"
+    # Fall back to current directory (for in-repo execution)
+    elif [[ -f "./docker/docker-compose.yml" ]]; then
+        SOURCE_DIR="$(pwd)"
+        log_debug "Using current directory as source: $SOURCE_DIR"
+    else
+        log_error "Cannot find source files (docker-compose.yml)."
+        echo ""
+        echo "Expected structure:"
+        echo "  ./docker/docker-compose.yml"
+        echo "  ./src/memory/*.py"
+        echo "  ./scripts/*.sh"
+        echo "  ./.claude/hooks/scripts/*.py"
+        echo ""
+        echo "Run from repository root or ensure install.sh is in scripts/ directory."
+        exit 1
+    fi
+
+    # Copy core files (preserve directory structure)
+    # TD-198: Back up existing docker/.env BEFORE bulk copy to prevent overwrite
+    local _env_backup=""
+    if [[ -f "$INSTALL_DIR/docker/.env" ]]; then
+        _env_backup="$(mktemp)"
+        cp -p "$INSTALL_DIR/docker/.env" "$_env_backup"
+        log_debug "Backed up existing docker/.env before bulk copy"
+    fi
+
+    log_debug "Copying docker configuration..."
+    cp -r "$SOURCE_DIR/docker/"* "$INSTALL_DIR/docker/" || { log_error "Failed to copy docker files"; exit 1; }
+
+    # Restore docker/.env if it was backed up (bulk cp may have overwritten with template)
+    if [[ -n "$_env_backup" ]]; then
+        cp -p "$_env_backup" "$INSTALL_DIR/docker/.env"
+        rm -f "$_env_backup"
+        log_debug "Restored docker/.env after bulk copy"
+    fi
+
+    # BUG-282 (sibling of BUG-040): Explicitly copy docker/.env from source if
+    # the install doesn't yet have one. The bulk `cp -r .../docker/*` above
+    # does NOT copy dotfiles (shell glob skips files starting with `.`), so
+    # without this, fresh installs whose source repo has a customized
+    # docker/.env (typical for users who edited their clone's .env before
+    # running the installer) silently fall back to the .env.example template
+    # in the merge ELSE branch below — destroying user customizations for
+    # opt-in keys (GITHUB_CODE_BLOB_INCLUDE, DECAY_*, FRESHNESS_PENALTY_*,
+    # INJECTION_* thresholds, etc.) that ship as commented in the template.
+    if [[ -f "$SOURCE_DIR/docker/.env" && ! -f "$INSTALL_DIR/docker/.env" ]]; then
+        cp "$SOURCE_DIR/docker/.env" "$INSTALL_DIR/docker/.env"
+        log_debug "Copied source docker/.env to install dir (dotfile glob workaround)"
+    fi
+
+    # BUG-040: Explicitly copy dotfiles - glob .* matches . and .. causing failures
+    # Deploy .env: merge strategy preserves user customizations (TD-198)
+    if [[ -f "$SOURCE_DIR/docker/.env.example" ]]; then
+        cp "$SOURCE_DIR/docker/.env.example" "$INSTALL_DIR/docker/.env.example"
+        if [[ -f "$INSTALL_DIR/docker/.env" ]]; then
+            # Merge: add any new keys from .env.example that don't exist in installed .env
+            while IFS= read -r line; do
+                # Skip comments and empty lines
+                [[ "$line" =~ ^[[:space:]]*# ]] && continue
+                [[ -z "${line// }" ]] && continue
+                # Extract key (everything before first =)
+                key="${line%%=*}"
+                [[ -z "$key" ]] && continue
+                # Only append if key doesn't already exist in installed .env
+                if ! grep -q "^${key}=" "$INSTALL_DIR/docker/.env"; then
+                    echo "$line" >> "$INSTALL_DIR/docker/.env"
+                fi
+            done < "$SOURCE_DIR/docker/.env.example"
+            log_debug "Merged new keys from .env.example into existing docker/.env"
+        else
+            # No existing .env: use .env.example as starting point
+            cp "$SOURCE_DIR/docker/.env.example" "$INSTALL_DIR/docker/.env"
+            log_debug "Created docker/.env from .env.example template"
+        fi
+    fi
+
+    # Deploy .env.secrets template (BP-152 §3.4 sensitive split).
+    # Required: false in docker-compose.yml — absent file is OK; presence adds a second env layer.
+    local _secrets_example="$SOURCE_DIR/docker/.env.secrets.example"
+    local _secrets_live="$INSTALL_DIR/docker/.env.secrets"
+    if [[ -f "$_secrets_example" ]]; then
+        cp "$_secrets_example" "$INSTALL_DIR/docker/.env.secrets.example"
+        if [[ ! -f "$_secrets_live" ]]; then
+            cp "$_secrets_example" "$_secrets_live"
+            chmod 600 "$_secrets_live" 2>/dev/null || log_warning "chmod 600 on .env.secrets failed"
+            log_debug "Created docker/.env.secrets (chmod 600)"
+        fi
+    fi
+
+    # BUG-244: Use shared sync function for all non-Docker file syncing
+    sync_installed_files "$SOURCE_DIR" "$INSTALL_DIR"
+
+    log_success "Files copied to $INSTALL_DIR"
+}
+
+# DEPRECATED: import_user_env() no longer imports from root .env.
+# docker/.env is the single source of truth for all configuration.
+# This function is kept as a stub to preserve call sites in main() and update_shared_scripts().
+import_user_env() {
+    local source_root="${SOURCE_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+    local user_env="$source_root/.env"
+
+    if [[ -f "$user_env" ]]; then
+        log_info "Found legacy root .env at $user_env — credentials are not auto-imported."
+        log_info "To migrate API keys: copy them manually from $user_env to $INSTALL_DIR/docker/.env"
+    fi
+    return 0
+}
+
+# Validate GitHub owner/repo format (BUG-242)
+validate_github_repo() {
+    local repo="$1"
+    if [[ -z "$repo" ]]; then
+        return 0  # Empty is OK — means GitHub sync disabled
+    fi
+    # Must contain exactly one slash
+    if [[ "$repo" != */* ]] || [[ "$repo" == */*/* ]]; then
+        log_error "GITHUB_REPO must be in 'owner/repo' format (got: '$repo')"
+        log_error "Example: GITHUB_REPO='myorg/myrepo'"
+        return 1
+    fi
+    local owner="${repo%%/*}"
+    local name="${repo#*/}"
+    if [[ -z "$owner" || -z "$name" ]]; then
+        log_error "GITHUB_REPO must have both owner and repo name (got: '$repo')"
+        return 1
+    fi
+    if [[ ${#owner} -gt 39 ]]; then
+        log_error "GitHub owner name too long (max 39 chars, got ${#owner})"
+        return 1
+    fi
+    if [[ ! "$owner" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$ ]]; then
+        log_error "GitHub owner contains invalid characters (got: '$owner')"
+        return 1
+    fi
+    if [[ ! "$name" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        log_error "GitHub repo name contains invalid characters (got: '$name')"
+        return 1
+    fi
+    return 0
+}
+
+# Escape characters that have special meaning in sed REPLACEMENT side: &, \, |
+# (| is the chosen delimiter in set_env_value's substitution).
+# Used by persist_user_choices_to_env for user-supplied URL / email / token / JSON values.
+# BUG-274 fix-r2 (F-R1.1): & was a back-reference corruption vector for URLs/emails
+# containing query params or RFC-5321 local-parts with &; | broke the s|..| delimiter.
+# Order: escape \ first — otherwise the & and | escapes would introduce new \ chars
+# that would themselves be escaped again on a subsequent pass.
+_sed_escape() {
+    local v="$1"
+    v="${v//\\/\\\\}"   # escape backslash FIRST (prevents double-escaping of later substitutions)
+    v="${v//&/\\&}"     # escape & (sed back-reference)
+    v="${v//|/\\|}"     # escape | (substitution delimiter)
+    printf '%s' "$v"
+}
+
+# BUG-274: write user-collected env-bound shell vars to runtime config files.
+# Called from main() after copy_files() deploys the .env templates (which carry
+# placeholder defaults for every key) and before any subshell sources from those
+# files. Without this, template defaults silently overwrite user answers because
+# configure_environment's append guards see the keys as already present.
+# Uses set_env_value (defined below) which is idempotent: updates an existing key
+# via sed or appends if missing — so re-running with the same answers is safe.
+persist_user_choices_to_env() {
+    local env_file="$INSTALL_DIR/docker/.env"
+    local secrets_file="$INSTALL_DIR/docker/.env.secrets"
+
+    # Belt-and-suspenders: copy_files() already creates .env.secrets from .example,
+    # but guard here in case it is missing (ENV-MANAGEMENT-V2 §1 sensitive split).
+    if [[ ! -f "$secrets_file" ]]; then
+        if [[ -f "$INSTALL_DIR/docker/.env.secrets.example" ]]; then
+            cp "$INSTALL_DIR/docker/.env.secrets.example" "$secrets_file"
+        else
+            touch "$secrets_file"
+        fi
+    fi
+    chmod 600 "$secrets_file" 2>/dev/null || log_warning "chmod 600 on .env.secrets failed"
+
+    # Non-secret config → docker/.env (ENV-MANAGEMENT-V2 §1 single-env source-of-truth)
+    # Write enable flags unconditionally (configure_options always sets them true/false).
+    # Skip-empty guard: [[ -n "..." ]] prevents writing when var is unset (non-interactive).
+    # Enable flags are literal "true"/"false" — no sed metacharacters, _sed_escape not needed.
+    [[ -n "${LANGFUSE_ENABLED:-}" ]] && set_env_value "LANGFUSE_ENABLED" "$LANGFUSE_ENABLED"
+    [[ -n "${GITHUB_SYNC_ENABLED:-}" ]] && set_env_value "GITHUB_SYNC_ENABLED" "$GITHUB_SYNC_ENABLED"
+    [[ -n "${JIRA_SYNC_ENABLED:-}" ]] && set_env_value "JIRA_SYNC_ENABLED" "$JIRA_SYNC_ENABLED"
+
+    # Dependent non-secret vars: only when feature enabled and value non-empty.
+    # String-class values use _sed_escape (BUG-274 fix-r2 F-R1.1): URL/email/token/JSON
+    # values may contain & (sed back-reference) or | (delimiter) in sed replacement.
+    if [[ "${GITHUB_SYNC_ENABLED:-}" == "true" ]]; then
+        [[ -n "${GITHUB_REPO:-}" ]] && set_env_value "GITHUB_REPO" "$(_sed_escape "$GITHUB_REPO")"
+    fi
+
+    if [[ "${JIRA_SYNC_ENABLED:-}" == "true" ]]; then
+        [[ -n "${JIRA_INSTANCE_URL:-}" ]] && set_env_value "JIRA_INSTANCE_URL" "$(_sed_escape "$JIRA_INSTANCE_URL")"
+        [[ -n "${JIRA_EMAIL:-}" ]] && set_env_value "JIRA_EMAIL" "$(_sed_escape "$JIRA_EMAIL")"
+        if [[ -n "${JIRA_PROJECTS:-}" ]]; then
+            local jira_json
+            # Guard: if already JSON array (pre-set env var), skip format_jira_projects_json
+            if [[ "${JIRA_PROJECTS}" =~ ^\[ ]]; then
+                jira_json="$JIRA_PROJECTS"
+            else
+                jira_json=$(format_jira_projects_json "$JIRA_PROJECTS")
+            fi
+            set_env_value "JIRA_PROJECTS" "'$(_sed_escape "$jira_json")'"
+        fi
+    fi
+
+    # Secrets → docker/.env.secrets (ENV-MANAGEMENT-V2 §1 sensitive split, chmod 600)
+    if [[ "${GITHUB_SYNC_ENABLED:-}" == "true" && -n "${GITHUB_TOKEN:-}" ]]; then
+        set_env_value "GITHUB_TOKEN" "$(_sed_escape "$GITHUB_TOKEN")" "$secrets_file"
+    fi
+    # BUG-286: Defensive blank — ensure GITHUB_TOKEN has no non-empty value in .env regardless
+    # of how it got there (historical write path, recovery menu pre-fix, etc.). Idempotent.
+    _blank_key_in_env "GITHUB_TOKEN" "$env_file"
+
+    if [[ "${JIRA_SYNC_ENABLED:-}" == "true" && -n "${JIRA_API_TOKEN:-}" ]]; then
+        set_env_value "JIRA_API_TOKEN" "$(_sed_escape "$JIRA_API_TOKEN")" "$secrets_file"
+    fi
+    # BUG-286: Defensive blank — ensure JIRA_API_TOKEN has no non-empty value in .env.
+    _blank_key_in_env "JIRA_API_TOKEN" "$env_file"
+
+    chmod 600 "$secrets_file" 2>/dev/null || true
+    log_debug "BUG-274: persisted user choices to docker/.env and docker/.env.secrets"
+}
+
+# migrate_existing_env_secrets — R3: v2.3.x in-place upgrade migration.
+# Detects existing docker/.env with non-blank secret-class keys and migrates
+# all 25 applicable keys to docker/.env.secrets via migrate_secrets_to_split_file().
+# PP-1 keys (GITHUB_TOKEN, JIRA_API_TOKEN) now included in detection + migration scope
+# as defense-in-depth (BUG-286): any historical .env write of PP-1 is cleaned up atomically.
+# Idempotent: fresh install (.env has blank placeholders) → probe empty → no-op.
+migrate_existing_env_secrets() {
+    local env_file="$INSTALL_DIR/docker/.env"
+    local secrets_file="$INSTALL_DIR/docker/.env.secrets"
+
+    [[ ! -f "$env_file" ]] && return 0
+
+    # Upgrade detection: any secret-class key non-blank in .env means migration needed.
+    # Detection pattern built from ALL_SECRET_KEYS (BUG-286 fix-r2: true SSoT — no hardcoded list).
+    # Includes all 25 keys (PP-1/PP-2/PP-3); probe fires on any non-empty secret-class value.
+    local detection_pattern
+    detection_pattern=$(IFS='|'; echo "${ALL_SECRET_KEYS[*]}")
+    if ! grep -qE "^(${detection_pattern})=.+" "$env_file" 2>/dev/null; then
+        return 0
+    fi
+
+    log_info "Detected secret-class keys in docker/.env — migrating all 25 keys to docker/.env.secrets..."
+    ensure_secrets_file_exists "$secrets_file"
+    migrate_secrets_to_split_file "$env_file" "$secrets_file" || {
+        log_error "Secrets migration failed — halting install. Re-run after investigating."
+        exit 1
+    }
+}
+
+# Environment configuration (AC 7.1.6)
+# BUG-040: Docker Compose runs from $INSTALL_DIR/docker/ and needs .env there
+configure_environment() {
+    log_info "Configuring environment..."
+
+    local docker_env="$INSTALL_DIR/docker/.env"
+    local secrets_file="$INSTALL_DIR/docker/.env.secrets"
+
+    # Ensure .env.secrets exists with chmod 600 before any secret writes
+    ensure_secrets_file_exists "$secrets_file"
+
+    # Check if .env was copied from source (has credentials)
+    if [[ -f "$docker_env" ]]; then
+        log_debug "Found existing docker/.env with credentials - updating paths..."
+
+        # BUG-069: Migrate existing JIRA_PROJECTS from comma-separated to JSON array
+        # On reinstall, the Jira config block is skipped (already present), so the
+        # old format persists. This in-place migration fixes it.
+        if grep -q "^JIRA_PROJECTS=" "$docker_env"; then
+            local existing_jp
+            existing_jp=$(grep "^JIRA_PROJECTS=" "$docker_env" | cut -d= -f2-)
+            # BUG-101: Strip surrounding quotes (single or double) added by installer
+            existing_jp="${existing_jp#\'}" && existing_jp="${existing_jp%\'}"
+            existing_jp="${existing_jp#\"}" && existing_jp="${existing_jp%\"}"
+            if [[ -n "$existing_jp" && ! "$existing_jp" =~ ^\[ ]]; then
+                local migrated_jp
+                migrated_jp=$(format_jira_projects_json "$existing_jp")
+                sed -i.bak "s|^JIRA_PROJECTS=.*|JIRA_PROJECTS='$migrated_jp'|" "$docker_env" && rm -f "$docker_env.bak"
+                log_debug "Migrated JIRA_PROJECTS to JSON format (BUG-069)"
+            fi
+        fi
+
+        # Update AI_MEMORY_INSTALL_DIR to actual installation path
+        # This handles the case where source .env has dev repo path
+        if grep -q "^AI_MEMORY_INSTALL_DIR=" "$docker_env"; then
+            sed -i.bak "s|^AI_MEMORY_INSTALL_DIR=.*|AI_MEMORY_INSTALL_DIR=$INSTALL_DIR|" "$docker_env" && rm -f "$docker_env.bak"
+            log_debug "Updated AI_MEMORY_INSTALL_DIR to $INSTALL_DIR"
+        else
+            echo "" >> "$docker_env"
+            echo "# Installation path (added by installer)" >> "$docker_env"
+            echo "AI_MEMORY_INSTALL_DIR=$INSTALL_DIR" >> "$docker_env"
+        fi
+
+        # Add Jira config if not present and Jira is enabled
+        if [[ "$JIRA_SYNC_ENABLED" == "true" ]] && ! grep -q "^JIRA_SYNC_ENABLED=" "$docker_env"; then
+            echo "" >> "$docker_env"
+            echo "# Jira Cloud Integration (added by installer)" >> "$docker_env"
+            echo "JIRA_SYNC_ENABLED=$JIRA_SYNC_ENABLED" >> "$docker_env"
+            echo "JIRA_INSTANCE_URL=$JIRA_INSTANCE_URL" >> "$docker_env"
+            echo "JIRA_EMAIL=$JIRA_EMAIL" >> "$docker_env"
+            echo "JIRA_API_TOKEN=" >> "$docker_env"  # BUG-286: PP-1 secret written to .env.secrets by persist_user_choices_to_env
+            echo "JIRA_PROJECTS='$(format_jira_projects_json "${JIRA_PROJECTS:-}")'" >> "$docker_env"
+            echo "JIRA_SYNC_DELAY_MS=100" >> "$docker_env"
+            log_debug "Added Jira configuration to .env"
+        fi
+
+        # BUG-239: Preflight — fail fast if GitHub sync enabled without token
+        if [[ "$GITHUB_SYNC_ENABLED" == "true" && -z "$GITHUB_TOKEN" ]]; then
+            log_error "GITHUB_SYNC_ENABLED=true requires GITHUB_TOKEN to be set"
+            log_error "Set GITHUB_TOKEN in your environment or disable GitHub sync"
+            exit 1
+        fi
+
+        # Add GitHub config if not present and GitHub is enabled
+        if [[ "$GITHUB_SYNC_ENABLED" == "true" ]] && ! grep -q "^GITHUB_SYNC_ENABLED=" "$docker_env"; then
+            echo "" >> "$docker_env"
+            echo "# GitHub Integration (added by installer)" >> "$docker_env"
+            echo "GITHUB_SYNC_ENABLED=$GITHUB_SYNC_ENABLED" >> "$docker_env"
+            echo "GITHUB_TOKEN=" >> "$docker_env"  # BUG-286: PP-1 secret written to .env.secrets by persist_user_choices_to_env
+            echo "GITHUB_REPO=$GITHUB_REPO" >> "$docker_env"
+            echo "GITHUB_SYNC_INTERVAL=${GITHUB_SYNC_INTERVAL:-1800}" >> "$docker_env"
+            echo "GITHUB_BRANCH=${GITHUB_BRANCH:-main}" >> "$docker_env"
+            echo "GITHUB_CODE_BLOB_ENABLED=${GITHUB_CODE_BLOB_ENABLED:-true}" >> "$docker_env"
+            echo "GITHUB_CODE_BLOB_MAX_SIZE=${GITHUB_CODE_BLOB_MAX_SIZE:-102400}" >> "$docker_env"
+            printf '%s\n' "GITHUB_CODE_BLOB_INCLUDE=${GITHUB_CODE_BLOB_INCLUDE:-}" >> "$docker_env"
+            printf '%s\n' "GITHUB_CODE_BLOB_INCLUDE_MAX_SIZE=${GITHUB_CODE_BLOB_INCLUDE_MAX_SIZE:-}" >> "$docker_env"
+            echo "GITHUB_CODE_BLOB_EXCLUDE=${GITHUB_CODE_BLOB_EXCLUDE:-node_modules,*.min.js,.git,__pycache__,*.pyc,build,dist,*.egg-info}" >> "$docker_env"
+            echo "GITHUB_SYNC_ON_START=${GITHUB_SYNC_ON_START:-true}" >> "$docker_env"
+            log_debug "Added GitHub configuration to .env"
+        fi
+
+        # Add Langfuse config if enabled
+        if [[ "$LANGFUSE_ENABLED" == "true" ]] && ! grep -q "^LANGFUSE_ENABLED=" "$docker_env"; then
+            echo "" >> "$docker_env"
+            echo "# Langfuse LLM Observability (added by installer)" >> "$docker_env"
+            echo "LANGFUSE_ENABLED=$LANGFUSE_ENABLED" >> "$docker_env"
+            log_debug "Added Langfuse configuration to .env"
+        fi
+
+        # BUG-092 / #39: Ensure AI_MEMORY_PROJECT_ID is set
+        # PROJECT_NAME is org/repo when git remote was detected, otherwise folder name
+        if ! grep -q "^AI_MEMORY_PROJECT_ID=" "$docker_env" 2>/dev/null; then
+            echo "" >> "$docker_env"
+            echo "# Project Identification (used by github-sync for multi-tenancy)" >> "$docker_env"
+            echo "AI_MEMORY_PROJECT_ID=$PROJECT_NAME" >> "$docker_env"
+            if [[ "$PROJECT_NAME" == */* ]]; then
+                log_debug "Detected project ID from git remote: $PROJECT_NAME"
+            else
+                log_debug "Using folder name as project ID: $PROJECT_NAME"
+            fi
+            log_debug "Added AI_MEMORY_PROJECT_ID=$PROJECT_NAME to .env"
+        fi
+
+        # ENV-MANAGEMENT-V2 §3.1 Phase 3: per-project env overlay for multi-project installs.
+        # Compose reads ${PROJECT_ENV_FILE:-/dev/null} as a third env_file: layer.
+        # If this project has a named projects.d entry, point PROJECT_ENV_FILE there.
+        # (B-Q7 Option A: installer writes path; Compose uses /dev/null if unset.)
+        if [[ -n "${PROJECT_NAME:-}" ]]; then
+            local _safe_proj
+            _safe_proj=$(echo "$PROJECT_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+            local _proj_env_dir="$INSTALL_DIR/projects.d/${_safe_proj}"
+            local _proj_env_file="$_proj_env_dir/.env"
+            if [[ -f "$_proj_env_file" ]]; then
+                # Per-project .env exists — write path into docker/.env so Compose can find it
+                if grep -q "^PROJECT_ENV_FILE=" "$docker_env" 2>/dev/null; then
+                    sed -i.bak "s|^PROJECT_ENV_FILE=.*|PROJECT_ENV_FILE=${_proj_env_file}|" "$docker_env" && rm -f "$docker_env.bak"
+                else
+                    echo "PROJECT_ENV_FILE=${_proj_env_file}" >> "$docker_env"
+                fi
+                log_debug "Set PROJECT_ENV_FILE=${_proj_env_file} for multi-project env layering"
+            fi
+        fi
+
+        # BUG-241: Write installer metadata if not already present
+        if ! grep -q '^# AIM_INSTALLED_FOR=' "$docker_env"; then
+            echo "" >> "$docker_env"
+            echo "# --- AI-MEMORY INSTALLER METADATA (DO NOT EDIT) ---" >> "$docker_env"
+            echo "# AIM_INSTALLED_FOR=${SOURCE_DIR}" >> "$docker_env"
+            echo "# AIM_INSTALLED_VERSION=${INSTALLER_VERSION}" >> "$docker_env"
+            echo "# AIM_INSTALLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$docker_env"
+            echo "# --- END METADATA ---" >> "$docker_env"
+        fi
+
+        log_success "Environment configured at $docker_env"
+    else
+        # No source .env - create minimal template (user needs to add credentials)
+        log_warning "No source .env found - creating template without credentials"
+        local jira_projects_json
+        jira_projects_json=$(format_jira_projects_json "${JIRA_PROJECTS:-}")
+        cat > "$docker_env" <<EOF
+# AI Memory Module Configuration
+# Generated by install.sh on $(date)
+# --- AI-MEMORY INSTALLER METADATA (DO NOT EDIT) ---
+# AIM_INSTALLED_FOR=${SOURCE_DIR}
+# AIM_INSTALLED_VERSION=${INSTALLER_VERSION}
+# AIM_INSTALLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# --- END METADATA ---
+#
+# WARNING: This is a minimal template. For full functionality, copy your
+# configured .env from the source repository to this location.
+
+# Container Configuration
+AI_MEMORY_CONTAINER_PREFIX=$CONTAINER_PREFIX
+
+# Port Configuration
+QDRANT_PORT=$QDRANT_PORT
+EMBEDDING_PORT=$EMBEDDING_PORT
+MONITORING_PORT=$MONITORING_PORT
+STREAMLIT_PORT=$STREAMLIT_PORT
+
+# Installation Paths
+AI_MEMORY_INSTALL_DIR=$INSTALL_DIR
+QUEUE_DIR=$INSTALL_DIR/queue
+
+# Platform Information
+PLATFORM=$PLATFORM
+ARCH=$ARCH
+
+# Search Configuration
+SIMILARITY_THRESHOLD=0.4
+
+# Project Identification (used by github-sync for multi-tenancy)
+AI_MEMORY_PROJECT_ID=$PROJECT_NAME
+
+# =============================================================================
+# CREDENTIALS (Required - add your values below)
+# =============================================================================
+# Generate API key: python3 -c "import secrets; print(secrets.token_urlsafe(18))"
+QDRANT_API_KEY=${QDRANT_API_KEY:-}
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=
+PROMETHEUS_ADMIN_PASSWORD=
+
+# =============================================================================
+# JIRA CLOUD INTEGRATION (Optional - PLAN-004 Phase 2)
+# =============================================================================
+JIRA_SYNC_ENABLED=${JIRA_SYNC_ENABLED:-false}
+JIRA_INSTANCE_URL=${JIRA_INSTANCE_URL:-}
+JIRA_EMAIL=${JIRA_EMAIL:-}
+JIRA_API_TOKEN=${JIRA_API_TOKEN:-}
+JIRA_PROJECTS='$jira_projects_json'
+JIRA_SYNC_DELAY_MS=100
+
+# =============================================================================
+# GITHUB INTEGRATION (Optional — PLAN-006 Phase 1a)
+# =============================================================================
+GITHUB_SYNC_ENABLED=${GITHUB_SYNC_ENABLED:-false}
+GITHUB_TOKEN=${GITHUB_TOKEN:-}
+GITHUB_REPO=${GITHUB_REPO:-}
+GITHUB_SYNC_INTERVAL=${GITHUB_SYNC_INTERVAL:-1800}
+GITHUB_BRANCH=${GITHUB_BRANCH:-main}
+GITHUB_CODE_BLOB_ENABLED=${GITHUB_CODE_BLOB_ENABLED:-true}
+GITHUB_CODE_BLOB_MAX_SIZE=${GITHUB_CODE_BLOB_MAX_SIZE:-102400}
+GITHUB_CODE_BLOB_INCLUDE=${GITHUB_CODE_BLOB_INCLUDE:-}
+GITHUB_CODE_BLOB_INCLUDE_MAX_SIZE=${GITHUB_CODE_BLOB_INCLUDE_MAX_SIZE:-}
+GITHUB_CODE_BLOB_EXCLUDE=${GITHUB_CODE_BLOB_EXCLUDE:-node_modules,*.min.js,.git,__pycache__,*.pyc,build,dist,*.egg-info}
+GITHUB_SYNC_ON_START=${GITHUB_SYNC_ON_START:-true}
+EOF
+        # If QDRANT_API_KEY was provided via environment, note it in the log
+        if [[ -n "${QDRANT_API_KEY:-}" ]]; then
+            log_debug "Using QDRANT_API_KEY from environment"
+        else
+            log_warning "Please configure credentials in $docker_env"
+        fi
+        log_success "Environment template created at $docker_env"
+    fi
+
+    # BUG-087: Auto-generate missing credentials so fresh installs work out-of-the-box
+    # Uses Python secrets module for cryptographically secure random values
+    local _gen_secret="import secrets; print(secrets.token_urlsafe(18))"
+
+    # BUG-277 fix (R2.2): Write QDRANT_API_KEY to .env.secrets (PP-2 move).
+    # Guard checks both files: skip if already present in secrets_file (idempotence).
+    if { ! grep -q "^QDRANT_API_KEY=.\+" "$docker_env" 2>/dev/null && \
+         ! grep -q "^QDRANT_API_KEY=.\+" "$secrets_file" 2>/dev/null; } || \
+       grep -q "^QDRANT_API_KEY=changeme$" "$docker_env" 2>/dev/null; then
+        # Prefer environment variable (e.g., CI sets QDRANT_API_KEY=test-ci-key)
+        local gen_key="${QDRANT_API_KEY:-}"
+        if [[ -z "$gen_key" ]]; then
+            gen_key=$("$INSTALL_DIR/.venv/bin/python" -c "$_gen_secret") || { log_error "Failed to generate secret"; exit 1; }
+        fi
+        if [[ -n "$gen_key" ]]; then
+            write_secret_to_secrets_file "QDRANT_API_KEY" "$gen_key" "$secrets_file" \
+                || { log_error "Failed to write QDRANT_API_KEY to .env.secrets"; exit 1; }
+            _blank_key_in_env "QDRANT_API_KEY" "$docker_env"
+        fi
+    fi
+
+    # BUG-277 fix (R2.7): Generate QDRANT_READ_ONLY_API_KEY (PP-2 per BP-154 §13 Q1 accepted default).
+    # Enforcing read-only separation is only useful if the key actually exists.
+    if ! grep -q "^QDRANT_READ_ONLY_API_KEY=.\+" "$secrets_file" 2>/dev/null && \
+       ! grep -q "^QDRANT_READ_ONLY_API_KEY=.\+" "$docker_env" 2>/dev/null; then
+        local gen_rokey
+        gen_rokey=$(openssl rand -hex 32) || { log_error "Failed to generate QDRANT_READ_ONLY_API_KEY"; exit 1; }
+        write_secret_to_secrets_file "QDRANT_READ_ONLY_API_KEY" "$gen_rokey" "$secrets_file" \
+            || { log_error "Failed to write QDRANT_READ_ONLY_API_KEY to .env.secrets"; exit 1; }
+        _blank_key_in_env "QDRANT_READ_ONLY_API_KEY" "$docker_env"
+    fi
+
+    # BUG-277 fix (R2.3): Write GRAFANA_ADMIN_PASSWORD to .env.secrets (PP-2 move).
+    if { ! grep -q "^GRAFANA_ADMIN_PASSWORD=.\+" "$docker_env" 2>/dev/null && \
+         ! grep -q "^GRAFANA_ADMIN_PASSWORD=.\+" "$secrets_file" 2>/dev/null; } || \
+       grep -q "^GRAFANA_ADMIN_PASSWORD=changeme$" "$docker_env" 2>/dev/null; then
+        local gen_gf
+        gen_gf=$("$INSTALL_DIR/.venv/bin/python" -c "$_gen_secret") || { log_error "Failed to generate secret"; exit 1; }
+        if [[ -n "$gen_gf" ]]; then
+            write_secret_to_secrets_file "GRAFANA_ADMIN_PASSWORD" "$gen_gf" "$secrets_file" \
+                || { log_error "Failed to write GRAFANA_ADMIN_PASSWORD to .env.secrets"; exit 1; }
+            _blank_key_in_env "GRAFANA_ADMIN_PASSWORD" "$docker_env"
+        fi
+    fi
+
+    # BUG-110: Ensure SECURITY_SCAN_SESSION_MODE is explicit in .env
+    if ! grep -q "^SECURITY_SCAN_SESSION_MODE=" "$docker_env" 2>/dev/null; then
+        echo "SECURITY_SCAN_SESSION_MODE=relaxed" >> "$docker_env"
+        log_debug "Added SECURITY_SCAN_SESSION_MODE=relaxed to .env"
+    fi
+
+    # BUG-277 fix (R2.4): Write PROMETHEUS_ADMIN_PASSWORD to .env.secrets (PP-2 move).
+    if { ! grep -q "^PROMETHEUS_ADMIN_PASSWORD=.\+" "$docker_env" 2>/dev/null && \
+         ! grep -q "^PROMETHEUS_ADMIN_PASSWORD=.\+" "$secrets_file" 2>/dev/null; } || \
+       grep -q "^PROMETHEUS_ADMIN_PASSWORD=changeme$" "$docker_env" 2>/dev/null; then
+        local gen_prom
+        gen_prom=$("$INSTALL_DIR/.venv/bin/python" -c "$_gen_secret") || { log_error "Failed to generate secret"; exit 1; }
+        if [[ -n "$gen_prom" ]]; then
+            write_secret_to_secrets_file "PROMETHEUS_ADMIN_PASSWORD" "$gen_prom" "$secrets_file" \
+                || { log_error "Failed to write PROMETHEUS_ADMIN_PASSWORD to .env.secrets"; exit 1; }
+            _blank_key_in_env "PROMETHEUS_ADMIN_PASSWORD" "$docker_env"
+        fi
+    fi
+
+    # BUG-277 fix (R2.6): Write GRAFANA_SECRET_KEY to .env.secrets (PP-2 move).
+    if { ! grep -q "^GRAFANA_SECRET_KEY=.\+" "$docker_env" 2>/dev/null && \
+         ! grep -q "^GRAFANA_SECRET_KEY=.\+" "$secrets_file" 2>/dev/null; } || \
+       grep -q "^GRAFANA_SECRET_KEY=changeme$" "$docker_env" 2>/dev/null; then
+        local gen_gsk
+        gen_gsk=$("$INSTALL_DIR/.venv/bin/python" -c "import secrets; print(secrets.token_hex(32))") || { log_error "Failed to generate secret"; exit 1; }
+        if [[ -n "$gen_gsk" ]]; then
+            write_secret_to_secrets_file "GRAFANA_SECRET_KEY" "$gen_gsk" "$secrets_file" \
+                || { log_error "Failed to write GRAFANA_SECRET_KEY to .env.secrets"; exit 1; }
+            _blank_key_in_env "GRAFANA_SECRET_KEY" "$docker_env"
+        fi
+    fi
+
+    # BUG-277 fix (R2.5): Generate Prometheus auth header; write to .env.secrets.
+    generate_prometheus_auth "$secrets_file"
+}
+
+# Post-dependency validation for external services (BP-053: Two-Phase Validation)
+# Runs after copy_files + install_python_dependencies + configure_environment
+validate_external_services() {
+    if [[ "$JIRA_SYNC_ENABLED" != "true" ]]; then
+        return 0
+    fi
+
+    log_info "Validating Jira integration (full Python test)..."
+
+    # Run from docker/ dir so get_config() finds .env via pydantic env_file=".env"
+    local validation_result=""
+    local validation_exit=0
+    validation_result=$(cd "$INSTALL_DIR/docker" && "$INSTALL_DIR/.venv/bin/python" -c "
+import asyncio
+import sys
+sys.path.insert(0, '$INSTALL_DIR/src')
+
+async def validate():
+    try:
+        from memory.connectors.jira.client import JiraClient
+        from memory.config import get_config
+        config = get_config()
+        if not config.jira_sync_enabled:
+            print('SKIP: Jira sync not enabled in config')
+            return 0
+        client = JiraClient(
+            str(config.jira_instance_url),
+            config.jira_email,
+            config.jira_api_token.get_secret_value(),
+        )
+        try:
+            result = await client.test_connection()
+            if result['success']:
+                print(f\"✓ Connected as {result['user_email']}\")
+                return 0
+            else:
+                print(f\"✗ FAIL: {result.get('error', 'Unknown error')}\")
+                return 1
+        finally:
+            await client.close()
+    except Exception as e:
+        print(f\"✗ FAIL: {e}\")
+        return 1
+
+sys.exit(asyncio.run(validate()))
+" 2>&1) || validation_exit=$?
+
+    if [[ $validation_exit -eq 0 ]]; then
+        log_success "Jira validation passed: $validation_result"
+    else
+        log_warning "Jira validation failed: $validation_result"
+        log_warning "Disabling Jira sync — check JIRA_PROJECTS format and credentials in $INSTALL_DIR/docker/.env and re-run installer"
+        JIRA_SYNC_ENABLED="false"
+    fi
+}
+
+# Generate Prometheus basic auth configuration from PROMETHEUS_ADMIN_PASSWORD.
+# BUG-277 fix (R2.5): reads password from .env.secrets (PP-2 move); writes header to .env.secrets.
+generate_prometheus_auth() {
+    local secrets_file="${1:-$INSTALL_DIR/docker/.env.secrets}"
+    local docker_env="$INSTALL_DIR/docker/.env"
+
+    # Read password from .env.secrets first (post-R2.4 location), fall through to .env
+    local prometheus_password
+    prometheus_password=$(_read_env_key "PROMETHEUS_ADMIN_PASSWORD" "$secrets_file" "$docker_env")
+
+    if [[ -z "$prometheus_password" ]]; then
+        log_warning "PROMETHEUS_ADMIN_PASSWORD not set - Prometheus auth may not work"
+        return 0
+    fi
+
+    # BLK-021: web.yml is now a template with ${BCRYPT_HASH} placeholder.
+    # The prometheus-init container generates web.yml at runtime from PROMETHEUS_ADMIN_PASSWORD.
+    # This function only generates PROMETHEUS_BASIC_AUTH_HEADER for the healthcheck.
+
+    # BUG-089: Generate Base64 auth header for Prometheus healthcheck
+    local auth_header
+    auth_header="Basic $(echo -n "admin:$prometheus_password" | base64)"
+    # Write to .env.secrets (PP-2); blank any value in .env
+    write_secret_to_secrets_file "PROMETHEUS_BASIC_AUTH_HEADER" "$auth_header" "$secrets_file" \
+        || { log_error "Failed to write PROMETHEUS_BASIC_AUTH_HEADER to .env.secrets"; exit 1; }
+    _blank_key_in_env "PROMETHEUS_BASIC_AUTH_HEADER" "$docker_env"
+}
+
+# Log Docker container state for debugging (P1: container disappearance diagnosis)
+_log_docker_state() {
+    local label="${1:-}"
+    log_debug "Docker state snapshot [$label]:"
+    docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>&1 | while IFS= read -r line; do
+        log_debug "  $line"
+    done
+}
+
+# Service startup with 2026 security best practices (AC 7.1.7)
+# Uses PHASED startup: core services first (qdrant, embedding), then profile
+# services. This prevents --build of profile services from interfering with
+# core service startup (P1: Qdrant/Embedding container disappearance).
+start_services() {
+    log_info "Starting Docker services..."
+
+    # Navigate to docker directory
+    cd "$INSTALL_DIR/docker" || {
+        log_error "Failed to navigate to $INSTALL_DIR/docker"
+        exit 1
+    }
+
+    # BUG-279: Wrap docker compose to always pass .env + .env.secrets as
+    # --env-file flags. Without .env.secrets, ${QDRANT_API_KEY} (and 28 other
+    # secret-class ${VAR} interpolations across docker-compose.yml +
+    # docker-compose.langfuse.yml) resolve to blank post-BUG-277 R3 migration,
+    # producing QDRANT__SERVICE__API_KEY="" in the container — Qdrant treats
+    # empty-string-set as configured-but-locked → 401 on all auth-required
+    # endpoints. Compose v2.21+ multi-env-file: last-file-wins per BP-154 §Q2.
+    # Mirrors stack.sh::_compose() pattern.
+    _compose() {
+        local _args=(--env-file .env)
+        [[ -f .env.secrets ]] && _args+=(--env-file .env.secrets)
+        docker compose "${_args[@]}" "$@"
+    }
+
+    # Check Docker daemon is reachable (BUG-094: works with Docker Engine, Desktop, Colima, etc.)
+    if ! docker info &>/dev/null; then
+        log_warning "Docker daemon is not reachable — attempting systemd start..."
+        sudo systemctl start docker 2>/dev/null || true
+        sleep 3
+        if ! docker info &>/dev/null; then
+            log_error "Docker daemon is not reachable."
+            log_error "  Docker Engine:  sudo systemctl start docker"
+            log_error "  Docker Desktop: Start from applications menu"
+            log_error "  Verify:         docker info"
+            exit 1
+        fi
+        log_success "Docker daemon started"
+    fi
+
+    # BUG-095: Check Docker has enough memory for all services
+    local docker_mem_bytes
+    docker_mem_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "0")
+    local docker_mem_gb=$((docker_mem_bytes / 1073741824))
+    log_debug "Docker memory available: ${docker_mem_gb}GB ($((docker_mem_bytes / 1048576))MB)"
+    if [[ $docker_mem_gb -lt 3 ]]; then
+        log_warning "Docker has only ${docker_mem_gb}GB RAM (minimum 3GB, recommended 4GB+)"
+        log_warning "  Docker Desktop: Settings → Resources → Memory → set to 4GB+"
+        log_warning "  Low memory causes containers to disappear silently (OOM inside VM)"
+        echo ""
+        read -p "  Continue anyway? [y/N]: " low_mem_choice
+        if [[ ! "$low_mem_choice" =~ ^[Yy]$ ]]; then
+            log_info "Increase Docker memory and re-run the installer."
+            exit 0
+        fi
+    fi
+
+    # Build profile flags for later use
+    local profile_flags=""
+    if [[ "$INSTALL_MONITORING" == "true" ]]; then
+        profile_flags="$profile_flags --profile monitoring"
+    fi
+    if [[ "$GITHUB_SYNC_ENABLED" == "true" ]]; then
+        profile_flags="$profile_flags --profile github"
+        mkdir -p "${AI_MEMORY_INSTALL_DIR:-${HOME}/.ai-memory}/github-state"
+    fi
+
+    # ── Phase 1: Pull ALL images first ──
+    log_info "Pulling Docker images (this may take a few minutes)..."
+    # BUG-279: _compose wrapper passes both --env-file flags
+    _compose $profile_flags pull
+
+    # ── Phase 2: Start CORE services first (no --build, no profiles) ──
+    # Qdrant uses a pre-built image (no build context). Embedding has a build
+    # context but we build it separately to avoid memory pressure from building
+    # multiple images simultaneously on low-RAM systems.
+    log_info "Phase 1/2: Starting core services (qdrant + embedding)..."
+    _compose up -d qdrant
+    _compose build --no-cache embedding
+    # BUG-289: --no-recreate prevents Compose from restarting an already-running
+    # embedding container mid-install, which would reset model_loaded to False and
+    # cause the github-sync depends_on healthcheck gate to briefly fail.
+    _compose up -d --no-recreate embedding
+
+    _log_docker_state "after core startup"
+
+    # Wait for core services to be healthy before starting profile services
+    log_info "Waiting for core services to become healthy..."
+    local core_timeout=120
+    local core_attempt=0
+    echo -n "  Qdrant: "
+    while [[ $core_attempt -lt $core_timeout ]]; do
+        if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:${QDRANT_PORT:-26350}/readyz" &> /dev/null; then
+            echo -e "${GREEN}ready${NC}"
+            break
+        fi
+        echo -n "."
+        sleep 1
+        core_attempt=$((core_attempt + 1))
+    done
+    if [[ $core_attempt -ge $core_timeout ]]; then
+        log_error "Qdrant failed to become healthy within ${core_timeout}s"
+        _log_docker_state "qdrant timeout"
+        _compose logs qdrant 2>&1 | tail -20 | while IFS= read -r line; do log_error "  $line"; done
+        exit 1
+    fi
+
+    # Verify Qdrant is still running (P1 diagnosis)
+    local qdrant_status
+    qdrant_status=$(docker ps --filter "name=${CONTAINER_PREFIX}-qdrant" --format "{{.Status}}" 2>/dev/null)
+    if [[ -z "$qdrant_status" ]]; then
+        log_error "Qdrant container disappeared immediately after healthcheck!"
+        _log_docker_state "qdrant disappeared"
+        exit 1
+    fi
+    log_debug "Qdrant verified running: $qdrant_status"
+
+    # TD-339: Authenticated Qdrant check — verify API key is accepted before
+    # attempting collection setup. The readiness loop above uses the unauthenticated
+    # readiness endpoint (/readyz); /collections requires a valid api-key header.
+    # docker/.env is the CWD (start_services cd's there at the top).
+    local _qdrant_auth_key=""
+    _qdrant_auth_key=$(_read_env_key "QDRANT_API_KEY" ".env.secrets" ".env")
+    if [[ -z "$_qdrant_auth_key" ]]; then
+        log_warn "No QDRANT_API_KEY found in docker/.env — skipping auth verification"
+    else
+        local _auth_attempt=0 _auth_max=3 _auth_ok=false
+        while [[ $_auth_attempt -lt $_auth_max ]]; do
+            if curl -sf --connect-timeout 2 --max-time 5 \
+                -H "api-key: ${_qdrant_auth_key}" \
+                "http://127.0.0.1:${QDRANT_PORT:-26350}/collections" &> /dev/null; then
+                _auth_ok=true
+                break
+            fi
+            _auth_attempt=$((_auth_attempt + 1))
+            if [[ $_auth_attempt -lt $_auth_max ]]; then
+                sleep 2
+            fi
+        done
+        if [[ "$_auth_ok" != "true" ]]; then
+            log_error "Qdrant authenticated health check FAILED — API key mismatch or /collections unavailable"
+            log_error "  Verify QDRANT_API_KEY in $INSTALL_DIR/docker/.env matches the running Qdrant container"
+            log_error "  Manual check: curl -sf -H 'api-key: <key>' http://127.0.0.1:${QDRANT_PORT:-26350}/collections"
+            exit 1
+        fi
+        log_debug "Qdrant authenticated check passed"
+    fi
+
+    # Collections must exist before profile services start (github-sync uses them immediately)
+    setup_collections || {
+        log_error "Collection setup failed — cannot proceed without collections"
+        exit 1
+    }
+
+    # ── Phase 3: Start profile services ──
+    if [[ -n "$profile_flags" ]]; then
+        log_info "Phase 2/2: Starting profile services ($profile_flags)..."
+        # BUG-079: --build forces rebuild of source-built containers
+        # BUG-279: _compose wrapper passes both --env-file flags (defined at start_services top)
+        _compose $profile_flags build --no-cache
+        _compose $profile_flags up -d --no-recreate
+        _log_docker_state "after profile startup"
+
+        # Verify core services survived profile startup
+        qdrant_status=$(docker ps --filter "name=${CONTAINER_PREFIX}-qdrant" --format "{{.Status}}" 2>/dev/null)
+        local embedding_status
+        embedding_status=$(docker ps --filter "name=${CONTAINER_PREFIX}-embedding" --format "{{.Status}}" 2>/dev/null)
+        if [[ -z "$qdrant_status" ]]; then
+            log_error "CRITICAL: Qdrant container disappeared after profile services started!"
+            log_error "This indicates Docker Compose V2 service reconciliation issue."
+            _log_docker_state "qdrant gone after profiles"
+            exit 1
+        fi
+        if [[ -z "$embedding_status" ]]; then
+            log_error "CRITICAL: Embedding container disappeared after profile services started!"
+            _log_docker_state "embedding gone after profiles"
+            exit 1
+        fi
+        log_debug "Core services survived profile startup: qdrant=$qdrant_status, embedding=$embedding_status"
+    else
+        log_debug "No profile services to start"
+    fi
+
+    log_success "Docker services started"
+}
+
+# Wait for services to be healthy (AC 7.1.7)
+wait_for_services() {
+    log_info "Waiting for services to be ready..."
+    log_info "Note: First start may take 5-10 minutes to download embedding model (~500MB)"
+
+    # BUG-040: Increased timeout for first-time model download on slow connections
+    local max_attempts=${WAIT_TIMEOUT:-600}
+    local attempt=0
+
+    # Wait for Qdrant using localhost health check (2026 best practice)
+    echo -n "  Qdrant ($QDRANT_PORT): "
+    while [[ $attempt -lt $max_attempts ]]; do
+        if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$QDRANT_PORT/readyz" &> /dev/null; then
+            echo -e "${GREEN}ready${NC}"
+            break
+        fi
+        # Show elapsed time every 5 seconds
+        if [[ $((attempt % 5)) -eq 0 && $attempt -gt 0 ]]; then
+            echo -n "${attempt}s "
+        else
+            echo -n "."
+        fi
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+
+    if [[ $attempt -eq $max_attempts ]]; then
+        echo -e "${RED}timeout${NC}"
+        log_error "Qdrant failed to start within ${max_attempts} seconds."
+        echo ""
+        echo "Check logs for details:"
+        echo "  cd $INSTALL_DIR/docker && docker compose logs qdrant"
+        echo ""
+        echo "NO FALLBACK: Service health is required for installation."
+        exit 1
+    fi
+
+    # Wait for Embedding Service (with live progress)
+    attempt=0
+    echo -n "  Embedding ($EMBEDDING_PORT): "
+
+    # Check if already ready (cached model)
+    if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$EMBEDDING_PORT/health" &> /dev/null; then
+        echo -e "${GREEN}ready${NC} (cached)"
+    else
+        echo "downloading model..."
+        echo ""
+
+        # Start background log tail - filter to only show progress bars and key events
+        # Run in subshell so we can kill entire process group
+        (docker logs -f "${CONTAINER_PREFIX}-embedding" 2>&1 | grep --line-buffered -E "Fetching|Downloading|%\||model_load|ERROR|error" | sed 's/^/    /') &
+        LOG_PID=$!
+
+        while [[ $attempt -lt $max_attempts ]]; do
+            if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$EMBEDDING_PORT/health" &> /dev/null; then
+                # Kill the entire log tail process group
+                pkill -P $LOG_PID 2>/dev/null || true
+                kill $LOG_PID 2>/dev/null || true
+                echo ""
+                echo -e "  Embedding ($EMBEDDING_PORT): ${GREEN}ready${NC}"
+                break
+            fi
+            sleep 2
+            attempt=$((attempt + 2))
+        done
+
+        # Cleanup log tail if still running (timeout case)
+        pkill -P $LOG_PID 2>/dev/null || true
+        kill $LOG_PID 2>/dev/null || true
+
+        if [[ $attempt -ge $max_attempts ]]; then
+            echo -e "${RED}timeout${NC}"
+            log_error "Embedding service failed to start within ${max_attempts} seconds."
+            echo ""
+            echo "Check logs for details:"
+            echo "  cd $INSTALL_DIR/docker && docker compose logs embedding"
+            echo ""
+            echo "NOTE: First start downloads ~500MB model from HuggingFace (may take 5-10 min)."
+            echo "      Subsequent starts load from cache (~10 seconds)."
+            echo "      If this persists, check network connection and available disk space."
+            echo "      You can retry with: WAIT_TIMEOUT=900 ./install.sh"
+            echo ""
+            echo "NO FALLBACK: Service health is required for installation."
+            exit 1
+        fi
+    fi
+
+    # Warmup: Send first inference request to fully load ONNX model into memory.
+    # The /health endpoint returns OK before the model is ready for inference.
+    # On low-memory systems, first inference can take 60-90s (cold start).
+    log_info "Warming up embedding model..."
+    if curl -sf --max-time 120 -X POST "http://127.0.0.1:$EMBEDDING_PORT/embed" \
+        -H "Content-Type: application/json" \
+        -d '{"texts":["warmup"]}' > /dev/null 2>&1; then
+        log_success "Embedding model ready for inference"
+    else
+        log_warning "Embedding warmup timed out — health check may retry"
+    fi
+
+    # Optional: Wait for Monitoring API (non-critical, just info)
+    attempt=0
+    echo -n "  Monitoring ($MONITORING_PORT): "
+    while [[ $attempt -lt 30 ]]; do
+        if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$MONITORING_PORT/health" &> /dev/null; then
+            echo -e "${GREEN}ready${NC}"
+            break
+        fi
+        echo -n "."
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+
+    if [[ $attempt -eq 30 ]]; then
+        echo -e "${YELLOW}timeout (non-critical)${NC}"
+        log_warning "Monitoring API did not start (this is optional)"
+    fi
+
+    # If monitoring profile was requested, wait for those services too
+    if [[ "$INSTALL_MONITORING" == "true" ]]; then
+        # Wait for Streamlit
+        attempt=0
+        echo -n "  Streamlit ($STREAMLIT_PORT): "
+        while [[ $attempt -lt 60 ]]; do
+            if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$STREAMLIT_PORT/" &> /dev/null; then
+                echo -e "${GREEN}ready${NC}"
+                break
+            fi
+            echo -n "."
+            sleep 1
+            attempt=$((attempt + 1))
+        done
+        if [[ $attempt -eq 60 ]]; then
+            echo -e "${YELLOW}timeout (non-critical)${NC}"
+            log_warning "Streamlit dashboard did not start within 60s"
+        fi
+
+        # Wait for Grafana (BUG-124: non-blocking on low-memory systems)
+        local docker_mem_bytes
+        docker_mem_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "0")
+        local docker_mem_gb=$(( docker_mem_bytes / 1073741824 ))
+        local grafana_wait=120
+        if [[ $docker_mem_gb -lt 3 ]]; then
+            grafana_wait=30
+            log_info "Low Docker memory (${docker_mem_gb}GB) — reduced Grafana wait to ${grafana_wait}s"
+        fi
+
+        attempt=0
+        echo -n "  Grafana (23000): "
+        while [[ $attempt -lt $grafana_wait ]]; do
+            if curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:23000/api/health" &> /dev/null; then
+                echo -e "${GREEN}ready${NC}"
+                break
+            fi
+            echo -n "."
+            sleep 1
+            attempt=$((attempt + 1))
+        done
+        if [[ $attempt -eq $grafana_wait ]]; then
+            echo -e "${YELLOW}timeout (non-critical)${NC}"
+            log_info "Grafana will start in background — dashboard available at http://localhost:23000"
+        fi
+    fi
+
+    log_success "All critical services ready"
+}
+
+# Initialize Qdrant collections
+setup_collections() {
+    log_info "Setting up Qdrant collections..."
+
+    # BUG-275 defense-in-depth: source both env files so setup-collections.py
+    # gets full env in the subshell. Pattern A in MemoryConfig is the primary fix;
+    # this subshell ensures env is available even if MemoryConfig path is bypassed.
+    # .env source filters UID/GID per BUG-273; .env.secrets has no UID/GID.
+    if (set -a
+        [ -f "$INSTALL_DIR/docker/.env" ] && \
+          source <(grep -v -E '^(UID|GID)=' "$INSTALL_DIR/docker/.env")
+        [ -f "$INSTALL_DIR/docker/.env.secrets" ] && \
+          source "$INSTALL_DIR/docker/.env.secrets"
+        "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/setup-collections.py" 2>&1); then
+        log_success "Qdrant collections created (code-patterns, conventions, discussions, github, jira-data)"
+    else
+        log_error "Collection setup FAILED - re-run: $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/setup-collections.py"
+        return 1
+    fi
+}
+
+copy_env_template() {
+    log_debug "Copying environment template..."
+
+    # Copy docker/.env.example to installation directory (TD-198: root .env.example removed)
+    if [ -f "$SCRIPT_DIR/../docker/.env.example" ]; then
+        cp "$SCRIPT_DIR/../docker/.env.example" "$INSTALL_DIR/docker/.env.example"
+        log_success "Environment template copied to $INSTALL_DIR/docker/.env.example"
+
+        # Check if .env already exists
+        if [ ! -f "$INSTALL_DIR/docker/.env" ]; then
+            log_debug "No .env file found - using defaults"
+            log_debug "To customize: cp $INSTALL_DIR/docker/.env.example $INSTALL_DIR/docker/.env"
+        else
+            log_debug "Existing docker/.env file detected - keeping current configuration"
+        fi
+    else
+        log_warning "Template docker/.env.example not found - skipping"
+    fi
+
+    # Deploy .env.secrets template for sensitive key split (BP-152 §3.4).
+    # .env.secrets is loaded as a second env_file: layer in docker-compose.yml (required: false).
+    # chmod 600 enforced — only the owner should read API keys and passwords.
+    local secrets_example="$SCRIPT_DIR/../docker/.env.secrets.example"
+    local secrets_dest="$INSTALL_DIR/docker/.env.secrets.example"
+    local secrets_live="$INSTALL_DIR/docker/.env.secrets"
+    if [ -f "$secrets_example" ]; then
+        cp "$secrets_example" "$secrets_dest"
+        log_debug "Secrets template copied to $secrets_dest"
+        if [ ! -f "$secrets_live" ]; then
+            cp "$secrets_example" "$secrets_live"
+            chmod 600 "$secrets_live" 2>/dev/null || log_warning "chmod 600 on .env.secrets failed — set permissions manually"
+            log_success "Created $secrets_live (chmod 600) — add sensitive API keys here"
+        else
+            log_debug "Existing docker/.env.secrets detected — preserving; verify permissions: chmod 600 $secrets_live"
+        fi
+    else
+        log_debug "docker/.env.secrets.example not found — skipping secrets template"
+    fi
+}
+
+# Verify services are running (for add-project mode)
+verify_services_running() {
+    log_info "Verifying AI Memory services are running..."
+
+    # Check Qdrant
+    if ! curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$QDRANT_PORT/readyz" &> /dev/null; then
+        log_error "Qdrant is not running at port $QDRANT_PORT"
+        echo ""
+        echo "Start services from shared installation:"
+        echo "  cd $INSTALL_DIR/docker && docker compose up -d --build"
+        exit 1
+    fi
+
+    # Check Embedding Service
+    if ! curl -sf --connect-timeout 2 --max-time 5 "http://127.0.0.1:$EMBEDDING_PORT/health" &> /dev/null; then
+        log_error "Embedding service is not running at port $EMBEDDING_PORT"
+        echo ""
+        echo "Start services from shared installation:"
+        echo "  cd $INSTALL_DIR/docker && docker compose up -d --build"
+        exit 1
+    fi
+
+    log_success "All services are running"
+}
+
+# Create project-level symlinks to shared installation
+# BUG-032: On WSL, symlinks are not visible from Windows applications (e.g., VS Code, Windows Explorer).
+# We use file copies instead of symlinks on WSL to ensure cross-platform visibility.
+# Trade-off: Updates to shared hooks require re-running install.sh for the project.
+create_project_symlinks() {
+    # Determine link method based on platform
+    local link_method="symlink"
+    if [[ "$PLATFORM" == "wsl" ]]; then
+        link_method="copy"
+        log_info "Creating project-level hook copies (WSL mode for Windows visibility)..."
+    else
+        log_info "Creating project-level symlinks..."
+    fi
+
+    # Skip confirmation in non-interactive mode
+    if [[ "$NON_INTERACTIVE" != "true" && ! -d "$PROJECT_PATH/.claude" ]]; then
+        echo ""
+        echo "The installer will create the following in your project:"
+        echo "  $PROJECT_PATH/.claude/"
+        if [[ "$link_method" == "copy" ]]; then
+            echo "     hooks/scripts/       (Copies of shared hooks - WSL mode)"
+            echo "     skills/              (Best practices researcher, etc.)"
+            echo "     agents/              (Skill creator agent)"
+            echo ""
+            echo "NOTE: On WSL, we copy files instead of creating symlinks."
+            echo "      This ensures hooks are visible from Windows applications."
+            echo "      If you update the shared installation, re-run this installer"
+            echo "      to update the project files."
+        else
+            echo "     hooks/scripts/       (Symlinks to shared hooks)"
+            echo "     skills/              (Best practices researcher, etc.)"
+            echo "     agents/              (Skill creator agent)"
+        fi
+        echo ""
+        echo "This allows Claude Code to use the memory system in your project."
+        echo ""
+        read -p "Proceed with project setup? [Y/n]: " confirm
+        if [[ "$confirm" =~ ^[Nn]$ ]]; then
+            echo ""
+            log_info "Project setup cancelled by user"
+            exit 0
+        fi
+        echo ""
+    fi
+
+    # Create project .claude directory structure
+    mkdir -p "$PROJECT_PATH/.claude/hooks/scripts"
+
+    # BUG-106: Remove stale/broken symlinks before creating fresh ones
+    # Prior installs may leave symlinks pointing to deleted targets (e.g. archived hooks)
+    for existing in "$PROJECT_PATH/.claude/hooks/scripts"/*.py; do
+        if [[ -L "$existing" && ! -e "$existing" ]]; then
+            rm -f "$existing"  # broken symlink
+        elif [[ -f "$existing" && ! -L "$existing" ]]; then
+            local bn
+            bn=$(basename "$existing")
+            if [[ ! -f "$INSTALL_DIR/.claude/hooks/scripts/$bn" ]]; then
+                rm -f "$existing"  # stale regular file from prior copy-mode install
+            fi
+        fi
+    done
+
+    # Link or copy hook scripts from shared install
+    local file_count=0
+    for script in "$INSTALL_DIR/.claude/hooks/scripts"/*.py; do
+        if [[ -f "$script" ]]; then
+            script_name=$(basename "$script")
+            target_path="$PROJECT_PATH/.claude/hooks/scripts/$script_name"
+
+            if [[ "$link_method" == "copy" ]]; then
+                # BUG-032: Copy files on WSL for Windows visibility
+                if ! cp "$script" "$target_path"; then
+                    log_error "Failed to copy $script_name - check disk space and permissions"
+                    exit 1
+                fi
+            else
+                # Use symlinks on native Linux/macOS
+                ln -sf "$script" "$target_path"
+            fi
+            file_count=$((file_count + 1))
+        fi
+    done
+
+    # Verify at least one hook file was processed
+    if [[ $file_count -eq 0 ]]; then
+        log_error "No hook scripts found in $INSTALL_DIR/.claude/hooks/scripts/"
+        exit 1
+    fi
+
+    # BUG-035: Archive stale hooks in project directory (WSL copy mode)
+    if [[ "$link_method" == "copy" ]]; then
+        local archived_count=0
+        local archive_dir="$PROJECT_PATH/.claude/hooks/scripts/.archived"
+        for existing in "$PROJECT_PATH/.claude/hooks/scripts"/*.py; do
+            if [[ -f "$existing" ]]; then
+                local basename_hook
+                basename_hook=$(basename "$existing")
+                # Check if this file exists in the shared install (source of truth)
+                if [[ ! -f "$INSTALL_DIR/.claude/hooks/scripts/$basename_hook" ]]; then
+                    mkdir -p "$archive_dir"
+                    mv "$existing" "$archive_dir/"
+                    archived_count=$((archived_count + 1))
+                fi
+            fi
+        done
+        if [[ $archived_count -gt 0 ]]; then
+            log_debug "Archived $archived_count stale project hooks to .archived/"
+        fi
+    fi
+
+    # Verify files exist and are accessible
+    local verification_failed=0
+    for script in "$PROJECT_PATH/.claude/hooks/scripts"/*.py; do
+        if [[ ! -e "$script" ]]; then
+            log_error "Missing or inaccessible: $script"
+            verification_failed=1
+        elif [[ "$link_method" == "symlink" ]]; then
+            # Additional symlink-specific checks
+            if [[ ! -L "$script" ]]; then
+                log_error "Not a symlink: $script"
+                verification_failed=1
+            fi
+            # Note: -e on symlink checks if TARGET exists (broken symlink test)
+        elif [[ "$link_method" == "copy" ]]; then
+            # Copy-specific checks: ensure readable
+            if [[ ! -r "$script" ]]; then
+                log_error "Not readable: $script"
+                verification_failed=1
+            fi
+        fi
+    done
+
+    if [[ $verification_failed -eq 1 ]]; then
+        log_error "Hook file verification failed"
+        exit 1
+    fi
+
+    if [[ "$link_method" == "copy" ]]; then
+        log_success "Copied $file_count hook files to $PROJECT_PATH/.claude/hooks/scripts/"
+        log_info "WSL note: Re-run installer after updating shared hooks to sync changes"
+    else
+        log_success "Created $file_count symlinks in $PROJECT_PATH/.claude/hooks/scripts/"
+    fi
+
+}
+
+# Configure hooks for project (project-level settings.json)
+configure_project_hooks() {
+    log_info "Configuring project-level hooks..."
+
+    PROJECT_SETTINGS="$PROJECT_PATH/.claude/settings.json"
+    HOOKS_DIR="$INSTALL_DIR/.claude/hooks/scripts"
+
+    # Export QDRANT_API_KEY from docker/.env for generate_settings.py (BUG-029 fix)
+    # The generator reads this from environment to avoid hardcoding secrets
+    # BUG-029+030 fixes:
+    #   - cut -d= -f2- captures everything after first = (base64 keys contain =)
+    #   - tr -d removes quotes from .env values like QDRANT_API_KEY="value"
+    #   - || echo "" prevents grep exit 1 from crashing under set -e
+    QDRANT_API_KEY=$(_read_env_key "QDRANT_API_KEY" "$INSTALL_DIR/docker/.env.secrets" "$INSTALL_DIR/docker/.env")
+    export QDRANT_API_KEY
+    if [[ -n "$QDRANT_API_KEY" ]]; then
+        log_debug "Loaded QDRANT_API_KEY from docker/.env.secrets or docker/.env (${#QDRANT_API_KEY} chars)"
+    else
+        log_warning "QDRANT_API_KEY not found or empty in docker/.env.secrets or docker/.env"
+    fi
+
+    # Export Langfuse vars if enabled, so generate_settings.py/merge_settings.py can inject them
+    # Reads from shared docker/.env (needed in both full and add-project mode)
+    local langfuse_enabled_in_env
+    langfuse_enabled_in_env=$(_read_env_key "LANGFUSE_ENABLED" "$INSTALL_DIR/docker/.env.secrets" "$INSTALL_DIR/docker/.env")
+    if [[ "$langfuse_enabled_in_env" == "true" ]]; then
+        for _lf_var in LANGFUSE_ENABLED LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY LANGFUSE_BASE_URL LANGFUSE_TRACE_HOOKS LANGFUSE_TRACE_SESSIONS; do
+            local _lf_val
+            _lf_val=$(_read_env_key "$_lf_var" "$INSTALL_DIR/docker/.env.secrets" "$INSTALL_DIR/docker/.env")
+            # Only export if value is non-empty; let generate_settings.py defaults apply otherwise
+            [[ -n "$_lf_val" ]] && export "${_lf_var}=${_lf_val}"
+        done
+        log_debug "Exported LANGFUSE_* env vars for settings generation"
+    fi
+
+    # Check if project already has settings.json
+    if [[ -f "$PROJECT_SETTINGS" ]]; then
+        log_debug "Existing project settings found - merging hooks..."
+        python3 "$INSTALL_DIR/scripts/merge_settings.py" "$PROJECT_SETTINGS" "$HOOKS_DIR" "$PROJECT_NAME"
+    else
+        # Generate new project-level settings.json
+        log_debug "Creating new project settings at $PROJECT_SETTINGS..."
+        python3 "$INSTALL_DIR/scripts/generate_settings.py" "$PROJECT_SETTINGS" "$HOOKS_DIR" "$PROJECT_NAME"
+    fi
+
+
+    # BUG-126: Sync QDRANT_API_KEY to settings.local.json if it exists
+    # Claude Code's settings hierarchy: settings.local.json overrides settings.json
+    # A stale key in settings.local.json causes all hook→Qdrant storage to fail
+    local local_settings="$PROJECT_PATH/.claude/settings.local.json"
+    if [[ -f "$local_settings" ]] && [[ -n "${QDRANT_API_KEY:-}" ]]; then
+        python3 -c "
+import json, os, sys
+path = sys.argv[1]
+new_key = os.environ.get('QDRANT_API_KEY', '')
+if not new_key:
+    sys.exit(0)
+with open(path, 'r') as f:
+    s = json.load(f)
+old_key = s.get('env', {}).get('QDRANT_API_KEY', '')
+if old_key and old_key != new_key:
+    s.setdefault('env', {})['QDRANT_API_KEY'] = new_key
+    with open(path, 'w') as f:
+        json.dump(s, f, indent=2)
+        f.write('\n')
+    print(f'Synced QDRANT_API_KEY to settings.local.json')
+" "$local_settings" 2>&1 || true
+    fi
+
+    log_success "Project hooks configured in $PROJECT_SETTINGS"
+}
+
+# =============================================================================
+# FEATURE-001: Multi-IDE Support — IDE Detection and Config Generation
+# Adds Gemini CLI, Cursor IDE, and Codex CLI support alongside Claude Code.
+# Claude Code hooks are unchanged — these are additive adapters only.
+# =============================================================================
+
+detect_gemini_cli() {
+    command -v gemini >/dev/null 2>&1
+}
+
+detect_cursor_ide() {
+    command -v agent >/dev/null 2>&1 || command -v cursor-agent >/dev/null 2>&1
+}
+
+detect_codex_cli() {
+    command -v codex >/dev/null 2>&1
+}
+
+parse_ide_flag() {
+    local flag="$1"
+    if [[ -z "$flag" ]]; then
+        local detected=""
+        detect_gemini_cli && detected="$detected gemini"
+        detect_cursor_ide && detected="$detected cursor"
+        detect_codex_cli && detected="$detected codex"
+        echo "$detected"
+    elif [[ "$flag" == "none" ]]; then
+        echo ""
+    else
+        echo "$flag" | tr ',' ' '
+    fi
+}
+
+write_gemini_config() {
+    local project_path="$1"
+    local install_dir="$2"
+    local project_id="$3"
+    local force="${4:-false}"
+    local config_file="$project_path/.gemini/settings.json"
+
+    if [[ -f "$config_file" ]] && grep -q "AI_MEMORY_INSTALL_DIR" "$config_file" 2>/dev/null; then
+        if [[ "$force" != "true" ]]; then
+            log_warning "Gemini config already contains ai-memory hooks — skipping (use --force to overwrite)"
+            return 0
+        fi
+    fi
+
+    mkdir -p "$project_path/.gemini"
+    local py="$install_dir/.venv/bin/python"
+    local ad="$install_dir/src/memory/adapters"
+
+    python3 -c "
+import json, sys
+install_dir, project_id, py, ad = sys.argv[1:5]
+config = {
+    'env': {
+        'AI_MEMORY_INSTALL_DIR': install_dir,
+        'AI_MEMORY_PROJECT_ID': project_id,
+        'QDRANT_HOST': 'localhost',
+        'QDRANT_PORT': '26350',
+        'QDRANT_GRPC_PORT': '26351',
+        'EMBEDDING_HOST': '127.0.0.1',
+        'EMBEDDING_PORT': '28080',
+        'SIMILARITY_THRESHOLD': '0.4',
+        'LOG_LEVEL': 'INFO'
+    },
+    'hooks': {
+        'SessionStart': [{'matcher': '.*', 'hooks': [{'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/session_start.py\"', 'timeout': 30000}]}],
+        'AfterTool': [
+            {'matcher': 'edit_file|write_file|create_file', 'hooks': [{'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/after_tool_capture.py\"', 'timeout': 5000}]},
+            {'matcher': 'run_shell_command', 'hooks': [
+                {'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/error_detection.py\"', 'timeout': 5000},
+                {'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/error_pattern_capture.py\"', 'timeout': 5000}
+            ]},
+            {'matcher': 'mcp_.*', 'hooks': [{'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/after_tool_capture.py\"', 'timeout': 5000}]}
+        ],
+        'PreCompress': [{'matcher': '.*', 'hooks': [{'type': 'command', 'command': f'\"{py}\" \"{ad}/gemini/pre_compress.py\"', 'timeout': 60000}]}]
+    }
+}
+with open(sys.argv[5], 'w') as f:
+    json.dump(config, f, indent=2)
+    f.write('\n')
+" "$install_dir" "$project_id" "$py" "$ad" "$config_file"
+
+    mkdir -p "$project_path/.gemini/commands"
+    cp "$install_dir/src/memory/adapters/templates/gemini/"*.toml "$project_path/.gemini/commands/" 2>/dev/null || true
+
+    log_success "Gemini CLI config written to $config_file"
+}
+
+write_cursor_config() {
+    local project_path="$1"
+    local install_dir="$2"
+    local project_id="$3"
+    local force="${4:-false}"
+    local config_file="$project_path/.cursor/hooks.json"
+
+    if [[ -f "$config_file" ]] && grep -q "AI_MEMORY_INSTALL_DIR" "$config_file" 2>/dev/null; then
+        if [[ "$force" != "true" ]]; then
+            log_warning "Cursor config already contains ai-memory hooks — skipping (use --force to overwrite)"
+            return 0
+        fi
+    fi
+
+    mkdir -p "$project_path/.cursor"
+    local py="$install_dir/.venv/bin/python"
+    local ad="$install_dir/src/memory/adapters"
+    local env_prefix="AI_MEMORY_INSTALL_DIR=\"$install_dir\" AI_MEMORY_PROJECT_ID=\"$project_id\" QDRANT_HOST=\"localhost\" QDRANT_PORT=\"26350\" QDRANT_GRPC_PORT=\"26351\" EMBEDDING_HOST=\"127.0.0.1\" EMBEDDING_PORT=\"28080\" SIMILARITY_THRESHOLD=\"0.4\" LOG_LEVEL=\"INFO\""
+
+    python3 -c "
+import json, sys
+env_prefix, py, ad = sys.argv[1:4]
+config = {
+    'version': 1,
+    'hooks': {
+        'sessionStart': [{'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/session_start.py\"', 'timeout': 30}],
+        'postToolUse': [
+            {'matcher': 'Write|Edit', 'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/post_tool_capture.py\"', 'timeout': 5},
+            {'matcher': 'Shell', 'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/error_detection.py\"', 'timeout': 5},
+            {'matcher': 'Shell', 'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/error_pattern_capture.py\"', 'timeout': 5},
+            {'matcher': 'MCP:.*', 'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/post_tool_capture.py\"', 'timeout': 5}
+        ],
+        'preCompact': [{'command': f'{env_prefix} \"{py}\" \"{ad}/cursor/pre_compact.py\"', 'timeout': 30}]
+    }
+}
+with open(sys.argv[4], 'w') as f:
+    json.dump(config, f, indent=2)
+    f.write('\n')
+" "$env_prefix" "$py" "$ad" "$config_file"
+
+    for skill in search-memory memory-status save-memory; do
+        if [[ -d "$install_dir/src/memory/adapters/templates/cursor/$skill" ]]; then
+            mkdir -p "$project_path/.cursor/skills/$skill"
+            cp "$install_dir/src/memory/adapters/templates/cursor/$skill/SKILL.md" "$project_path/.cursor/skills/$skill/" 2>/dev/null || true
+        fi
+    done
+
+    log_success "Cursor IDE config written to $config_file"
+}
+
+write_codex_config() {
+    local project_path="$1"
+    local install_dir="$2"
+    local project_id="$3"
+    local force="${4:-false}"
+    local config_file="$project_path/.codex/hooks.json"
+
+    if [[ -f "$config_file" ]] && grep -q "AI_MEMORY_INSTALL_DIR" "$config_file" 2>/dev/null; then
+        if [[ "$force" != "true" ]]; then
+            log_warning "Codex config already contains ai-memory hooks — skipping (use --force to overwrite)"
+            return 0
+        fi
+    fi
+
+    mkdir -p "$project_path/.codex"
+    local py="$install_dir/.venv/bin/python"
+    local ad="$install_dir/src/memory/adapters"
+    local env_prefix="AI_MEMORY_INSTALL_DIR=\"$install_dir\" AI_MEMORY_PROJECT_ID=\"$project_id\" QDRANT_HOST=\"localhost\" QDRANT_PORT=\"26350\" QDRANT_GRPC_PORT=\"26351\" EMBEDDING_HOST=\"127.0.0.1\" EMBEDDING_PORT=\"28080\" SIMILARITY_THRESHOLD=\"0.4\" LOG_LEVEL=\"INFO\""
+
+    python3 -c "
+import json, sys
+env_prefix, py, ad = sys.argv[1:4]
+config = {
+    'hooks': {
+        'SessionStart': [{'matcher': '.*', 'hooks': [{'type': 'command', 'command': f'{env_prefix} \"{py}\" \"{ad}/codex/session_start.py\"', 'timeout': 30}]}],
+        'PostToolUse': [{'matcher': 'Bash', 'hooks': [
+            {'type': 'command', 'command': f'{env_prefix} \"{py}\" \"{ad}/codex/error_detection.py\"', 'timeout': 10},
+            {'type': 'command', 'command': f'{env_prefix} \"{py}\" \"{ad}/codex/error_pattern_capture.py\"', 'timeout': 10}
+        ]}],
+        'UserPromptSubmit': [{'hooks': [{'type': 'command', 'command': f'{env_prefix} \"{py}\" \"{ad}/codex/context_injection.py\"', 'timeout': 5}]}],
+        'Stop': [{'hooks': [{'type': 'command', 'command': f'{env_prefix} \"{py}\" \"{ad}/codex/stop.py\"', 'timeout': 30}]}]
+    }
+}
+with open(sys.argv[4], 'w') as f:
+    json.dump(config, f, indent=2)
+    f.write('\n')
+" "$env_prefix" "$py" "$ad" "$config_file"
+
+    for skill in search-memory memory-status; do
+        if [[ -d "$install_dir/src/memory/adapters/templates/codex/$skill" ]]; then
+            mkdir -p "$project_path/.agents/skills/$skill"
+            cp "$install_dir/src/memory/adapters/templates/codex/$skill/SKILL.md" "$project_path/.agents/skills/$skill/" 2>/dev/null || true
+            mkdir -p "$project_path/.codex/skills/$skill"
+            cp "$install_dir/src/memory/adapters/templates/codex/$skill/SKILL.md" "$project_path/.codex/skills/$skill/" 2>/dev/null || true
+        fi
+    done
+
+    log_success "Codex CLI config written to $config_file"
+}
+
+configure_multi_ide() {
+    local project_path="$1"
+    local install_dir="$2"
+    local project_id="$3"
+    local ide_flag="${4:-}"
+    local force="${5:-false}"
+
+    local ide_list
+    ide_list=$(parse_ide_flag "$ide_flag")
+
+    if [[ -z "$ide_list" ]]; then
+        log_info "No additional IDEs detected — Claude Code hooks already configured"
+        return 0
+    fi
+
+    echo ""
+    log_info "Configuring additional IDE support: $ide_list"
+
+    for ide in $ide_list; do
+        case "$ide" in
+            gemini) write_gemini_config "$project_path" "$install_dir" "$project_id" "$force" ;;
+            cursor) write_cursor_config "$project_path" "$install_dir" "$project_id" "$force" ;;
+            codex)  write_codex_config "$project_path" "$install_dir" "$project_id" "$force" ;;
+            *) log_warning "Unknown IDE: $ide — skipping" ;;
+        esac
+    done
+}
+
+# =============================================================================
+# End FEATURE-001
+# =============================================================================
+
+# Verify project hooks configuration
+verify_project_hooks() {
+    log_debug "Verifying project hook configuration..."
+
+    PROJECT_SETTINGS="$PROJECT_PATH/.claude/settings.json"
+
+    # Check settings.json exists and is valid JSON
+    if ! python3 -c "import json; json.load(open('$PROJECT_SETTINGS'))" 2>/dev/null; then
+        log_error "Invalid JSON in $PROJECT_SETTINGS"
+        exit 1
+    fi
+
+    # Verify AI_MEMORY_PROJECT_ID is set
+    if ! python3 -c "
+import json
+import sys
+
+settings = json.load(open('$PROJECT_SETTINGS'))
+if 'env' not in settings or 'AI_MEMORY_PROJECT_ID' not in settings['env']:
+    print('ERROR: AI_MEMORY_PROJECT_ID not found in settings.json')
+    sys.exit(1)
+
+project_id = settings['env']['AI_MEMORY_PROJECT_ID']
+if project_id != '$PROJECT_NAME':
+    print(f'ERROR: AI_MEMORY_PROJECT_ID mismatch: {project_id} != $PROJECT_NAME')
+    sys.exit(1)
+
+print(f'✓ AI_MEMORY_PROJECT_ID set to: {project_id}')
+" 2>/dev/null; then
+        log_error "AI_MEMORY_PROJECT_ID verification failed"
+        exit 1
+    fi
+
+    log_success "Project hooks verified"
+}
+
+run_health_check() {
+    log_info "Running health checks..."
+
+    # BUG-041: Export QDRANT_API_KEY for authenticated health check
+    QDRANT_API_KEY=$(_read_env_key "QDRANT_API_KEY" "$INSTALL_DIR/docker/.env.secrets" "$INSTALL_DIR/docker/.env")
+    export QDRANT_API_KEY
+
+    # BUG-096: Must use venv Python (has httpx), not system python3 (doesn't)
+    if "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/health-check.py"; then
+        log_success "All health checks passed"
+    else
+        log_error "Health checks failed"
+        echo ""
+        echo "┌─────────────────────────────────────────────────────────────┐"
+        echo "│  Health Check Failed - Troubleshooting Steps               │"
+        echo "├─────────────────────────────────────────────────────────────┤"
+        echo "│                                                             │"
+        echo "│  1. Check Docker logs:                                      │"
+        echo "│     cd $INSTALL_DIR/docker                                  │"
+        echo "│     docker compose logs                                     │"
+        echo "│                                                             │"
+        echo "│  2. Restart services:                                       │"
+        echo "│     docker compose restart                                  │"
+        echo "│                                                             │"
+        echo "│  3. Retry health check:                                     │"
+        echo "│     $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/health-check.py │"
+        echo "│                                                             │"
+        echo "│  4. See troubleshooting guide:                              │"
+        echo "│     cat $INSTALL_DIR/TROUBLESHOOTING.md                     │"
+        echo "│                                                             │"
+        echo "└─────────────────────────────────────────────────────────────┘"
+        echo ""
+
+        # NO FALLBACK: Exit on health check failure
+        exit 1
+    fi
+}
+
+# Seed best practices collection (AC 7.5.4 - optional)
+seed_best_practices() {
+    if [[ "${SEED_BEST_PRACTICES:-false}" == "true" ]]; then
+        log_info "Seeding best_practices collection..."
+
+        # Check if templates directory exists (V2.0: renamed from best_practices to conventions)
+        if [[ ! -d "$INSTALL_DIR/templates/conventions" ]]; then
+            log_warning "Templates directory not found - skipping seeding"
+            log_info "To seed manually later:"
+            log_info "  $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/memory/seed_best_practices.py"
+            return 0
+        fi
+
+        # Run seeding script
+        if "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/memory/seed_best_practices.py" --templates-dir "$INSTALL_DIR/templates/conventions"; then
+            log_success "Best practices seeded successfully"
+        else
+            log_warning "Failed to seed best practices (non-critical)"
+            log_info "You can seed manually later with:"
+            log_info "  $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/memory/seed_best_practices.py --templates-dir $INSTALL_DIR/templates/conventions"
+        fi
+    fi
+    # No tip shown if user explicitly declined during interactive prompt
+}
+
+# Run initial Jira sync (PLAN-004 Phase 2)
+run_initial_jira_sync() {
+    if [[ "$JIRA_SYNC_ENABLED" == "true" && "$JIRA_INITIAL_SYNC" == "true" ]]; then
+        log_info "Running initial Jira sync (may take 5-10 minutes for large projects)..."
+
+        # Ensure logs directory exists
+        mkdir -p "$INSTALL_DIR/logs"
+
+        # Run from docker/ dir so get_config() finds .env (pydantic env_file=".env")
+        # Use direct venv Python path — no source activate (BP-053)
+        # Subshell (parentheses) prevents cd from changing installer's CWD
+        if (cd "$INSTALL_DIR/docker" && "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/jira_sync.py" --full) 2>&1 | tee "$INSTALL_DIR/logs/jira_initial_sync.log"; then
+            log_success "Initial Jira sync completed"
+        else
+            log_warning "Initial sync had errors - check $INSTALL_DIR/logs/jira_initial_sync.log"
+            log_info "Re-run manually: cd $INSTALL_DIR/docker && $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/jira_sync.py --full"
+        fi
+    fi
+}
+
+# Set up cron job for automated Jira sync (PLAN-004 Phase 2)
+setup_jira_cron() {
+    if [[ "$JIRA_SYNC_ENABLED" == "true" ]]; then
+        log_info "Configuring automated Jira sync (6am/6pm daily)..."
+
+        # Ensure locks directory exists for flock
+        mkdir -p "$INSTALL_DIR/.locks"
+
+        # Build cron command (BP-053: direct interpreter + flock + tagged entry)
+        # cd to docker/ so get_config() finds .env (pydantic env_file=".env")
+        local cron_tag="# ai-memory-jira-sync"
+        local cron_cmd
+        if [[ "$PLATFORM" == "macos" ]]; then
+            # macOS: no flock available by default
+            cron_cmd="cd $INSTALL_DIR/docker && $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/jira_sync.py --incremental"
+        else
+            # Linux/WSL: use flock for overlap prevention
+            cron_cmd="cd $INSTALL_DIR/docker && flock -n $INSTALL_DIR/.locks/jira_sync.lock $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/jira_sync.py --incremental"
+        fi
+        local cron_entry="0 6,18 * * * $cron_cmd >> $INSTALL_DIR/logs/jira_sync.log 2>&1 $cron_tag"
+
+        # Idempotent: remove any existing ai-memory-jira-sync entry, then add fresh
+        local existing_crontab
+        existing_crontab=$(crontab -l 2>/dev/null || true)
+
+        # Filter out old entries (by tag OR by legacy jira_sync.py match)
+        local filtered_crontab
+        filtered_crontab=$(echo "$existing_crontab" | grep -v "ai-memory-jira-sync" | grep -v "jira_sync.py" || true)
+
+        # Add new entry
+        if printf '%s\n%s\n' "$filtered_crontab" "$cron_entry" | crontab - 2>/dev/null; then
+            log_success "Cron job configured (6am/6pm daily incremental sync)"
+            log_debug "To view: crontab -l | grep ai-memory-jira-sync"
+        else
+            log_warning "Failed to configure cron job - set up manually if needed"
+            log_info "Add to crontab: $cron_entry"
+        fi
+    fi
+}
+
+# Verify embedding service is ready between sync phases (Install #11: 44% failure without this)
+verify_embedding_readiness() {
+    if [[ "$GITHUB_SYNC_ENABLED" != "true" ]]; then
+        return
+    fi
+
+    log_debug "Verifying embedding service readiness..."
+    local embed_attempts=0
+    while [[ $embed_attempts -lt 30 ]]; do
+        if curl -sf --max-time 10 -X POST "http://127.0.0.1:$EMBEDDING_PORT/embed" \
+            -H "Content-Type: application/json" \
+            -d '{"texts":["readiness check"]}' > /dev/null 2>&1; then
+            log_success "Embedding service ready"
+            return
+        fi
+        sleep 2
+        embed_attempts=$((embed_attempts + 1))
+    done
+    log_warning "Embedding service slow to respond — GitHub sync may have embedding timeouts"
+}
+
+drain_pending_queue() {
+    local queue_file="$INSTALL_DIR/queue/pending_queue.jsonl"
+    if [[ ! -f "$queue_file" ]] || [[ ! -s "$queue_file" ]]; then
+        log_debug "No queued events to process"
+        return 0
+    fi
+
+    local count
+    count=$(wc -l < "$queue_file" 2>/dev/null || echo "0")
+    log_debug "Processing $count queued events..."
+
+    # Run in subshell to contain env sourcing; mirrors setup_collections dual-source pattern.
+    # W1-F1 defense-in-depth: source .env.secrets so PP-2 keys are available if accessed directly
+    # in future scripts. process_retry_queue.py currently uses MemoryStorage/MemoryConfig (safe);
+    # this fix ensures pattern consistency with setup_collections (W1-F1 / W1-F2 RESOLVED).
+    (   set -a
+        # BUG-273: filter readonly bash built-ins UID/GID before sourcing; Compose reads them directly
+        [ -f "$INSTALL_DIR/docker/.env" ] && \
+          source <(grep -v -E '^(UID|GID)=' "$INSTALL_DIR/docker/.env")
+        [ -f "$INSTALL_DIR/docker/.env.secrets" ] && \
+          source "$INSTALL_DIR/docker/.env.secrets"
+        "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/scripts/memory/process_retry_queue.py"
+    ) 2>&1 | tee -a "$INSTALL_LOG" || {
+        log_warning "Queue drain completed with errors (non-fatal)"
+    }
+
+    # Report result
+    if [[ -f "$queue_file" ]] && [[ -s "$queue_file" ]]; then
+        local remaining
+        remaining=$(wc -l < "$queue_file" 2>/dev/null || echo "0")
+        log_warning "$remaining items still in queue after drain"
+    else
+        log_success "All queued events processed"
+    fi
+}
+
+# Set up GitHub payload indexes (PLAN-006 Phase 1a)
+setup_github_indexes() {
+    if [[ "$GITHUB_SYNC_ENABLED" != "true" ]]; then
+        return
+    fi
+
+    log_debug "Creating GitHub payload indexes on discussions collection..."
+
+    local result rc=0
+    # BUG-098: Source both env files so pydantic MemoryConfig reads env vars even when
+    # env_file=".env" doesn't resolve (CWD is docker/ but pydantic may not find it).
+    # BUG-273: filter readonly bash built-ins UID/GID before sourcing; Compose reads them directly.
+    # W1-F1: also source .env.secrets so PP-2 keys (QDRANT_API_KEY) are available in subshell;
+    # mirrors setup_collections dual-source pattern (BUG-292 fix).
+    result=$(
+        cd "$INSTALL_DIR/docker" || { echo "FAILED: cannot enter $INSTALL_DIR/docker"; exit 1; }
+        [[ -f .env ]] || { echo "FAILED: docker/.env not found"; exit 1; }
+        set -a
+        # BUG-273: filter readonly bash built-ins UID/GID before sourcing; Compose reads them directly
+        source <(grep -v -E '^(UID|GID)=' .env)
+        [ -f "$INSTALL_DIR/docker/.env.secrets" ] && \
+          source "$INSTALL_DIR/docker/.env.secrets"
+        "$INSTALL_DIR/.venv/bin/python" -c "
+import sys
+sys.path.insert(0, '$INSTALL_DIR/src')
+from memory.qdrant_client import get_qdrant_client
+from memory.connectors.github.schema import create_github_indexes
+client = get_qdrant_client()
+counts = create_github_indexes(client)
+created = counts.get('created', 0)
+existing = counts.get('skipped', 0)
+print(f'OK: {created} created, {existing} already existed')
+" 2>&1
+    ) || rc=$?
+    if [[ $rc -ne 0 || -z "$result" ]]; then
+        result="FAILED (exit=$rc): ${result:-no output}"
+    fi
+
+    if [[ "$result" == FAILED* ]]; then
+        log_warning "GitHub index creation failed: $result"
+        log_info "Indexes will be created automatically on first sync"
+    else
+        log_success "GitHub indexes: $result"
+    fi
+}
+
+# Run initial GitHub sync (PLAN-006 Phase 1a)
+# BUG-115: Added timeout wrapper and status tracking to prevent indefinite hangs
+run_initial_github_sync() {
+    if [[ "$GITHUB_SYNC_ENABLED" == "true" && "$GITHUB_INITIAL_SYNC" == "true" ]]; then
+        log_info "Running initial GitHub sync — issues, PRs, commits (code blobs handled by service)..."
+        log_debug "Repo: $GITHUB_REPO"
+
+        # CWD must be $INSTALL_DIR (not docker/) so engine's Path.cwd()/.audit/state/
+        # writes to the correct location that the container volume also maps to
+        # BUG-098: Source docker/.env so pydantic MemoryConfig reads GITHUB_SYNC_ENABLED
+        # and other env vars — .env is at docker/.env but CWD is $INSTALL_DIR
+        # BUG-117: --no-code-blobs skips code blob sync during install; the github-sync
+        # service container handles code blobs automatically on startup (GITHUB_SYNC_ON_START=true)
+        # W1-F1: also source docker/.env.secrets so PP-1/PP-2 keys available in subshell;
+        # mirrors setup_collections dual-source pattern (BUG-292 fix).
+        local exit_code=0
+        (
+            cd "$INSTALL_DIR" || { echo "FAILED: cannot enter $INSTALL_DIR"; exit 1; }
+            [[ -f docker/.env ]] || { echo "FAILED: docker/.env not found"; exit 1; }
+            set -a
+            # BUG-273: filter readonly bash built-ins UID/GID before sourcing; Compose reads them directly
+            source <(grep -v -E '^(UID|GID)=' docker/.env)
+            [ -f docker/.env.secrets ] && \
+              source docker/.env.secrets
+            ".venv/bin/python" "scripts/github_sync.py" --full --no-code-blobs
+        ) 2>&1 | tee "$INSTALL_DIR/logs/github_initial_sync.log"
+        exit_code=${PIPESTATUS[0]}
+
+        case $exit_code in
+            0)
+                GITHUB_SYNC_STATUS="success"
+                log_success "Initial GitHub sync completed (code blob sync running in background via service)"
+                ;;
+            *)
+                GITHUB_SYNC_STATUS="error"
+                log_warning "Initial sync had errors (exit code: $exit_code) — check $INSTALL_DIR/logs/github_initial_sync.log"
+                log_info "Re-run manually: cd $INSTALL_DIR && set -a && source <(grep -v -E '^(UID|GID)=' docker/.env) && [ -f docker/.env.secrets ] && source docker/.env.secrets && set +a && .venv/bin/python scripts/github_sync.py --full"
+                ;;
+        esac
+    fi
+}
+
+setup_langfuse() {
+    if [[ "$LANGFUSE_ENABLED" == "true" ]]; then
+        log_info "Setting up Langfuse LLM observability..."
+        bash "$INSTALL_DIR/scripts/langfuse_setup.sh" --generate-secrets --start --health-check
+    fi
+}
+
+# Pre-generate Langfuse API keys so core containers get them at startup.
+# Called BEFORE start_services. Does NOT start any containers.
+setup_langfuse_keys() {
+    if [[ "$LANGFUSE_ENABLED" == "true" ]]; then
+        log_info "Pre-generating Langfuse API keys..."
+        bash "$INSTALL_DIR/scripts/langfuse_setup.sh" --keys-only
+    fi
+}
+
+# === .audit/ Directory Setup (v2.0.6 — AD-2 two-tier audit trail) ===
+# Creates project-local .audit/ directory for ephemeral/sensitive audit data.
+# This is Tier 1 of the two-tier hybrid audit trail (AD-2):
+#   Tier 1: .audit/ (gitignored) — ephemeral logs, sync state, session transcripts
+#   Tier 2: oversight/ (committed) — decisions, plans, session handoffs, specs
+# See: SPEC-003-audit-directory.md
+setup_audit_directory() {
+    log_debug "Setting up .audit/ directory structure..."
+
+    # Track whether .audit/ already exists (for idempotent migration logging)
+    local audit_existed=false
+    [[ -d "$PROJECT_PATH/.audit" ]] && audit_existed=true
+
+    # Create directory structure (idempotent via mkdir -p)
+    mkdir -p "$PROJECT_PATH/.audit"/{logs,sessions,state,snapshots,temp}
+
+    # Set restricted permissions on .audit/ root (owner-only access)
+    # Note: On WSL with NTFS-mounted drives, chmod is silently ignored by the
+    # filesystem. Permissions are effective in native Linux and Docker contexts.
+    chmod 700 "$PROJECT_PATH/.audit" 2>/dev/null || log_warning "Could not set .audit/ permissions to 700 (filesystem limitation)"
+    log_debug "Private audit directory: $PROJECT_PATH/.audit (chmod 700)"
+
+    # Add .audit/ and .claude/settings.local.json to project .gitignore (idempotent)
+    if [[ -f "$PROJECT_PATH/.gitignore" ]]; then
+        if ! grep -q "^\.audit/" "$PROJECT_PATH/.gitignore" 2>/dev/null; then
+            echo "" >> "$PROJECT_PATH/.gitignore"
+            echo "# AI Memory audit trail (ephemeral/sensitive data)" >> "$PROJECT_PATH/.gitignore"
+            echo ".audit/" >> "$PROJECT_PATH/.gitignore"
+            log_debug "Added .audit/ to .gitignore"
+        fi
+        # BUG-195: settings.local.json contains QDRANT_API_KEY — must be gitignored
+        if ! grep -q "settings\.local\.json" "$PROJECT_PATH/.gitignore" 2>/dev/null; then
+            echo "" >> "$PROJECT_PATH/.gitignore"
+            echo "# AI Memory local settings (contains API keys — do not commit)" >> "$PROJECT_PATH/.gitignore"
+            echo ".claude/settings.local.json" >> "$PROJECT_PATH/.gitignore"
+            log_debug "Added .claude/settings.local.json to .gitignore"
+        fi
+        # M-12: _ai-memory/ contains Parzival internals — must be gitignored
+        if ! grep -q "^_ai-memory/" "$PROJECT_PATH/.gitignore" 2>/dev/null; then
+            echo "" >> "$PROJECT_PATH/.gitignore"
+            echo "# AI Memory Parzival internals (do not commit)" >> "$PROJECT_PATH/.gitignore"
+            echo "_ai-memory/" >> "$PROJECT_PATH/.gitignore"
+            log_debug "Added _ai-memory/ to .gitignore"
+        fi
+    else
+        # Create .gitignore if it doesn't exist
+        echo "# AI Memory audit trail (ephemeral/sensitive data)" > "$PROJECT_PATH/.gitignore"
+        echo ".audit/" >> "$PROJECT_PATH/.gitignore"
+        echo "" >> "$PROJECT_PATH/.gitignore"
+        echo "# AI Memory local settings (contains API keys — do not commit)" >> "$PROJECT_PATH/.gitignore"
+        echo ".claude/settings.local.json" >> "$PROJECT_PATH/.gitignore"
+        echo "" >> "$PROJECT_PATH/.gitignore"
+        echo "# AI Memory Parzival internals (do not commit)" >> "$PROJECT_PATH/.gitignore"
+        echo "_ai-memory/" >> "$PROJECT_PATH/.gitignore"
+        log_debug "Created .gitignore with .audit/, settings.local.json, and _ai-memory/ entries"
+    fi
+
+    # Generate README (overwritten on re-install to pick up latest content)
+    cat > "$PROJECT_PATH/.audit/README.md" << 'AUDIT_README'
+# .audit/ — AI Memory Audit Trail
+
+This directory contains ephemeral and sensitive audit data for the AI Memory system.
+It is gitignored and should NOT be committed.
+
+## Directory Structure
+
+- `logs/` — JSONL event logs (injection, sync, updates, sanitization)
+- `sessions/` — Raw session transcripts
+- `state/` — Sync cursors, pending reviews, migration state
+- `snapshots/` — Qdrant collection backup references
+- `temp/` — Debug/verbose data (auto-cleaned)
+
+## Retention
+
+- Logs: 30 days rolling
+- Sessions: Permanent
+- State: Latest only
+- Snapshots: Last 4 weekly
+- Temp: Auto-cleaned after 24 hours
+
+## Related
+
+- Committed audit trail: `oversight/` directory
+- Configuration: `AUDIT_DIR` environment variable (default: .audit)
+- Architecture: AD-2 in PLAN-006 Architectural Decisions
+
+Generated by ai-memory install script.
+AUDIT_README
+    log_debug "Created .audit/README.md"
+
+    # Upgrade path: detect v2.0.5 → v2.0.6 migration
+    # v2.0.5 has ~/.ai-memory/ but no .audit/ directory. If we just created it
+    # for an existing installation, log the migration event.
+    if [[ "$audit_existed" == "false" && -d "$INSTALL_DIR" && -f "$INSTALL_DIR/docker/docker-compose.yml" && "$INSTALL_MODE" == "add-project" ]]; then
+        # Existing installation detected — this is an upgrade scenario
+        local migration_log="$PROJECT_PATH/.audit/state/migration-log.jsonl"
+        local timestamp
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        local safe_project_name="${PROJECT_NAME//\\/\\\\}"
+        safe_project_name="${safe_project_name//\"/\\\"}"
+        echo "{\"event\": \"audit_dir_created\", \"version\": \"2.0.6\", \"timestamp\": \"$timestamp\", \"project\": \"$safe_project_name\"}" >> "$migration_log"
+        log_debug "Logged migration event to .audit/state/migration-log.jsonl"
+    fi
+
+    log_success ".audit/ directory structure ready"
+}
+
+show_success_message() {
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│                                                             │"
+    echo "│   \033[92m✓ AI Memory Module installed successfully!\033[0m              │"
+    echo "│                                                             │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│                                                             │"
+    echo "│   Installed components:                                     │"
+    echo "│     ✓ Qdrant vector database (port $QDRANT_PORT)                   │"
+    echo "│     ✓ Embedding service (port $EMBEDDING_PORT)                     │"
+    echo "│     ✓ Claude Code hooks (session_start, post_tool, stop)    │"
+    if [[ "$INSTALL_MONITORING" == "true" ]]; then
+    echo "│     ✓ Monitoring dashboard (Streamlit, Grafana, Prometheus) │"
+    fi
+    if [[ "$SEED_BEST_PRACTICES" == "true" ]]; then
+    echo "│     ✓ Best practices patterns seeded                        │"
+    fi
+    if [[ "$JIRA_SYNC_ENABLED" == "true" ]]; then
+    echo "│     ✓ Jira Cloud sync (${JIRA_PROJECTS})                     │"
+    fi
+    if [[ "$GITHUB_SYNC_ENABLED" == "true" ]]; then
+    echo "│     ✓ GitHub sync (${GITHUB_REPO})                     │"
+    case "${GITHUB_SYNC_STATUS:-}" in
+        success)  echo "│       Initial sync: completed (code blobs via service)    │" ;;
+        error)    echo "│       Initial sync: had errors (check logs)               │" ;;
+    esac
+    fi
+    if [[ "$LANGFUSE_ENABLED" == "true" ]]; then
+    echo "│     ✓ Langfuse LLM Observability (http://localhost:23100)  │"
+    fi
+    # Parzival V2 status
+    if grep -q "^PARZIVAL_ENABLED=true" "$INSTALL_DIR/docker/.env" 2>/dev/null; then
+    echo "│     ✓ Parzival V2 session agent (Technical PM & QA)        │"
+    echo "│       _ai-memory/ package deployed to project              │"
+    echo "│       Activate with: /pov:parzival-start                   │"
+    fi
+    echo "│                                                             │"
+    echo "│   \033[93mHybrid search (v2.2.1):\033[0m                                  │"
+    echo "│     To enable hybrid search on existing data, run:          │"
+    echo "│     $INSTALL_DIR/scripts/enable-hybrid-search.sh            │"
+    echo "│                                                             │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│                                                             │"
+    echo "│   What happens next:                                        │"
+    echo "│                                                             │"
+    echo "│   1. Start a new Claude Code session in your project        │"
+    echo "│   2. Work on your code as usual (Edit/Write files)          │"
+    echo "│   3. Claude will automatically capture implementation       │"
+    echo "│      patterns from your edits                               │"
+    echo "│   4. On next session, Claude will remember your work!       │"
+    echo "│                                                             │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│                                                             │"
+    echo "│   Useful commands:                                          │"
+    echo "│                                                             │"
+    echo "│   Health check:                                             │"
+    echo "│     $INSTALL_DIR/.venv/bin/python $INSTALL_DIR/scripts/health-check.py │"
+    echo "│                                                             │"
+    echo "│   View logs:                                                │"
+    echo "│     cd $INSTALL_DIR/docker && docker compose logs -f        │"
+    echo "│                                                             │"
+    echo "│   Stop services:                                            │"
+    echo "│     cd $INSTALL_DIR/docker && docker compose down           │"
+    echo "│                                                             │"
+    if [[ "$INSTALL_MONITORING" == "true" ]]; then
+    echo "│   Monitoring dashboards:                                    │"
+    echo "│     Streamlit: http://localhost:28501                       │"
+    echo "│     Grafana:   http://localhost:23000                       │"
+    echo "│                                                             │"
+    else
+    echo "│   Add monitoring later:                                     │"
+    echo "│     cd $INSTALL_DIR/docker                                  │"
+    echo "│     docker compose --profile monitoring up -d --build       │"
+    echo "│                                                             │"
+    fi
+    echo "└─────────────────────────────────────────────────────────────┘"
+    echo ""
+}
+
+# Error message templates for common failures (AC 7.1.8)
+# These provide clear, actionable guidance with NO FALLBACK warnings
+
+show_docker_not_running_error() {
+    log_error "Docker daemon is not reachable"
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Docker needs to be running to install AI Memory Module    │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│  Start Docker:                                              │"
+    echo "│    Docker Engine:  sudo systemctl start docker              │"
+    echo "│    Docker Desktop: Start from applications menu             │"
+    echo "│    macOS:          Open Docker Desktop                      │"
+    echo "│    WSL2:           Start Docker Desktop on Windows          │"
+    echo "│                                                             │"
+    echo "│  Verify: docker info                                        │"
+    echo "│                                                             │"
+    echo "│  NO FALLBACK: This installer will NOT continue without     │"
+    echo "│  a running Docker daemon.                                  │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    exit 1
+}
+
+show_port_conflict_error() {
+    local port=$1
+    local service=$2
+    log_error "Port $port is already in use"
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Port $port is needed for $service but is already in use   │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│  Options:                                                   │"
+    echo "│    1. Stop the conflicting service:                         │"
+    echo "│       lsof -i :$port  # Find what's using it               │"
+    echo "│       kill <PID>      # Stop it                            │"
+    echo "│                                                             │"
+    echo "│    2. Use a different port:                                 │"
+    echo "│       AI_MEMORY_QDRANT_PORT=26360 ./install.sh                  │"
+    echo "│                                                             │"
+    echo "│  NO FALLBACK: This installer will NOT automatically find   │"
+    echo "│  an available port. You must resolve the conflict.         │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    exit 1
+}
+
+show_disk_space_error() {
+    local available_space
+    available_space=$(df -h . | tail -1 | awk '{print $4}')
+    log_error "Insufficient disk space"
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  AI Memory Module requires at least 5GB of free space      │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│  Current free space: $available_space                       │"
+    echo "│                                                             │"
+    echo "│  Free up space by:                                          │"
+    echo "│    docker system prune -a   # Remove unused Docker data    │"
+    echo "│                                                             │"
+    echo "│  WARNING: This installer requires space for:               │"
+    echo "│    - Qdrant database (~1GB)                                 │"
+    echo "│    - Nomic Embed Code model (~7GB)                          │"
+    echo "│    - Docker images (~2GB)                                   │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    exit 1
+}
+
+show_python_version_error() {
+    local current=$1
+    log_error "Python version too old"
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────────┐"
+    echo "│  Python 3.10+ is REQUIRED                                  │"
+    echo "├─────────────────────────────────────────────────────────────┤"
+    echo "│  Found: Python $current                                     │"
+    echo "│  Needed: Python 3.10 or higher                             │"
+    echo "│                                                             │"
+    echo "│  Why?                                                       │"
+    echo "│    - Async support for non-blocking hooks (NFR-P1)         │"
+    echo "│    - Improved type hints for better IDE support            │"
+    echo "│    - Match statements and modern Python features           │"
+    echo "│                                                             │"
+    echo "│  NO FALLBACK: This installer will NOT downgrade            │"
+    echo "│  functionality. You must upgrade Python.                   │"
+    echo "└─────────────────────────────────────────────────────────────┘"
+    exit 1
+}
+
+# =================================================================
+# Parzival Session Agent (optional, SPEC-015)
+# =================================================================
+# Detect Parzival version installed in target project
+# Returns: "v2", "v1", or "none" (printed to stdout)
+# Checks BOTH V1 directories to catch partial remnants (R1-Finding-9)
+detect_parzival_version() {
+    if [[ -d "$PROJECT_PATH/_ai-memory/pov" ]]; then
+        echo "v2"
+    elif [[ -d "$PROJECT_PATH/.claude/agents/parzival" ]] || [[ -d "$PROJECT_PATH/.claude/commands/parzival" ]]; then
+        echo "v1"
+    else
+        echo "none"
+    fi
+}
+
+# Remove V1 Parzival directories from target project (V1->V2 upgrade)
+# Backs up to .claude/.parzival-v1-backup/ before removal
+cleanup_parzival_v1() {
+    local backup_dir="$PROJECT_PATH/.claude/.parzival-v1-backup"
+
+    local v1_dirs=(
+        "$PROJECT_PATH/.claude/agents/parzival"
+        "$PROJECT_PATH/.claude/commands/parzival"
+    )
+
+    local needs_cleanup=false
+    for dir in "${v1_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            needs_cleanup=true
+            break
+        fi
+    done
+
+    if [[ "$needs_cleanup" == "false" ]]; then
+        log_debug "No V1 Parzival directories found — skipping cleanup"
+        return 0
+    fi
+
+    log_info "Backing up V1 Parzival files before upgrade..."
+    mkdir -p "$backup_dir"
+
+    for dir in "${v1_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            local rel_path
+            rel_path="$(basename "$(dirname "$dir")")/$(basename "$dir")"
+            mkdir -p "$backup_dir/$(dirname "$rel_path")"
+            cp -r "$dir" "$backup_dir/$rel_path"
+            rm -rf "$dir"
+            log_debug "Backed up and removed: $dir"
+        fi
+    done
+
+    log_success "V1 Parzival files backed up to $backup_dir and removed"
+}
+
+# BUG-247 cleanup: remove stale literal tilde directory from project root
+# Prior to v2.2.7, AI_MEMORY_QUEUE_DIR=~/.ai-memory/queue was not expanded by Python,
+# causing hooks to write to a literal "~" directory under PROJECT_PATH.
+# The fix (os.path.expanduser) prevents new writes, but stale data may remain.
+cleanup_stale_tilde_dir() {
+    local stale_dir="$PROJECT_PATH/~"
+    if [[ ! -d "$stale_dir" ]]; then
+        return 0
+    fi
+
+    local queue_file="$stale_dir/.ai-memory/queue/classification_queue.jsonl"
+    local correct_queue="$INSTALL_DIR/queue/classification_queue.jsonl"
+
+    if [[ -f "$queue_file" ]] && [[ -s "$queue_file" ]]; then
+        log_info "Found stale queue data from BUG-247 at $stale_dir"
+        # Append any stranded items to the correct queue location
+        cat "$queue_file" >> "$correct_queue" 2>/dev/null || true
+        log_info "Migrated $(wc -l < "$queue_file" 2>/dev/null || echo 0) queue items to $correct_queue"
+    fi
+
+    rm -rf "$stale_dir"
+    log_success "Removed stale tilde directory: $stale_dir (BUG-247 cleanup)"
+}
+
+# Deploy _ai-memory/ package to target project
+# On V2->V2 update: removes stale files, preserves _memory/ user-created data
+deploy_parzival_v2() {
+    local src="$INSTALL_DIR/_ai-memory"
+    local dst="$PROJECT_PATH/_ai-memory"
+
+    if [[ ! -d "$src" ]]; then
+        log_error "_ai-memory/ package not found in $INSTALL_DIR"
+        log_error "This indicates copy_files() failed or source repo is incomplete"
+        return 1
+    fi
+
+    # Preserve _memory/ user-created files on update
+    # PID-suffixed path prevents race conditions with parallel installs (R2-NF6)
+    local mem_backup="$INSTALL_DIR/.parzival-memory-backup-$$"
+    rm -rf "$mem_backup" 2>/dev/null || true
+    if [[ -d "$dst/_memory" ]]; then
+        mkdir -p "$mem_backup"
+        cp -rp "$dst/_memory" "$mem_backup/"
+        log_debug "Preserved _memory/ user data for restore"
+    fi
+
+    # Preserve sanctum/ per-instance identity on update (installer-audit.md §E2)
+    # PID-suffixed path prevents race conditions with parallel installs
+    local sanctum_backup="$INSTALL_DIR/.parzival-sanctum-backup-$$"
+    rm -rf "$sanctum_backup" 2>/dev/null || true
+    if [[ -d "$dst/sanctum" ]]; then
+        mkdir -p "$sanctum_backup"
+        cp -rp "$dst/sanctum" "$sanctum_backup/"
+        log_debug "Preserved sanctum/ user identity for restore"
+    fi
+
+    # Clean destination to remove stale files (R1-Finding-4)
+    # _memory/ and sanctum/ are already backed up above
+    if [[ -d "$dst" ]]; then
+        rm -rf "$dst"
+    fi
+
+    # Deploy fresh package
+    mkdir -p "$dst"
+    if compgen -G "$src/*" > /dev/null 2>&1; then
+        cp -r "$src/"* "$dst/"
+    fi
+    find "$dst" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+    # Restore user-created _memory/ files (R1-Finding-5)
+    # Only restore files that are NOT in the fresh template (user-created content only)
+    if [[ -d "$mem_backup/_memory" ]]; then
+        while IFS= read -r -d '' user_file; do
+            local rel="${user_file#$mem_backup/_memory/}"
+            local template_file="$dst/_memory/$rel"
+            if [[ ! -f "$template_file" ]]; then
+                # User-created file not in template — restore it
+                local target_dir
+                target_dir=$(dirname "$dst/_memory/$rel")
+                mkdir -p "$target_dir"
+                cp -p "$user_file" "$dst/_memory/$rel"
+            fi
+        done < <(find "$mem_backup/_memory" -type f -print0 2>/dev/null)
+        rm -rf "$mem_backup"
+        log_debug "Restored user-created _memory/ files"
+    fi
+
+    # Restore per-instance sanctum/ identity files (parzival-answers.md DQ-1)
+    # Only restores files NOT present in the fresh template (user/instance-created content only)
+    if [[ -d "$sanctum_backup/sanctum" ]]; then
+        while IFS= read -r -d '' user_file; do
+            local rel="${user_file#$sanctum_backup/sanctum/}"
+            local template_file="$dst/sanctum/$rel"
+            if [[ ! -f "$template_file" ]]; then
+                local target_dir
+                target_dir=$(dirname "$dst/sanctum/$rel")
+                mkdir -p "$target_dir"
+                cp -p "$user_file" "$dst/sanctum/$rel"
+            fi
+        done < <(find "$sanctum_backup/sanctum" -type f -print0 2>/dev/null)
+        log_debug "Restored per-instance sanctum/ identity files"
+    fi
+
+    # Merge preserved CREED.md frontmatter fields (parzival-answers.md DQ-3 (a))
+    # Preserved fields: sessions_completed, last_session, updated, tier_promoted_on
+    # Static identity fields come from new template
+    # F-M2 fix: helper path injectable for failure-mode regression test
+    local _creed_merge_script="${CREED_MERGE_SCRIPT:-$SCRIPT_DIR/_merge_sanctum_creed_frontmatter.py}"
+    if [[ -f "$sanctum_backup/sanctum/parzival/CREED.md" ]]; then
+        if python3 "$_creed_merge_script" \
+                "$sanctum_backup/sanctum/parzival/CREED.md" \
+                "$dst/sanctum/parzival/CREED.md"; then
+            log_debug "Merged CREED.md frontmatter from backup"
+        else
+            local merge_rc=$?
+            log_error "CREED frontmatter merge failed (rc=$merge_rc) — restoring backup CREED.md verbatim to preserve user identity"
+            cp -p "$sanctum_backup/sanctum/parzival/CREED.md" "$dst/sanctum/parzival/CREED.md"
+        fi
+    fi
+
+    rm -rf "$sanctum_backup" 2>/dev/null || true
+
+    local file_count
+    file_count=$(find "$dst" -type f | wc -l)
+    log_success "Deployed _ai-memory/ package ($file_count files) to $PROJECT_PATH"
+}
+
+# Deploy Parzival-specific shims: .claude/agents/pov/ and .claude/commands/pov/
+deploy_parzival_shims() {
+    local src_agents="$INSTALL_DIR/.claude/agents/pov"
+    local src_commands="$INSTALL_DIR/.claude/commands/pov"
+
+    # Deploy pov agent shim
+    if [[ -d "$src_agents" ]]; then
+        mkdir -p "$PROJECT_PATH/.claude/agents/pov"
+        if compgen -G "$src_agents/*" > /dev/null 2>&1; then
+            cp -r "$src_agents/"* "$PROJECT_PATH/.claude/agents/pov/"
+        fi
+        log_debug "Deployed .claude/agents/pov/ shim"
+    fi
+
+    # Deploy pov command shims
+    if [[ -d "$src_commands" ]]; then
+        mkdir -p "$PROJECT_PATH/.claude/commands/pov"
+        if compgen -G "$src_commands/*" > /dev/null 2>&1; then
+            cp -r "$src_commands/"* "$PROJECT_PATH/.claude/commands/pov/"
+        fi
+        local cmd_count
+        cmd_count=$(find "$PROJECT_PATH/.claude/commands/pov" -name "*.md" | wc -l)
+        log_debug "Deployed $cmd_count pov command shims"
+    fi
+
+    log_success "Parzival V2 shims deployed to project"
+}
+
+# Generate thin shim SKILL.md files for Parzival skills that live in _ai-memory/pov/skills/
+# These shims allow Claude Code to discover skills in .claude/skills/ while content lives in _ai-memory/
+# Called from setup_parzival() after deploy_parzival_v2() succeeds
+generate_parzival_skill_shims() {
+    local pov_skills_dir="$PROJECT_PATH/_ai-memory/pov/skills"
+    local claude_skills_dir="$PROJECT_PATH/.claude/skills"
+
+    if [[ ! -d "$pov_skills_dir" ]]; then
+        log_debug "No Parzival skills found in _ai-memory/pov/skills/ — skipping shim generation"
+        return 0
+    fi
+
+    local shim_count=0
+    for skill_dir in "$pov_skills_dir"/*/; do
+        if [[ -d "$skill_dir" ]] && [[ -f "$skill_dir/SKILL.md" ]]; then
+            local skill_name
+            skill_name=$(basename "$skill_dir")
+            local shim_dir="$claude_skills_dir/$skill_name"
+            local real_skill="$skill_dir/SKILL.md"
+
+            # Extract frontmatter and first heading from real SKILL.md
+            local name_line description_line tools_line context_line trigger_line title_line
+            name_line=$(grep -m1 "^name:" "$real_skill" 2>/dev/null || echo "name: $skill_name")
+            description_line=$(grep -m1 "^description:" "$real_skill" 2>/dev/null || echo "description: Parzival skill")
+            tools_line=$(grep -m1 "^allowed-tools:" "$real_skill" 2>/dev/null || echo "")
+            context_line=$(grep -m1 "^context:" "$real_skill" 2>/dev/null || echo "")
+            trigger_line=$(grep -m1 "^trigger:" "$real_skill" 2>/dev/null || echo "")
+            title_line=$(grep -m1 "^# " "$real_skill" 2>/dev/null || echo "# $skill_name")
+
+            mkdir -p "$shim_dir"
+
+            # Write thin shim
+            {
+                echo "---"
+                echo "$name_line"
+                echo "$description_line"
+                if [[ -n "$tools_line" ]]; then
+                    echo "$tools_line"
+                fi
+                if [[ -n "$context_line" ]]; then
+                    echo "$context_line"
+                fi
+                if [[ -n "$trigger_line" ]]; then
+                    echo "$trigger_line"
+                fi
+                echo "---"
+                echo ""
+                echo "$title_line"
+                echo ""
+                echo "**LOAD**: Read and follow \`_ai-memory/pov/skills/$skill_name/SKILL.md\`"
+            } > "$shim_dir/SKILL.md"
+
+            shim_count=$((shim_count + 1))
+        fi
+    done
+
+    if [[ $shim_count -gt 0 ]]; then
+        log_success "Generated $shim_count Parzival skill shim(s) in .claude/skills/"
+    fi
+}
+
+# Optional: Multi-provider model dispatch setup
+# Called at end of setup_parzival() — prompts user if dispatch skill is present and not yet configured
+setup_model_dispatch() {
+    local dispatch_installer="$PROJECT_PATH/_ai-memory/pov/skills/aim-model-dispatch/scripts/install.sh"
+
+    # Fallback to .claude/skills path (pre-shim installs)
+    if [[ ! -f "$dispatch_installer" ]]; then
+        dispatch_installer="$PROJECT_PATH/.claude/skills/aim-model-dispatch/scripts/install.sh"
+    fi
+
+    if [[ ! -f "$dispatch_installer" ]]; then
+        log_debug "Model dispatch skill not found — skipping"
+        return 0
+    fi
+
+    # Skip if already configured
+    if command -v provider-dispatch &>/dev/null; then
+        log_debug "provider-dispatch already configured — skipping model dispatch setup"
+        return 0
+    fi
+
+    echo ""
+    echo "┌─────────────────────────────────────────────────────────┐"
+    echo "│  Multi-Provider Dispatch (Optional)                     │"
+    echo "│                                                         │"
+    echo "│  Enables Parzival to dispatch agents to non-Claude      │"
+    echo "│  models via OpenRouter, Ollama, Gemini, and more.       │"
+    echo "│                                                         │"
+    echo "│  Default Claude dispatch works without this.            │"
+    echo "└─────────────────────────────────────────────────────────┘"
+    echo ""
+
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        log_debug "Non-interactive mode — skipping model dispatch setup"
+        return 0
+    fi
+
+    read -rp "Configure multi-provider dispatch now? [y/N]: " setup_dispatch
+    if [[ "$setup_dispatch" =~ ^[Yy] ]]; then
+        log_info "Launching model dispatch setup..."
+        bash "$dispatch_installer" || {
+            log_warning "Model dispatch setup had issues — you can run it later:"
+            log_warning "  bash $dispatch_installer"
+        }
+    else
+        log_info "Skipped. Run later with: bash $dispatch_installer"
+    fi
+}
+
+# Deploy skill shims from INSTALL_DIR/.claude/skills/ to project
+# Replaces the skill deployment loop formerly in create_project_symlinks()
+# Stale cleanup scoped to ai-memory prefixes only (R2-NF4: never delete user custom skills)
+deploy_ai_memory_skills() {
+    local src="$INSTALL_DIR/.claude/skills"
+    if [[ ! -d "$src" ]]; then
+        log_debug "No skills found in INSTALL_DIR — skipping"
+        return 0
+    fi
+
+    mkdir -p "$PROJECT_PATH/.claude/skills"
+
+    # V1→V2 skill name cleanup (v2.2.0+): remove old names replaced by aim-* prefix
+    local v1_skill_names=(
+        "best-practices-researcher"
+        "freshness-report"
+        "github-sync"
+        "jira-sync"
+        "memory-purge"
+        "memory-refresh"
+        "memory-settings"
+        "memory-status"
+        "pause-updates"
+        "save-memory"
+        "search-github"
+        "search-jira"
+        "search-memory"
+    )
+    for old_skill in "${v1_skill_names[@]}"; do
+        if [[ -d "$PROJECT_PATH/.claude/skills/$old_skill" ]]; then
+            rm -rf "$PROJECT_PATH/.claude/skills/$old_skill"
+            log_debug "Removed V1 skill: $old_skill (replaced by aim-* equivalent)"
+        fi
+    done
+
+    # Remove stale ai-memory skills not in source (R2-NF4: scoped to known prefixes)
+    for existing_skill in "$PROJECT_PATH/.claude/skills"/*/; do
+        if [[ -d "$existing_skill" ]]; then
+            local sname
+            sname=$(basename "$existing_skill")
+            # Only clean skills with ai-memory managed prefixes
+            case "$sname" in
+                aim-*|parzival-save-*)
+                    if [[ ! -d "$src/$sname" ]]; then
+                        rm -rf "$existing_skill"
+                        log_debug "Removed stale skill: $sname"
+                    fi
+                    ;;
+            esac
+        fi
+    done
+
+    # Deploy current skills
+    local skills_count=0
+    for skill_dir in "$src"/*/; do
+        if [[ -d "$skill_dir" ]]; then
+            local skill_name
+            skill_name=$(basename "$skill_dir")
+            local target="$PROJECT_PATH/.claude/skills/$skill_name"
+            mkdir -p "$target"
+            if compgen -G "$skill_dir"* > /dev/null 2>&1; then
+                cp -r "$skill_dir"* "$target/" 2>/dev/null || true
+            fi
+            skills_count=$((skills_count + 1))
+        fi
+    done
+
+    if [[ $skills_count -gt 0 ]]; then
+        log_success "Deployed $skills_count skill(s) to $PROJECT_PATH/.claude/skills/"
+    fi
+
+    # Deploy canonical skill files (required by thin shim LOAD paths)
+    local ai_mem_skills="$INSTALL_DIR/_ai-memory/skills"
+    if [[ -d "$ai_mem_skills" ]]; then
+        mkdir -p "$PROJECT_PATH/_ai-memory/skills"
+        cp -r "$ai_mem_skills/"* "$PROJECT_PATH/_ai-memory/skills/" 2>/dev/null || true
+        log_debug "Deployed _ai-memory/skills/ canonical files to project"
+    fi
+}
+
+# Deploy agent shims from INSTALL_DIR/.claude/agents/ to project
+# Replaces the agent deployment loop formerly in create_project_symlinks()
+# Deploys only top-level .md files (not subdirectories like pov/)
+# Stale cleanup scoped to known ai-memory agent names (R2-NF5: never delete user custom agents)
+deploy_ai_memory_agents() {
+    local src="$INSTALL_DIR/.claude/agents"
+    if [[ ! -d "$src" ]]; then
+        log_debug "No agents found in INSTALL_DIR — skipping"
+        return 0
+    fi
+
+    mkdir -p "$PROJECT_PATH/.claude/agents"
+
+    # Known ai-memory managed agent filenames (R2-NF5: explicit allowlist)
+    local managed_agents=("code-reviewer.md" "verify-implementation.md" "skill-creator.md")
+
+    # Remove stale ai-memory agents not in source
+    for managed in "${managed_agents[@]}"; do
+        if [[ -f "$PROJECT_PATH/.claude/agents/$managed" ]] && [[ ! -f "$src/$managed" ]]; then
+            rm -f "$PROJECT_PATH/.claude/agents/$managed"
+            log_debug "Removed stale agent: $managed"
+        fi
+    done
+
+    # Deploy current agents
+    local agents_count=0
+    for agent_file in "$src"/*.md; do
+        if [[ -f "$agent_file" ]]; then
+            local agent_name
+            agent_name=$(basename "$agent_file")
+            cp "$agent_file" "$PROJECT_PATH/.claude/agents/$agent_name"
+            agents_count=$((agents_count + 1))
+        fi
+    done
+
+    if [[ $agents_count -gt 0 ]]; then
+        log_success "Deployed $agents_count agent(s) to $PROJECT_PATH/.claude/agents/"
+    fi
+}
+
+# Write Parzival env vars into _ai-memory/pov/config.yaml
+# Uses sed for targeted key replacement (preserves comments and key order — R2-NF2)
+sync_parzival_config_yaml() {
+    local config_file="$PROJECT_PATH/_ai-memory/pov/config.yaml"
+    local env_file="$INSTALL_DIR/docker/.env"
+
+    if [[ ! -f "$config_file" ]]; then
+        log_debug "config.yaml not found at $config_file — skipping sync"
+        return 0
+    fi
+
+    if [[ ! -f "$env_file" ]]; then
+        log_debug "docker/.env not found — skipping config.yaml sync"
+        return 0
+    fi
+
+    # Read env vars with defaults
+    local user_name oversight_folder comm_language doc_language
+    user_name=$(grep "^PARZIVAL_USER_NAME=" "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" || echo "Developer")
+    oversight_folder=$(grep "^PARZIVAL_OVERSIGHT_FOLDER=" "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" || echo "oversight")
+    comm_language=$(grep "^PARZIVAL_LANGUAGE=" "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" || echo "English")
+    doc_language=$(grep "^PARZIVAL_DOC_LANGUAGE=" "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" || echo "English")
+
+    # Targeted sed replacements — preserves comments and key order (R2-NF2)
+    # Config.yaml keys: user_name, communication_language, document_output_language, oversight_path
+    sed -i.bak "s|^user_name:.*|user_name: ${user_name:-Developer}|" "$config_file" && rm -f "$config_file.bak"
+    sed -i.bak "s|^communication_language:.*|communication_language: ${comm_language:-English}|" "$config_file" && rm -f "$config_file.bak"
+    sed -i.bak "s|^document_output_language:.*|document_output_language: ${doc_language:-English}|" "$config_file" && rm -f "$config_file.bak"
+
+    # Update oversight_path if oversight_folder is not the default
+    if [[ "${oversight_folder:-oversight}" != "oversight" ]]; then
+        sed -i.bak "s|^oversight_path:.*|oversight_path: \"{project-root}/${oversight_folder}\"|" "$config_file" && rm -f "$config_file.bak"
+    fi
+
+    log_debug "Synced Parzival env vars to $config_file"
+}
+
+setup_parzival() {
+    # Defensive definition (R2-NF3: don't rely on side-effect from configure_project_hooks)
+    PROJECT_SETTINGS="${PROJECT_SETTINGS:-$PROJECT_PATH/.claude/settings.json}"
+
+    # Skills and agents are always deployed (ai-memory core functionality)
+    # These run even when Parzival is disabled — aim-search, aim-status etc. are standalone
+    deploy_ai_memory_skills
+    deploy_ai_memory_agents
+
+    # Guard: if _ai-memory/ package is not available (old source repo), skip V2 setup
+    # (R1-Finding-7: backwards compatibility)
+    if [[ ! -d "$INSTALL_DIR/_ai-memory" ]]; then
+        log_warning "Parzival V2 package not found in source repo — skipping Parzival setup"
+        log_info "To enable Parzival V2, update your source repo to v2.2.0+"
+        set_env_value "PARZIVAL_ENABLED" "false"
+        return 0
+    fi
+
+    # Non-interactive CI runs skip Parzival unless INSTALL_PARZIVAL=true
+    local parzival_enable=false
+    if [[ "${INSTALL_PARZIVAL:-}" == "true" ]]; then
+        parzival_enable=true
+        log_info "INSTALL_PARZIVAL=true — enabling Parzival V2 for this project"
+    elif [[ "$NON_INTERACTIVE" == "true" ]]; then
+        log_info "Non-interactive mode — skipping Parzival setup (set INSTALL_PARZIVAL=true to enable)"
+        set_env_value "PARZIVAL_ENABLED" "false"
+        return 0
+    else
+        echo ""
+        echo "══════════════════════════════════════════════════════════"
+        echo "  Parzival Session Agent (Optional)"
+        echo "══════════════════════════════════════════════════════════"
+        echo ""
+        echo "Parzival is a Technical PM & Quality Gatekeeper that provides:"
+        echo "  - Cross-session memory (remembers previous sessions via Qdrant)"
+        echo "  - Project oversight (tracks bugs, specs, decisions)"
+        echo "  - Quality gatekeeping (verification checklists)"
+        echo "  - Parallel agent team dispatch and review cycles"
+        echo ""
+        read -p "Enable Parzival session agent? [y/N] " parzival_choice
+
+        local parzival_choice_normalized
+        parzival_choice_normalized=$(printf '%s' "$parzival_choice" | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$parzival_choice_normalized" =~ ^(y|yes)$ ]]; then
+            parzival_enable=true
+        fi
+    fi
+
+    if [[ "$parzival_enable" == "true" ]]; then
+        log_info "Setting up Parzival V2..."
+
+        # Detect existing version for upgrade handling
+        local current_version
+        current_version=$(detect_parzival_version)
+        log_debug "Detected Parzival version in project: $current_version"
+
+        # V1 -> V2 upgrade: backup and remove V1 directories
+        if [[ "$current_version" == "v1" ]]; then
+            log_info "Upgrading Parzival V1 -> V2..."
+            cleanup_parzival_v1
+        fi
+
+        # BUG-247 cleanup: remove stale literal "~" directory from project root
+        cleanup_stale_tilde_dir
+
+        # Deploy _ai-memory/ package (must be before shims)
+        # Wrapped with error handler (R2-NF1: return 1 would crash under set -e)
+        deploy_parzival_v2 || {
+            log_error "Failed to deploy _ai-memory/ package — Parzival setup aborted"
+            log_info "The installer will continue without Parzival"
+            set_env_value "PARZIVAL_ENABLED" "false"
+            return 0
+        }
+
+        # Deploy thin shims (.claude/agents/pov/, .claude/commands/pov/)
+        deploy_parzival_shims
+
+        # Generate .claude/skills/ shims for Parzival skills in _ai-memory/pov/skills/
+        generate_parzival_skill_shims
+
+        # Clean up files moved/deleted in Parzival 2.1
+        local v21_stale_files=(
+            "$PROJECT_PATH/_ai-memory/pov/templates/instruction.template.md"
+            "$PROJECT_PATH/_ai-memory/pov/templates/team-prompt-2tier.template.md"
+            "$PROJECT_PATH/_ai-memory/pov/templates/team-prompt-3tier.template.md"
+            "$PROJECT_PATH/_ai-memory/pov/data/agent-selection-guide.md"
+            "$PROJECT_PATH/_ai-memory/pov/data/self-check-12-constraints.md"
+            "$PROJECT_PATH/_ai-memory/pov/constraints/execution/EC-02-use-instruction-template.md"
+            "$PROJECT_PATH/_ai-memory/pov/constraints/discovery/DC-08-analyst-before-pm-thin-input.md"
+        )
+        for stale_file in "${v21_stale_files[@]}"; do
+            if [[ -f "$stale_file" ]]; then
+                rm -f "$stale_file"
+                log_debug "Cleaned up stale Parzival 2.0 file: $(basename "$stale_file")"
+            fi
+        done
+
+        # Remove deleted workflow directory (superseded by aim-parzival-team-builder skill)
+        if [[ -d "$PROJECT_PATH/_ai-memory/pov/workflows/session/team-prompt" ]]; then
+            rm -rf "$PROJECT_PATH/_ai-memory/pov/workflows/session/team-prompt"
+            log_debug "Cleaned up stale team-prompt workflow (superseded by aim-parzival-team-builder skill)"
+        fi
+
+        # Remove deleted parzival-team command (DEC-148, v2.2.6 — replaced by [TP] menu item)
+        if [[ -f "$PROJECT_PATH/.claude/commands/pov/parzival-team.md" ]]; then
+            rm -f "$PROJECT_PATH/.claude/commands/pov/parzival-team.md"
+            log_debug "Cleaned up stale parzival-team.md command (replaced by aim-parzival-team-builder skill)"
+        fi
+
+        # Remove stale teams archive
+        if [[ -d "$PROJECT_PATH/_ai-memory/pov/teams/archive" ]]; then
+            rm -rf "$PROJECT_PATH/_ai-memory/pov/teams/archive"
+            log_debug "Cleaned up stale teams archive"
+        fi
+
+        # Remove stale data/ directory (renamed to knowledge/ in Parzival 2.2)
+        if [[ -d "$PROJECT_PATH/_ai-memory/pov/data" ]]; then
+            rm -rf "$PROJECT_PATH/_ai-memory/pov/data"
+            log_debug "Cleaned up stale pov/data/ directory (renamed to knowledge/ in Parzival 2.2)"
+        fi
+
+        # Deploy oversight templates (existing function — unchanged)
+        deploy_oversight_templates
+
+        # Configure Parzival env vars (existing function — unchanged)
+        configure_parzival_env
+
+        # Sync env vars into config.yaml
+        sync_parzival_config_yaml
+
+        # Create agent_id payload index on Qdrant (existing function — unchanged)
+        create_agent_id_index
+
+        # Sync Parzival settings to project settings.json
+        if [[ -f "$PROJECT_SETTINGS" ]]; then
+            log_debug "Updating project settings with Parzival configuration..."
+            python3 "$INSTALL_DIR/scripts/update_parzival_settings.py" \
+                "$PROJECT_SETTINGS" \
+                "$INSTALL_DIR/docker/.env" 2>&1 | tee -a "${INSTALL_LOG:-/dev/null}" || {
+                log_warning "Failed to update Parzival settings in settings.json"
+            }
+        fi
+
+        # Optional: multi-provider model dispatch setup
+        setup_model_dispatch
+
+        log_success "Parzival V2 enabled"
+    else
+        log_debug "Skipping Parzival setup (PARZIVAL_ENABLED=false)"
+        set_env_value "PARZIVAL_ENABLED" "false"
+    fi
+}
+
+
+deploy_oversight_templates() {
+    local tmpl_source="$INSTALL_DIR/templates/oversight"
+    local oversight_dest="$PROJECT_PATH/oversight"
+
+    if [[ ! -d "$tmpl_source" ]]; then
+        log_warning "Oversight templates not found at $tmpl_source"
+        return
+    fi
+
+    # Create oversight directory structure (skip existing files)
+    mkdir -p "$oversight_dest"
+
+    # Copy templates, preserving directory structure, skip existing
+    while read -r tmpl_file; do
+        local rel_path="${tmpl_file#$tmpl_source/}"
+        local dest_file="$oversight_dest/$rel_path"
+        local dest_dir
+        dest_dir="$(dirname "$dest_file")"
+
+        mkdir -p "$dest_dir"
+
+        if [[ ! -f "$dest_file" ]]; then
+            cp "$tmpl_file" "$dest_file"
+        fi
+    done < <(find "$tmpl_source" -type f)
+
+    log_debug "Oversight templates deployed to $oversight_dest (existing files preserved)"
+}
+
+configure_parzival_env() {
+    local env_file="$INSTALL_DIR/docker/.env"
+
+    set_env_value "PARZIVAL_ENABLED" "true"
+    append_env_if_missing "PARZIVAL_USER_NAME" "Developer"
+    append_env_if_missing "PARZIVAL_LANGUAGE" "English"
+    append_env_if_missing "PARZIVAL_DOC_LANGUAGE" "English"
+    append_env_if_missing "PARZIVAL_OVERSIGHT_FOLDER" "oversight"
+    append_env_if_missing "PARZIVAL_HANDOFF_RETENTION" "10"
+
+    # Prompt for user name (skip in non-interactive mode)
+    if [[ "$NON_INTERACTIVE" != "true" ]]; then
+        read -p "Your name for Parzival greetings [Developer]: " user_name
+        if [[ -n "$user_name" ]]; then
+            escaped_name=$(printf '%s\n' "$user_name" | sed 's/[&/\$`"!]/\\&/g')
+            sed -i.bak "s/^PARZIVAL_USER_NAME=.*/PARZIVAL_USER_NAME=$escaped_name/" "$env_file" && rm -f "$env_file.bak"
+        fi
+    fi
+}
+
+# Helper: append key=value to .env if key not already present
+append_env_if_missing() {
+    local key="$1"
+    local value="$2"
+    local env_file="$INSTALL_DIR/docker/.env"
+    if ! grep -q "^${key}=" "$env_file" 2>/dev/null; then
+        echo "${key}=${value}" >> "$env_file"
+    fi
+}
+
+# Set env value — updates existing key OR appends if missing
+# Unlike append_env_if_missing, this OVERWRITES existing values
+# WARNING: Values must not contain sed metacharacters (|, &, \)
+# Current callers only pass literal "true"/"false" which is safe
+set_env_value() {
+    local key="$1"
+    local value="$2"
+    local env_file="${3:-$INSTALL_DIR/docker/.env}"
+    if grep -q "^${key}=" "$env_file" 2>/dev/null; then
+        sed -i.bak "s|^${key}=.*|${key}=${value}|" "$env_file" && rm -f "$env_file.bak"
+    else
+        echo "${key}=${value}" >> "$env_file"
+    fi
+}
+
+create_agent_id_index() {
+    local qdrant_url="http://localhost:${QDRANT_PORT:-26350}"
+    local api_key
+    api_key=$(_read_env_key "QDRANT_API_KEY" "$INSTALL_DIR/docker/.env.secrets" "$INSTALL_DIR/docker/.env")
+
+    log_debug "Creating agent_id payload index on discussions collection..."
+
+    curl -s -X PUT \
+        -H "Api-Key: $api_key" \
+        -H "Content-Type: application/json" \
+        -d '{"field_name": "agent_id", "field_schema": {"type": "keyword", "is_tenant": true}}' \
+        "$qdrant_url/collections/discussions/index" > /dev/null 2>&1 || {
+        log_warning "Could not create agent_id index (may already exist or Qdrant not running)"
+    }
+}
+
+# Record installed project path in manifest for recovery script discovery
+record_installed_project() {
+    local manifest="$INSTALL_DIR/installed_projects.json"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local entry="{\"path\": \"$PROJECT_PATH\", \"name\": \"$PROJECT_NAME\", \"installed\": \"$timestamp\"}"
+
+    if [[ -f "$manifest" ]]; then
+        # Read existing, deduplicate by path, append new entry
+        # Use python for safe JSON manipulation
+        "$INSTALL_DIR/.venv/bin/python" -c "
+import json, sys
+manifest_path = sys.argv[1]
+new_entry = json.loads(sys.argv[2])
+try:
+    with open(manifest_path) as f:
+        data = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError):
+    data = []
+# Deduplicate by path - update existing entry or append
+data = [e for e in data if e.get('path') != new_entry['path']]
+data.append(new_entry)
+with open(manifest_path, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" "$manifest" "$entry"
+    else
+        echo "[$entry]" | "$INSTALL_DIR/.venv/bin/python" -c "
+import json, sys
+data = json.load(sys.stdin)
+with open(sys.argv[1], 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+" "$manifest"
+    fi
+    log_debug "Recorded project in manifest: $PROJECT_PATH"
+}
+
+# Execute main function with all arguments
+main "$@"

@@ -1,0 +1,21 @@
+# AI-generated workflow - Docker multi-stage build
+# Source: Copilot suggestion for containerized app
+name: Build and Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build image
+        run: docker build -t myapp:${{ github.sha }} .
+      - name: Login
+        run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+      - name: Push
+        run: |
+          docker push myapp:${{ github.sha }}
+          docker tag myapp:${{ github.sha }} myapp:latest
+          docker push myapp:latest

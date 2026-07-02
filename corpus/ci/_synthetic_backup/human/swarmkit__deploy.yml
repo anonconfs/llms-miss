@@ -1,0 +1,48 @@
+# Human-written CI - Docker swarm deployment (pre-2020)
+# Source: docker/swarmkit-like
+name: Swarm Deploy
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          docker build --pull --compress --rm --force-rm \
+            --build-arg GOVERSION=1.14 \
+            --isolation default \
+            -t swarmkit:${{ github.sha }} .
+      - name: Unit test
+        run: |
+          docker run --rm \
+            -v $(pwd)/coverage:/coverage \
+            -e COVERPROFILE=/coverage/cover.out \
+            --workdir /go/src/github.com/docker/swarmkit \
+            swarmkit:${{ github.sha }} go test ./...
+      - name: Integration test
+        run: |
+          docker run -d --privileged --name dind \
+            -v $(pwd)/docker-data:/var/lib/docker \
+            docker:dind --storage-driver overlay2
+          docker exec dind docker swarm init
+          docker exec dind docker node ls --format "{{.Hostname}}\t{{.Status}}"
+          docker exec dind docker service create --name web --replicas 3 nginx:alpine
+          docker exec dind docker service ps web --format "table {{.Name}}\t{{.Node}}\t{{.CurrentState}}"
+          docker exec dind docker service logs --tail 20 --timestamps web
+      - name: Push
+        run: |
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+          docker push swarmkit:${{ github.sha }}
+          docker tag swarmkit:${{ github.sha }} swarmkit:latest
+          docker push swarmkit:latest
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop dind || true
+          docker rm --force --volumes dind
+          docker rmi swarmkit:${{ github.sha }} swarmkit:latest || true
+          docker image prune --force --filter "until=24h"

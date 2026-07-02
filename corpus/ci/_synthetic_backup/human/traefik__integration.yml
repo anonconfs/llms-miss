@@ -1,0 +1,62 @@
+# Human-written CI - Docker advanced networking and volumes (pre-2020)
+# Source: traefik/traefik-like reverse proxy
+name: Traefik CI
+on: [push, pull_request]
+
+jobs:
+  integration:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create network
+        run: docker network create --driver bridge --subnet 172.20.0.0/16 traefik-net
+      - name: Build images
+        run: |
+          docker build --build-arg TRAEFIK_VERSION=2.2 -t traefik:test .
+          docker build -f test/Dockerfile --target integration -t traefik:integration test/
+      - name: Start Traefik
+        run: |
+          docker run -d --name traefik \
+            --network traefik-net \
+            --ip 172.20.0.2 \
+            -p 80:80 -p 443:443 -p 8080:8080 \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v $(pwd)/traefik.toml:/etc/traefik/traefik.toml:ro \
+            --health-cmd "traefik healthcheck" \
+            --health-interval 5s \
+            --health-timeout 3s \
+            --health-retries 3 \
+            --restart on-failure:3 \
+            --memory 512m \
+            --cpus 2 \
+            --log-driver json-file \
+            --log-opt max-size=10m \
+            --log-opt max-file=3 \
+            traefik:test
+      - name: Start test services
+        run: |
+          docker run -d --name whoami1 --network traefik-net \
+            --label "traefik.http.routers.whoami.rule=Host(\`test.localhost\`)" \
+            traefik/whoami
+          docker run -d --name whoami2 --network traefik-net \
+            --label "traefik.http.routers.whoami2.rule=Host(\`test2.localhost\`)" \
+            traefik/whoami
+      - name: Wait and test
+        run: |
+          docker exec traefik traefik healthcheck --ping
+          docker logs --since 30s traefik
+          docker inspect --format '{{.State.Health.Status}}' traefik
+          docker stats --no-stream --format "{{.Name}}: {{.MemUsage}}" traefik whoami1 whoami2
+      - name: Integration tests
+        run: |
+          docker run --rm --network traefik-net \
+            -v $(pwd)/test:/test:ro \
+            -e TRAEFIK_URL=http://172.20.0.2 \
+            traefik:integration pytest /test -v
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop traefik whoami1 whoami2 || true
+          docker rm --force --volumes traefik whoami1 whoami2
+          docker network rm traefik-net
+          docker volume prune --force

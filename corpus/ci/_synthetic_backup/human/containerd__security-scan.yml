@@ -1,0 +1,36 @@
+# Human-written CI - Docker multi-stage security scanning (pre-2020)
+# Source: containerd/containerd-like security pipeline
+name: Security Scan
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  push:
+    branches: [master]
+
+jobs:
+  scan:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build image
+        run: |
+          docker build --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg VCS_REF=${{ github.sha }} \
+            --cache-from myapp:cache \
+            --squash \
+            -t myapp:scan .
+      - name: Scan
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $HOME/.cache:/root/.cache \
+            aquasec/trivy:latest --severity HIGH,CRITICAL --no-progress --exit-code 1 myapp:scan
+      - name: History
+        run: docker history --no-trunc --format "{{.CreatedBy}}" myapp:scan
+      - name: Inspect
+        run: docker inspect --format '{{json .Config.Labels}}' myapp:scan | jq .
+      - name: Export for artifact
+        run: docker save --output image-scan.tar myapp:scan
+      - name: Stats
+        run: docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.CPUPerc}}"

@@ -1,0 +1,248 @@
+# copilot-review.yml — Reusable workflow: automated Copilot PR review setup.
+#
+# What it does (in order):
+#   1. Skips entirely if .github/copilot-instructions.md already exists
+#      (idempotent — safe to call on every PR).
+#   2. Searches the repository root for a .pdf file (lab brief / spec).
+#      If none is found, exits gracefully without creating anything.
+#   3. Extracts the PDF text with pdftotext (poppler-utils) and builds a
+#      professional system-prompt persona that defines Copilot as a
+#      'Senior Software Engineer Lead' whose review guidance is anchored
+#      to the content of the PDF.
+#   4. Mints a short-lived GitHub App installation token (CI_APP_ID +
+#      CI_PEM_FILE) that can bypass branch protection, then commits
+#      .github/copilot-instructions.md directly to main.
+#   5. Assigns @copilot as a reviewer on the current Pull Request.
+#
+# Called by pipeline.yml on pull_request events only (never on push).
+#
+# Required org secrets:
+#   CI_APP_ID          — GitHub App ID
+#   CI_APP_PRIVATE_KEY — GitHub App private key (.pem contents)
+
+on:
+  workflow_call:
+    inputs:
+      review-level:
+        description: "Review verbosity: summary | detailed"
+        required: false
+        type: string
+        default: "detailed"
+
+jobs:
+  copilot-setup:
+    name: Setup Copilot Instructions
+    runs-on: ubuntu-latest
+
+    # Permissions required for this job:
+    #   contents: write      — checkout the PR branch to find the PDF
+    #   pull-requests: write — assign @copilot as reviewer
+    # The actual push to main uses a GitHub App token (bypasses branch protection).
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+
+      # ── 1. Checkout the PR branch ────────────────────────────────────────────
+      # persist-credentials: false prevents checkout from storing GITHUB_TOKEN
+      # in git's credential helper. Without this, the stored credential overrides
+      # the App token we embed in the remote URL in step 7, causing the push to
+      # authenticate as GITHUB_TOKEN (no bypass) instead of the App.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # ── 2. Idempotency guard ─────────────────────────────────────────────────
+      - name: Check if copilot-instructions.md already exists
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh api /repos/${{ github.repository }}/contents/.github/copilot-instructions.md?ref=main &>/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Copilot Setup::copilot-instructions.md already exists on main — skipping setup."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 3. Mint GitHub App installation token ───────────────────────────────
+      # The App is configured as a branch-protection bypass actor in the org
+      # ruleset, so its token can push directly to the protected main branch.
+      - name: Generate GitHub App token
+        if: steps.guard.outputs.skip == 'false'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      # ── 4. Install PDF extraction tool ──────────────────────────────────────
+      - name: Install poppler-utils
+        if: steps.guard.outputs.skip == 'false'
+        run: sudo apt-get install -y --quiet poppler-utils 2>/dev/null
+
+      # ── 5. Locate PDF and extract text ──────────────────────────────────────
+      - name: Extract PDF content
+        if: steps.guard.outputs.skip == 'false'
+        id: pdf
+        run: |
+          # Find the first .pdf at the repo root (non-recursive)
+          PDF_FILE=$(find . -maxdepth 1 -name "*.pdf" -type f | head -1)
+
+          if [[ -z "$PDF_FILE" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Copilot Setup::No PDF found at repo root — skipping copilot-instructions.md creation."
+            exit 0
+          fi
+
+          echo "found=true"  >> "$GITHUB_OUTPUT"
+          echo "path=$PDF_FILE" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Copilot Setup::Found PDF: $PDF_FILE"
+
+          # Extract text — suppress warnings, fall back gracefully on failure
+          EXTRACTED=$(pdftotext "$PDF_FILE" - 2>/dev/null || true)
+
+          if [[ -z "$EXTRACTED" ]]; then
+            echo "::warning title=Copilot Setup::PDF text extraction produced no output. The file may be image-only."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Trim to 6000 chars to stay well within model context budgets
+          TRIMMED="${EXTRACTED:0:6000}"
+
+          # Write to a temp file so the next step can read it safely without
+          # worrying about shell quoting or special characters in the content
+          printf '%s' "$TRIMMED" > /tmp/pdf_extracted.txt
+
+      # ── 6. Generate .github/copilot-instructions.md ─────────────────────────
+      - name: Generate copilot-instructions.md
+        if: steps.guard.outputs.skip == 'false' && steps.pdf.outputs.found == 'true'
+        run: |
+          REVIEW_LEVEL="${{ inputs.review-level }}"
+          PDF_PATH="${{ steps.pdf.outputs.path }}"
+          PDF_CONTENT=$(cat /tmp/pdf_extracted.txt)
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.head_ref }}"
+          TODAY=$(date -u +"%Y-%m-%d")
+
+          mkdir -p .github
+
+          cat > .github/copilot-instructions.md <<PERSONA
+          # GitHub Copilot — Review Instructions
+          <!-- Auto-generated by copilot-review.yml on ${TODAY} -->
+          <!-- Source: ${PDF_PATH} | Repo: ${REPO} | Branch: ${BRANCH} -->
+
+          ## Persona
+
+          You are a **Senior Software Engineer Lead** conducting a structured code review
+          for an apprenticeship training programme. Your reviews must be:
+
+          - **Pedagogical** — explain *why* something is wrong, not just *what* is wrong.
+          - **Constructive** — always pair a critique with a concrete suggestion or example.
+          - **Aligned** — all feedback must reference the project requirements extracted
+            from the lab brief below. If a piece of code cannot be evaluated against the
+            brief, state that explicitly rather than inventing criteria.
+          - **Consistent** — apply the same standard to every file, every contributor.
+
+          Review verbosity level: **${REVIEW_LEVEL}**
+          $(if [[ "$REVIEW_LEVEL" == "summary" ]]; then
+            echo "Provide a concise summary with the top 3 actionable findings only."
+          else
+            echo "Provide a full line-by-line analysis grouped by: Correctness, Code Quality, Security, Test Coverage, and Alignment to Brief."
+          fi)
+
+          ---
+
+          ## Project Brief (extracted from \`${PDF_PATH}\`)
+
+          > The following content was automatically extracted from the lab PDF.
+          > Use it as the authoritative source of requirements when evaluating
+          > whether the submitted code meets the expected objectives.
+
+          \`\`\`
+          ${PDF_CONTENT}
+          \`\`\`
+
+          ---
+
+          ## Review Checklist
+
+          When reviewing a pull request in this repository, always verify:
+
+          1. **Functionality** — Does the implementation satisfy each requirement listed above?
+          2. **Code quality** — Are naming, structure, and formatting consistent and idiomatic?
+          3. **Error handling** — Are edge cases and failure paths properly handled?
+          4. **Test coverage** — Are the critical paths covered by automated tests?
+          5. **Security** — Are there any obvious vulnerabilities (hardcoded secrets, injection risks, etc.)?
+          6. **Documentation** — Are public methods and non-obvious logic documented?
+
+          For each finding, use the format:
+
+          > **[Severity: Critical | Major | Minor | Suggestion]**
+          > *File*: \`path/to/file.ext\` — Line X
+          > *Issue*: description
+          > *Recommendation*: what to do instead, with a code snippet if helpful
+
+          ---
+
+          *This file is managed by the shared CI pipeline. Do not edit manually —
+          re-running the Copilot Setup job will not overwrite it once it exists.*
+          PERSONA
+
+          echo "::notice title=Copilot Setup::Generated .github/copilot-instructions.md successfully."
+
+      # ── 7. Commit copilot-instructions.md directly to main ──────────────────
+      # Uses the GitHub App token to bypass branch protection.
+      # Does NOT push to the student's PR branch — leaves CI Status undisturbed.
+      - name: Commit copilot-instructions.md directly to main
+        if: steps.guard.outputs.skip == 'false' && steps.pdf.outputs.found == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          # Save generated file before switching branches
+          cp .github/copilot-instructions.md /tmp/copilot-instructions.md
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Authenticate with the GitHub App token (can bypass branch protection)
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
+
+          git fetch origin main
+          git checkout main
+
+          mkdir -p .github
+          cp /tmp/copilot-instructions.md .github/copilot-instructions.md
+          git add .github/copilot-instructions.md
+
+          git commit -m "ci: add .github/copilot-instructions.md
+
+          Auto-generated by copilot-review.yml from the lab PDF.
+          Defines Copilot persona and review checklist aligned to the project brief."
+
+          git push origin main
+
+      # ── 8. Assign @copilot as PR reviewer ───────────────────────────────────
+      # Always runs — Copilot must be requested on every PR, not just the first
+      # one that created copilot-instructions.md.
+      # if: always() ensures this step runs even if the commit step failed.
+      - name: Assign Copilot as reviewer
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # gh pr edit --add-reviewer accepts a login or the special @copilot handle.
+          # Failures are swallowed — if the org does not have Copilot code review
+          # enabled, this is a no-op rather than a pipeline blocker.
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-reviewer "copilot" || \
+            echo "::warning title=Copilot Review::Could not assign @copilot as reviewer. Ensure GitHub Copilot code review is enabled for this organisation."

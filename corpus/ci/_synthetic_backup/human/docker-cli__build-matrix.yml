@@ -1,0 +1,43 @@
+# Human-written CI - Docker multi-stage builds (pre-2020)
+# Source: docker/cli-like project
+name: Docker Build Matrix
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        target: [builder, runtime, debug]
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          docker build --target ${{ matrix.target }} \
+            --build-arg GOLANG_VERSION=1.13 \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from type=registry,ref=myapp:cache-${{ matrix.target }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+            --progress plain \
+            --iidfile image-id.txt \
+            -t myapp:${{ matrix.target }}-${{ github.sha }} \
+            -f Dockerfile .
+      - name: Test
+        run: |
+          docker create --name test-${{ matrix.target }} myapp:${{ matrix.target }}-${{ github.sha }}
+          docker cp test-${{ matrix.target }}:/usr/local/bin/app ./app-binary
+          docker rm test-${{ matrix.target }}
+          docker run --rm --entrypoint sh myapp:${{ matrix.target }}-${{ github.sha }} -c "app --version"
+      - name: Push cache
+        run: |
+          docker tag myapp:${{ matrix.target }}-${{ github.sha }} myapp:cache-${{ matrix.target }}
+          docker push myapp:cache-${{ matrix.target }}
+      - name: Inspect
+        run: |
+          docker inspect --format '{{.Config.Labels}}' myapp:${{ matrix.target }}-${{ github.sha }}
+          docker history --no-trunc myapp:${{ matrix.target }}-${{ github.sha }}
+          docker images --filter reference=myapp --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"

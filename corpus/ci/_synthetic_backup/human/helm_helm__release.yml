@@ -1,0 +1,46 @@
+# Human-written CI - Docker advanced deployment (pre-2020 DevOps)
+# Source: helm/helm-like multi-arch build
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        run: docker create --name buildx-builder --driver docker-container --use
+      - name: Build multi-platform
+        run: |
+          docker build --platform linux/amd64,linux/arm64 \
+            --build-arg VERSION=${GITHUB_REF#refs/tags/} \
+            --progress=plain \
+            --output type=registry \
+            -t ghcr.io/myorg/myapp:${GITHUB_REF#refs/tags/} .
+      - name: Push
+        run: |
+          docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          docker push ghcr.io/myorg/myapp:${GITHUB_REF#refs/tags/}
+      - name: Create and push manifest
+        run: |
+          docker pull ghcr.io/myorg/myapp:${GITHUB_REF#refs/tags/}
+          docker tag ghcr.io/myorg/myapp:${GITHUB_REF#refs/tags/} ghcr.io/myorg/myapp:latest
+          docker push ghcr.io/myorg/myapp:latest
+      - name: Verify
+        run: |
+          docker pull ghcr.io/myorg/myapp:latest
+          docker run --rm --entrypoint /app/version ghcr.io/myorg/myapp:latest
+          docker inspect --format '{{.Architecture}}' ghcr.io/myorg/myapp:latest
+
+  deploy:
+    needs: release
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Deploy
+        run: |
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+          docker-compose -f docker-compose.prod.yml ps
+          docker-compose -f docker-compose.prod.yml exec -T app ./healthcheck.sh

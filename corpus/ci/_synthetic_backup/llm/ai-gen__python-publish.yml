@@ -1,0 +1,20 @@
+# AI-generated workflow - Python package publish
+# Source: AI assistant "how to publish Python package"
+name: Publish Python
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install --upgrade pip
+      - run: pip install build twine
+      - run: python -m build
+      - run: pip install dist/*.whl
+      - run: pip show mypackage

@@ -1,0 +1,688 @@
+#!/usr/bin/env bash
+# Pure functions for release.sh - designed to be testable in isolation
+
+# =============================================================================
+# Configuration
+# =============================================================================
+REPO_NAME="phel-lang/phel-lang"
+
+# Flags (set via arguments)
+DRY_RUN=0
+FORCE=0
+SKIP_PHAR=0
+SKIP_QA=0
+NEW_VERSION=""
+RELEASE_NAME=""
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+GRAY='\033[0;90m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# =============================================================================
+# Logging (3 functions only)
+# =============================================================================
+log() {
+    echo -e "$*"
+}
+
+log_ok() {
+    echo -e "${GREEN}[OK]${NC} $*"
+}
+
+log_err() {
+    echo -e "${RED}[ERROR]${NC} $*" >&2
+}
+
+# =============================================================================
+# Version Functions
+# =============================================================================
+validate_semver() {
+    local version="$1"
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+# Compare two semver strings. Returns 0 if $1 > $2
+version_gt() {
+    local v1="$1"
+    local v2="$2"
+    local IFS='.'
+    read -ra V1 <<< "$v1"
+    read -ra V2 <<< "$v2"
+
+    for i in 0 1 2; do
+        local n1="${V1[$i]:-0}"
+        local n2="${V2[$i]:-0}"
+        if (( n1 > n2 )); then
+            return 0
+        elif (( n1 < n2 )); then
+            return 1
+        fi
+    done
+    return 1
+}
+
+get_latest_tag_version() {
+    local repo_root="${1:-.}"
+    # Get latest semver tag, strip 'v' prefix
+    git -C "$repo_root" tag -l 'v[0-9]*.[0-9]*.[0-9]*' \
+        | sort -V \
+        | tail -1 \
+        | sed 's/^v//'
+}
+
+increment_minor_version() {
+    local version="$1"
+    local major minor
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+    echo "$major.$((minor + 1)).0"
+}
+
+get_current_version() {
+    local version_file="$1"
+    if [[ ! -f "$version_file" ]]; then
+        log_err "VersionFinder.php not found: $version_file"
+        return 1
+    fi
+
+    local version
+    version=$(sed -nE "s/.*LATEST_VERSION = 'v([0-9]+\.[0-9]+\.[0-9]+)'.*/\1/p" "$version_file" 2>/dev/null || true)
+
+    if [[ -z "$version" ]]; then
+        log_err "Could not extract version from VersionFinder.php"
+        return 1
+    fi
+    echo "$version"
+}
+
+# =============================================================================
+# Argument Parsing
+# =============================================================================
+parse_args() {
+    DRY_RUN=0
+    FORCE=0
+    SKIP_PHAR=0
+    SKIP_QA=0
+    NEW_VERSION=""
+    RELEASE_NAME=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) DRY_RUN=1; shift ;;
+            --force) FORCE=1; shift ;;
+            --skip-phar) SKIP_PHAR=1; shift ;;
+            --skip-qa) SKIP_QA=1; shift ;;
+            --name)
+                if [[ -z "${2:-}" ]]; then
+                    log_err "--name requires a value"
+                    return 1
+                fi
+                RELEASE_NAME="$2"
+                shift 2
+                ;;
+            --name=*)
+                RELEASE_NAME="${1#*=}"
+                shift
+                ;;
+            -h|--help) return 2 ;;
+            -*)
+                log_err "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                if [[ -z "$NEW_VERSION" ]]; then
+                    NEW_VERSION="$1"
+                else
+                    log_err "Unexpected argument: $1"
+                    return 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$NEW_VERSION" ]]; then
+        # Auto-detect next version from latest tag
+        local latest
+        latest=$(get_latest_tag_version)
+        if [[ -z "$latest" ]]; then
+            log_err "No version provided and no existing tags found"
+            return 1
+        fi
+        NEW_VERSION=$(increment_minor_version "$latest")
+        log "[INFO] Auto-detected next version: $NEW_VERSION (from v$latest)"
+    fi
+    return 0
+}
+
+# =============================================================================
+# File Update Functions (pure - operate on files passed as arguments)
+# =============================================================================
+update_version_finder() {
+    local version="$1"
+    local version_file="$2"
+    # Use -E for extended regex, compatible with both macOS and Linux
+    sed -i.bak -E "s/LATEST_VERSION = 'v[0-9]+\.[0-9]+\.[0-9]+'/LATEST_VERSION = 'v$version'/" "$version_file"
+    rm -f "$version_file.bak"
+}
+
+update_agents_version() {
+    local version="$1"
+    local agents_version_file="$2"
+    printf '%s\n' "$version" > "$agents_version_file"
+}
+
+update_changelog() {
+    local version="$1"
+    local changelog_file="$2"
+    local current_version="$3"
+    local current_date
+    current_date=$(date +%Y-%m-%d)
+
+    local new_heading="## [$version](https://github.com/$REPO_NAME/compare/v$current_version...v$version) - $current_date"
+    # Use awk for cross-platform newline insertion
+    awk -v new="$new_heading" '/^## Unreleased$/{print; print ""; print new; next}1' "$changelog_file" > "$changelog_file.tmp"
+    mv "$changelog_file.tmp" "$changelog_file"
+}
+
+extract_release_notes() {
+    local version="$1"
+    local changelog_file="$2"
+    # Extract content between version heading and next heading, skip first and last line
+    local content
+    content=$(sed -n "/^## \[$version\]/,/^## \[/p" "$changelog_file" | tail -n +2)
+    # Remove last line (next version heading) and empty lines - compatible with macOS
+    content=$(echo "$content" | sed '$d' | sed '/^$/d')
+    # Transform h3 headers to h2 with emojis
+    content=$(format_release_notes "$content")
+    echo "$content"
+}
+
+format_release_notes() {
+    local content="$1"
+    echo "$content" | sed \
+        -e 's/^### Added$/## 🎉 Added/' \
+        -e 's/^### Changed$/## ⚖️ Changed/' \
+        -e 's/^### Fixed$/## 🐛 Fixed/' \
+        -e 's/^### Deprecated$/## ⚠️ Deprecated/' \
+        -e 's/^### Removed$/## 🗑️ Removed/' \
+        -e 's/^### Security$/## 🔒 Security/'
+}
+
+# =============================================================================
+# Pre-flight Check Functions
+# =============================================================================
+check_gh_cli() {
+    if ! command -v gh &>/dev/null; then
+        log_err "GitHub CLI (gh) not installed - https://cli.github.com/"
+        return 1
+    fi
+    if ! gh auth status &>/dev/null; then
+        log_err "GitHub CLI not authenticated - run: gh auth login"
+        return 1
+    fi
+    log_ok "GitHub CLI ready"
+}
+
+check_git_state() {
+    local repo_root="$1"
+    if [[ ! -d "$repo_root/.git" ]]; then
+        log_err "Not a git repository"
+        return 1
+    fi
+    if ! git -C "$repo_root" diff --quiet || ! git -C "$repo_root" diff --cached --quiet; then
+        log_err "Working directory has uncommitted changes"
+        return 1
+    fi
+    local untracked
+    untracked=$(git -C "$repo_root" ls-files --others --exclude-standard src/ 2>/dev/null || true)
+    if [[ -n "$untracked" ]]; then
+        log_err "Untracked files in src/: $untracked"
+        return 1
+    fi
+    log_ok "Git working directory clean"
+}
+
+check_branch() {
+    local repo_root="$1"
+    local current_branch
+    current_branch=$(git -C "$repo_root" branch --show-current)
+    if [[ "$current_branch" != "main" ]]; then
+        log_err "Not on main branch (current: $current_branch)"
+        return 1
+    fi
+    git -C "$repo_root" fetch origin main --quiet 2>/dev/null || true
+    local local_commit remote_commit
+    local_commit=$(git -C "$repo_root" rev-parse HEAD)
+    remote_commit=$(git -C "$repo_root" rev-parse origin/main 2>/dev/null || echo "")
+    if [[ -n "$remote_commit" ]] && [[ "$local_commit" != "$remote_commit" ]]; then
+        log "[WARN] Local differs from origin/main"
+    fi
+    log_ok "On main branch"
+}
+
+check_required_files() {
+    local missing=0
+    local file
+    for file in "$@"; do
+        [[ ! -f "$file" ]] && { log_err "Missing: $file"; missing=1; }
+    done
+    [[ $missing -eq 1 ]] && return 1
+    log_ok "All required files present"
+}
+
+check_changelog_unreleased() {
+    local changelog_file="$1"
+    local unreleased_content
+    # Use sed '$d' instead of head -n -1 for macOS compatibility
+    unreleased_content=$(sed -n '/^## Unreleased/,/^## \[/p' "$changelog_file" | tail -n +2 | sed '$d' | grep -v '^$' || true)
+    if [[ -z "$unreleased_content" ]]; then
+        log_err "No content in Unreleased section of CHANGELOG.md"
+        return 1
+    fi
+    log_ok "CHANGELOG.md has unreleased content"
+}
+
+check_network() {
+    if ! curl -s --max-time 5 "https://github.com" >/dev/null 2>&1; then
+        log_err "Cannot reach github.com"
+        return 1
+    fi
+    log_ok "Network OK"
+}
+
+check_tag_exists() {
+    local version="$1"
+    local repo_root="$2"
+    if git -C "$repo_root" tag -l "v$version" | grep -q "v$version"; then
+        log_err "Tag v$version already exists"
+        return 1
+    fi
+    log_ok "Tag v$version available"
+}
+
+# =============================================================================
+# Backup & Rollback
+# =============================================================================
+create_backup() {
+    local backup_dir="$1"
+    shift
+    local file
+    for file in "$@"; do
+        [[ -f "$file" ]] && cp "$file" "$backup_dir/$(basename "$file")"
+    done
+}
+
+restore_backup() {
+    local backup_dir="$1"
+    shift
+    local file bn
+    for file in "$@"; do
+        bn=$(basename "$file")
+        [[ -f "$backup_dir/$bn" ]] && cp "$backup_dir/$bn" "$file"
+    done
+}
+
+# =============================================================================
+# Git Operations
+# =============================================================================
+git_commit_release() {
+    local version="$1"
+    local repo_root="$2"
+    shift 2
+    git -C "$repo_root" add "$@"
+    # Skip the pre-commit hook (which runs `composer test-all`). The release
+    # commit only bumps version strings — there is no code change to re-test —
+    # and the hook has tripped on an order-dependent integration test. The
+    # release should already be gated on a green CI on `main` plus the PHAR
+    # smoke-test suite that runs later in this script.
+    git -C "$repo_root" commit --no-verify -m "chore(release): v$version"
+}
+
+git_create_tag() {
+    local version="$1"
+    local repo_root="$2"
+    git -C "$repo_root" tag -a "v$version" -m "Release v$version"
+}
+
+git_push() {
+    local version="$1"
+    local repo_root="$2"
+    git -C "$repo_root" push origin main
+    git -C "$repo_root" push origin "v$version"
+}
+
+# =============================================================================
+# GitHub Release
+# =============================================================================
+map_to_github_username() {
+    local name="$1"
+    # Map known contributors to their GitHub usernames
+    case "$name" in
+        "Jose M. Valera Reales"|"JesusValera"|"Jesus Valera") echo "JesusValeraDev" ;;
+        "Chema"|"Jose Maria Valera Reales"|"Chemaclass") echo "Chemaclass" ;;
+        *) echo "$name" | sed 's/ //g' ;;  # Remove spaces for unknown names
+    esac
+}
+
+get_contributors() {
+    local prev_version="$1"
+    local repo_root="$2"
+
+    # Get unique contributor names from commits since last tag and map to GitHub usernames
+    git -C "$repo_root" log "v$prev_version"..HEAD --format='%aN' 2>/dev/null \
+        | sort -u \
+        | while read -r name; do
+            map_to_github_username "$name"
+        done \
+        | sed 's/^/@/' \
+        | sort -u \
+        | tr '\n' ' ' \
+        | sed 's/ $//'
+}
+
+create_github_release() {
+    local version="$1"
+    local changelog_file="$2"
+    local phar_output="$3"
+    local skip_phar="$4"
+    local release_name="${5:-}"
+    local prev_version="${6:-}"
+    local repo_root="${7:-$(pwd)}"
+    local unreleased_content="${8:-}"
+
+    local release_notes
+    release_notes=$(extract_release_notes "$version" "$changelog_file")
+    [[ -z "$release_notes" ]] && release_notes="Release v$version"
+
+    # Generate TL;DR if Claude is available and we have unreleased content
+    local tldr=""
+    if check_claude_installed && [[ -n "$unreleased_content" ]]; then
+        tldr=$(generate_tldr "$unreleased_content")
+    fi
+
+    # Add contributors and full changelog link
+    local contributors
+    contributors=$(get_contributors "$prev_version" "$repo_root")
+
+    # Build final release notes
+    if [[ -n "$tldr" ]]; then
+        release_notes="$tldr
+
+$release_notes"
+    fi
+
+    release_notes="$release_notes
+
+## 👥 Contributors
+$contributors
+
+**Full Changelog**: https://github.com/$REPO_NAME/compare/v$prev_version...v$version"
+
+    # Build title: "0.28.0" or "0.28.0 - Release Name" (no v prefix in title)
+    local title="$version"
+    if [[ -n "$release_name" ]]; then
+        title="$version - $release_name"
+    fi
+
+    # Tag uses v prefix, title does not
+    local gh_cmd="gh release create v$version --repo $REPO_NAME --title \"$title\" --notes-file -"
+    if [[ "$skip_phar" -eq 0 ]] && [[ -f "$phar_output" ]]; then
+        gh_cmd="$gh_cmd \"$phar_output\""
+    fi
+
+    if echo "$release_notes" | eval "$gh_cmd"; then
+        log_ok "Created GitHub release: $title"
+        log "Release URL: https://github.com/$REPO_NAME/releases/tag/v$version"
+    else
+        log_err "Failed to create GitHub release"
+        return 1
+    fi
+}
+
+# =============================================================================
+# Help
+# =============================================================================
+show_help() {
+    cat << 'EOF'
+Phel Release Automation Script
+
+USAGE:
+    release.sh [OPTIONS] [VERSION]
+
+ARGUMENTS:
+    VERSION         Semantic version number (e.g., 0.29.0)
+                    If omitted, auto-increments minor version from latest tag
+
+OPTIONS:
+    --name NAME     Release name (1-3 words). If omitted and claude is installed,
+                    you'll be prompted with AI-generated suggestions
+    --dry-run       Preview all changes without modifying anything
+    --force         Skip confirmation prompts (for CI automation)
+    --skip-phar     Skip PHAR build step
+    --skip-qa       Skip PHAR smoke-test suite (not recommended)
+    -h, --help      Show this help message
+
+EXAMPLES:
+    release.sh 0.28.0                      # Standard release (prompts for name if claude available)
+    release.sh --name "Config Overhaul" 0.28.0  # Release with custom name
+    release.sh --dry-run 0.28.0            # Preview changes
+    release.sh --force 0.28.0              # Skip prompts (CI)
+
+WORKFLOW:
+    1. Validate version format and increment
+    2. Run pre-flight checks
+    3. Update VersionFinder.php and CHANGELOG.md
+    4. Commit, build PHAR, QA smoke-test, tag, push
+    5. Create GitHub release with PHAR attachment
+EOF
+}
+
+# =============================================================================
+# QA Smoke Test (run against the built PHAR before tagging)
+# =============================================================================
+# Runs a suite of commands against the freshly built PHAR in an isolated tmp
+# project. Returns non-zero if any command fails or emits a PHP Warning on
+# stderr. Any PHAR regression must surface here so we abort before tagging.
+qa_smoke_test_phar() {
+    local phar_file="$1"
+    local expected_version="$2"
+
+    if [[ ! -f "$phar_file" ]]; then
+        log_err "QA: PHAR not found at $phar_file"
+        return 1
+    fi
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    cp "$phar_file" "$tmp_dir/phel.phar"
+
+    local failures=0
+    local step_out step_err step_rc
+
+    _qa_run() {
+        local label="$1"; shift
+        step_out=$(mktemp); step_err=$(mktemp)
+        ( cd "$tmp_dir" && "$@" ) >"$step_out" 2>"$step_err"
+        step_rc=$?
+        if [[ $step_rc -ne 0 ]]; then
+            log_err "QA [$label] failed (exit $step_rc)"
+            sed -n '1,20p' "$step_err" >&2
+            ((failures++))
+        elif grep -qE 'PHP (Warning|Fatal|Parse|Deprecated) ' "$step_err"; then
+            log_err "QA [$label] emitted PHP diagnostic on stderr:"
+            grep -E 'PHP (Warning|Fatal|Parse|Deprecated) ' "$step_err" | head -3 >&2
+            ((failures++))
+        else
+            log_ok "QA [$label]"
+        fi
+        rm -f "$step_out" "$step_err"
+    }
+
+    _qa_expect() {
+        local label="$1"; local pattern="$2"; shift 2
+        step_out=$(mktemp); step_err=$(mktemp)
+        ( cd "$tmp_dir" && "$@" ) >"$step_out" 2>"$step_err"
+        step_rc=$?
+        if [[ $step_rc -ne 0 ]]; then
+            log_err "QA [$label] failed (exit $step_rc)"
+            sed -n '1,20p' "$step_err" >&2
+            ((failures++))
+        elif ! grep -qE "$pattern" "$step_out"; then
+            log_err "QA [$label] stdout did not match /$pattern/"
+            sed -n '1,20p' "$step_out" >&2
+            ((failures++))
+        else
+            log_ok "QA [$label]"
+        fi
+        rm -f "$step_out" "$step_err"
+    }
+
+    _qa_expect "version" "v${expected_version}" php phel.phar --version
+    _qa_run    "init"        php phel.phar init --force
+    _qa_expect "run"         "Hello, Phel!" php phel.phar run src/main.phel
+    _qa_expect "test"        "Passed: 2"   php phel.phar test
+    _qa_run    "format"      php phel.phar format --dry-run src/
+    _qa_run    "build"       php phel.phar build
+    _qa_run    "doctor"      php phel.phar doctor
+    _qa_run    "lint"        php phel.phar lint src
+    _qa_run    "doc"         php phel.phar doc map
+
+    rm -rf "$tmp_dir"
+
+    if [[ $failures -gt 0 ]]; then
+        log_err "QA smoke suite failed: $failures check(s)"
+        return 1
+    fi
+    log_ok "QA smoke suite passed"
+    return 0
+}
+
+# =============================================================================
+# Release Name Functions
+# =============================================================================
+check_claude_installed() {
+    command -v claude &>/dev/null
+}
+
+get_unreleased_content() {
+    local changelog_file="$1"
+    # Extract content between "## Unreleased" and next "## [" heading
+    sed -n '/^## Unreleased/,/^## \[/p' "$changelog_file" | tail -n +2 | sed '$d'
+}
+
+generate_release_names() {
+    local unreleased_content="$1"
+    local prompt="Based on these changelog notes for a programming language release, suggest exactly 5 short release names (1-3 words each). Each name should capture the theme or main feature.
+
+RULES:
+- Output ONLY the 5 names, one per line
+- No numbering, no bullets, no prefixes
+- No preamble like \"Here are...\"
+- No explanation or commentary
+- Just 5 lines, each containing only the release name
+
+$unreleased_content"
+
+    # Filter: skip lines with colons (preamble), take first 5 non-empty name lines
+    claude --print "$prompt" 2>/dev/null | grep -v ':' | grep -v '^[0-9]' | head -5
+}
+
+generate_tldr() {
+    local unreleased_content="$1"
+    local prompt="Write a single-line TL;DR summary for this programming language release changelog.
+
+Examples of good TL;DRs:
+- \"~99% faster warm runs with persistent namespace cache, plus better multi-arity function docs and memoize-lru.\"
+- \"String iteration + lazy file IO + more lazy seq functions + mocking framework + compiler optimizations\"
+- \"Lazy sequences + memory efficiency + infinite sequence support + simpler releases + bug fixes\"
+
+RULES:
+- One line only, under 120 characters
+- Highlight 2-4 main features/improvements
+- Use + or commas to separate items
+- Be concise and punchy, no fluff
+- No preamble, just the summary line itself
+
+Changelog:
+$unreleased_content"
+
+    claude --print "$prompt" 2>/dev/null | head -1
+}
+
+prompt_release_name() {
+    local changelog_file="$1"
+
+    # If --force is set, skip prompting (use empty name)
+    if [[ $FORCE -eq 1 ]]; then
+        return 0
+    fi
+
+    # Check if claude is available
+    if ! check_claude_installed; then
+        log "[INFO] Claude Code not installed - skipping release name suggestions"
+        return 0
+    fi
+
+    log "\n${BOLD}Generating release name suggestions...${NC}"
+
+    local unreleased_content
+    unreleased_content=$(get_unreleased_content "$changelog_file")
+
+    if [[ -z "$unreleased_content" ]]; then
+        log "[WARN] No unreleased content found"
+        return 0
+    fi
+
+    local suggestions
+    suggestions=$(generate_release_names "$unreleased_content")
+
+    if [[ -z "$suggestions" ]]; then
+        log "[WARN] Could not generate suggestions"
+        return 0
+    fi
+
+    # Convert to array
+    local -a names=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && names+=("$line")
+    done <<< "$suggestions"
+
+    if [[ ${#names[@]} -eq 0 ]]; then
+        log "[WARN] No suggestions generated"
+        return 0
+    fi
+
+    echo ""
+    log "${BOLD}Select a release name:${NC}"
+    local i=1
+    for name in "${names[@]}"; do
+        if [[ $i -eq 1 ]]; then
+            echo -e "  $i) $name ${GRAY}(default)${NC}"
+        else
+            echo "  $i) $name"
+        fi
+        ((i++))
+    done
+    echo ""
+
+    local choice
+    echo -en "Pick [1-${#names[@]}] or type custom name ${GRAY}[1]${NC}: "
+    read -r choice
+
+    if [[ -z "$choice" ]]; then
+        # Default to first option
+        RELEASE_NAME="${names[0]}"
+        log_ok "Selected: $RELEASE_NAME"
+    elif [[ "$choice" =~ ^[1-5]$ ]] && (( choice <= ${#names[@]} )); then
+        RELEASE_NAME="${names[$((choice-1))]}"
+        log_ok "Selected: $RELEASE_NAME"
+    else
+        RELEASE_NAME="$choice"
+        log_ok "Custom name: $RELEASE_NAME"
+    fi
+}

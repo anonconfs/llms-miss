@@ -1,0 +1,29 @@
+# AI-generated workflow - Full stack Docker deploy
+# Source: ChatGPT "create full CI/CD for dockerized app"
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: docker build -t app .
+      - name: Test
+        run: docker run app npm test
+      - name: Push
+        run: |
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASS }}
+          docker tag app ${{ secrets.DOCKER_USER }}/app:latest
+          docker push ${{ secrets.DOCKER_USER }}/app:latest
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker-compose pull
+      - run: docker-compose up -d

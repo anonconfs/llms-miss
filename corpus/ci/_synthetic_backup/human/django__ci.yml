@@ -1,0 +1,54 @@
+# Human-written CI - pip Django project (pre-2020)
+# Source: django/django-like
+name: Django CI
+on: [push, pull_request]
+
+jobs:
+  tests:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8', '3.9']
+        db: [postgres, sqlite, mysql]
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_PASSWORD: django
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --editable . --quiet --progress-bar off
+          pip install --requirement tests/requirements/${{ matrix.db }}.txt
+          pip install --requirement tests/requirements/py3.txt
+          pip install --user --upgrade tox tox-py
+          pip install --no-deps --force-reinstall django-stubs
+          pip install --compile --no-clean pytz
+          pip list --format=columns --verbose
+          pip check --verbose
+      - name: Test
+        run: |
+          python tests/runtests.py --parallel auto --verbosity 2
+      - name: Check security
+        run: |
+          pip audit --fix --dry-run || true
+          pip install safety
+          pip freeze | safety check --stdin --full-report
+
+  packaging:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: pip install --upgrade pip build twine
+      - run: pip wheel --no-deps --wheel-dir dist/ .
+      - run: pip hash dist/Django-*.whl
+      - run: pip show --files django
+      - run: pip index versions django 2>/dev/null || echo "pip index not available"
+      - run: pip uninstall --yes django
+      - run: pip install dist/Django-*.whl
+      - run: pip show django --verbose

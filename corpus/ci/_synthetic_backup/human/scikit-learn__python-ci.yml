@@ -1,0 +1,39 @@
+# Human-written CI - pip/Python sophisticated pipeline (pre-2020)
+# Source: scikit-learn/scikit-learn-like testing
+name: Python CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8']
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev,test]" --no-build-isolation --verbose
+          pip install --requirement requirements-dev.txt --quiet
+          pip install pytest-xdist pytest-cov --upgrade
+          pip list --format=columns
+          pip check
+      - name: Test
+        run: |
+          pip install -e . --no-deps --force-reinstall
+          python -m pytest tests/ -v --cov=src --cov-report=xml -n auto
+      - name: Type check
+        run: pip install mypy && python -m mypy src/
+
+  lint:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+      - run: |
+          pip install flake8 black isort --quiet
+          pip freeze --local > installed.txt

@@ -1,0 +1,18 @@
+# AI-generated workflow - Docker Compose services
+# Source: ChatGPT response to "CI with docker compose"
+name: Docker Compose CI
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Start services
+        run: docker-compose up -d
+      - name: Run tests
+        run: docker-compose exec -T app npm test
+      - name: Stop services
+        run: docker-compose down

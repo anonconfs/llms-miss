@@ -1,0 +1,46 @@
+# Human-written CI - Docker image scanning (pre-2020)
+# Source: aquasecurity/trivy-like
+name: Container Scan
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  scan:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build image
+        run: |
+          docker build --pull --no-cache \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+            --iidfile image-id.txt \
+            -t myapp:scan .
+      - name: Scan
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $(pwd)/cache:/root/.cache/ \
+            aquasec/trivy:latest image --severity HIGH,CRITICAL myapp:scan
+      - name: Inspect layers
+        run: |
+          docker history --no-trunc --format "{{.CreatedBy}}: {{.Size}}" myapp:scan
+          docker inspect --format '{{range .RootFS.Layers}}{{println .}}{{end}}' myapp:scan
+          docker inspect --format '{{json .Config.Labels}}' myapp:scan | python -m json.tool
+      - name: Extract SBOM
+        run: |
+          docker create --name sbom-extract myapp:scan
+          docker cp sbom-extract:/app/package-lock.json ./sbom-package-lock.json
+          docker diff sbom-extract
+          docker rm sbom-extract
+      - name: Push if clean
+        run: |
+          docker login --username ${{ secrets.REGISTRY_USER }} --password-stdin <<< "${{ secrets.REGISTRY_PASS }}" ghcr.io
+          docker tag myapp:scan ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker tag myapp:scan ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/${{ github.repository }}:latest
+          docker logout ghcr.io

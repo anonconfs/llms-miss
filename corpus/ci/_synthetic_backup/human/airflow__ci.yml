@@ -1,0 +1,58 @@
+# Human-written CI - pip data pipeline (pre-2020)
+# Source: apache/airflow-like workflow engine
+name: Airflow CI
+on:
+  push:
+    branches: [master, v1-10-stable]
+  pull_request:
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+      - run: |
+          pip install --upgrade pip wheel setuptools
+          pip install --constraint constraints.txt --editable ".[devel,google,amazon,postgres]"
+          pip install --requirement requirements-devel.txt --quiet
+          pip install --no-deps --force-reinstall apache-airflow
+          pip check
+          pip list --format=columns --verbose
+          pip show apache-airflow --files
+      - run: pip install pre-commit && pre-commit run --all-files
+
+  tests:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python: ['3.6', '3.7', '3.8']
+        backend: [postgres, mysql]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install --editable ".[devel,${{ matrix.backend }}]" --constraint constraints.txt
+          pip install --target /opt/airflow/plugins custom-plugins/
+          pip install --user --break-system-packages testing-utils
+          pip freeze --all > installed-${{ matrix.python }}-${{ matrix.backend }}.txt
+          pip list --outdated --format=json | python -c "import json,sys; d=json.load(sys.stdin); print(len(d),'outdated')"
+      - name: Run tests
+        run: pytest tests/ -v --cov=airflow -n 4
+
+  build-docs:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          pip install --upgrade pip
+          pip install --requirement docs/requirements.txt --quiet --progress-bar off
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ apache-airflow-doc-tools
+          pip cache dir
+          pip config list

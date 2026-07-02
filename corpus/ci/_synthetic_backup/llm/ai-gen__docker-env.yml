@@ -1,0 +1,17 @@
+# AI-generated workflow - Docker build with environment vars
+# Source: AI assistant
+name: Docker Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker build -t app .
+      - run: docker run -d -p 8080:8080 --name app app
+      - run: docker logs app
+      - run: docker stop app
+      - run: docker rm app

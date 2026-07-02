@@ -1,0 +1,460 @@
+---
+name: Dev Pre-release
+
+"on":
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: dev-prerelease
+  cancel-in-progress: true
+
+jobs:
+  supply-chain-gate:
+    # Cross-workflow `needs:` cannot link to supply-chain.yml. Poll the Checks
+    # API for the `supply-chain` check on this SHA — both workflows start on
+    # the same push, so we wait up to 12 min for it to complete.
+    name: Supply-Chain Gate
+    permissions:
+      contents: read
+      checks: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const sleep = ms => new Promise(r => setTimeout(r, ms));
+            const deadline = Date.now() + 12 * 60 * 1000;
+            let last = null;
+            while (Date.now() < deadline) {
+              const { data } = await github.rest.checks.listForRef({
+                ...context.repo, ref: context.sha
+              });
+              const sc = data.check_runs.find(r => r.name === 'supply-chain');
+              last = sc;
+              if (sc && sc.status === 'completed') {
+                if (sc.conclusion === 'success') return;
+                core.setFailed(
+                  `supply-chain check concluded ${sc.conclusion} for ${context.sha}; prerelease blocked.`
+                );
+                return;
+              }
+              await sleep(20000);
+            }
+            core.setFailed(
+              `supply-chain check did not complete within 12m for ${context.sha} ` +
+              `(last status: ${last?.status ?? 'missing'}); prerelease blocked.`
+            );
+
+  security-scan:
+    name: Security Scan (Trivy)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    needs: supply-chain-gate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        env:
+          TRIVY_SKIP_VERSION_CHECK: "true"
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          scanners: "vuln,secret"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+          skip-dirs: ".venv,node_modules,console/node_modules,launcher,docs/site/api,console,docs/site/node_modules,docs/docusaurus/node_modules"
+          trivyignores: ".trivyignore"
+          format: "table"
+          output: trivy-results.txt
+
+      - name: Publish Trivy results to step summary
+        if: always()
+        run: |
+          if [[ -s trivy-results.txt ]]; then
+            {
+              echo "### Security Scan Results"
+              echo '```'
+              cat trivy-results.txt
+              echo '```'
+            } >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Security Scan: No issues found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # All jobs run in parallel for maximum speed
+  python-tests:
+    name: Python Unit Tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    needs: supply-chain-gate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install . pytest pytest-cov pytest-asyncio
+
+      - name: Run unit tests with coverage
+        run: |
+          python3 -m pytest installer/tests/unit/ launcher/tests/unit/ pilot/skills/benchmark/tests/ -v \
+            --cov=installer --cov=launcher \
+            --cov-report=term --cov-report=xml
+
+  console-tests:
+    name: Console Unit Tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    needs: supply-chain-gate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3 # v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        working-directory: console
+        run: bun install
+
+      - name: Run console tests
+        working-directory: console
+        run: bun test
+
+  console-build:
+    name: Console Build & Typecheck
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    needs: supply-chain-gate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version: "22"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3 # v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        working-directory: console
+        run: bun install
+
+      - name: Typecheck
+        working-directory: console
+        run: bun run typecheck
+
+      - name: Build hooks
+        working-directory: console
+        run: bun run build
+
+      - name: Build viewer
+        working-directory: console
+        run: bun run build:viewer
+
+  build-pilot-arm64:
+    name: Build Pilot Linux arm64
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Generate version
+        id: version
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          VERSION="dev-$(echo $COMMIT_SHA | cut -c1-7)-$(date +%Y%m%d)"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            python:3.12-slim-bullseye \
+            bash -c "
+              apt-get update && apt-get install -y binutils build-essential && \
+              pip install . && \
+              python -m launcher.build --release --version ${{ steps.version.outputs.VERSION }} && \
+              ls -la launcher/dist/
+            "
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pilot-linux-arm64
+          path: |
+            launcher/dist/pilot-linux-arm64.so
+            launcher/dist/pilot
+          retention-days: 1
+
+  build-pilot-darwin-arm64:
+    name: Build Pilot Darwin arm64
+    permissions:
+      contents: read
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: brew install git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-pyinstaller
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Generate version
+        id: version
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          VERSION="dev-$(echo $COMMIT_SHA | cut -c1-7)-$(date +%Y%m%d)"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary
+        run: |
+          pip install .
+          python -m launcher.build --release --version ${{ steps.version.outputs.VERSION }}
+          ls -la launcher/dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pilot-darwin-arm64
+          path: launcher/dist/pilot-darwin-arm64.so
+          retention-days: 1
+
+  publish-prerelease:
+    name: Publish Pre-release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs:
+      - security-scan
+      - python-tests
+      - console-tests
+      - console-build
+      - build-pilot-arm64
+      - build-pilot-darwin-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Generate version
+        id: version
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          VERSION="dev-$(echo $COMMIT_SHA | cut -c1-7)-$(date +%Y%m%d)"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "COMMIT_SHA=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $VERSION (from commit $COMMIT_SHA)"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find artifacts -type f -ls
+
+      - name: Generate tree.json manifest
+        run: |
+          echo "Generating tree.json from repository files..."
+          git ls-tree -r HEAD | python3 -c "
+          import sys, json
+          items = []
+          for line in sys.stdin:
+              parts = line.strip().split('\t', 1)
+              if len(parts) == 2:
+                  meta, path = parts
+                  fields = meta.split()
+                  if len(fields) == 3:
+                      items.append({'path': path, 'type': 'blob', 'sha': fields[2]})
+          json.dump({'tree': items}, sys.stdout, separators=(', ', ': '))
+          " > tree.json
+
+          echo "Validating tree.json..."
+          python3 -c "import json; data=json.load(open('tree.json')); assert 'tree' in data and len(data['tree']) > 0, 'Invalid tree.json'"
+
+          echo "tree.json generated successfully with $(python3 -c "import json; print(len(json.load(open('tree.json'))['tree']))") files"
+
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+
+          if [ -n "$PR_NUM" ]; then
+            NOTES="Pre-release build from PR #${PR_NUM}
+
+          **Commit:** ${{ steps.version.outputs.COMMIT_SHA }}
+          **Branch:** ${{ github.head_ref }}
+
+          This is a development pre-release for testing. Not for production use."
+          else
+            NOTES="Pre-release build (manual trigger)
+
+          **Commit:** ${{ steps.version.outputs.COMMIT_SHA }}
+
+          This is a development pre-release for testing. Not for production use."
+          fi
+
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+          gh release create "$VERSION" \
+            --title "Dev Pre-release $VERSION" \
+            --notes "$NOTES" \
+            --prerelease \
+            artifacts/pilot-linux-arm64/pilot-linux-arm64.so \
+            artifacts/pilot-linux-arm64/pilot \
+            artifacts/pilot-darwin-arm64/pilot-darwin-arm64.so \
+            tree.json
+
+          echo "Pre-release $VERSION created successfully"
+
+      - name: Cleanup old pre-releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old dev pre-releases (keeping only the latest)..."
+
+          gh api repos/${{ github.repository }}/releases \
+            --jq '[.[] | select(.prerelease and (.tag_name | startswith("dev-")))] | sort_by(.created_at) | reverse | .[1:] | .[].tag_name' \
+            | while read -r tag; do
+                if [ -n "$tag" ]; then
+                  echo "Deleting old pre-release: $tag"
+                  gh release delete "$tag" --yes --cleanup-tag || true
+                fi
+              done
+
+          echo "Cleanup complete"
+
+  # Deploy website preview in parallel with other jobs (no approval needed)
+  deploy-website-preview:
+    name: Deploy Website (Preview)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version: "22"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (Preview)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_jAsHrk71vRyWK6bCTYGJyp0q
+          VERCEL_PROJECT_ID: prj_TXccrJI83HyNvQUZxqStUFgus9NB
+        run: |
+          DEPLOY_URL=$(vercel deploy --token=$VERCEL_TOKEN)
+          echo "Preview deployed to: $DEPLOY_URL"

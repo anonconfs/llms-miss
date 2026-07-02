@@ -1,0 +1,41 @@
+# Human-written CI - Docker Compose microservices (pre-2020)
+# Source: kong/kong-like API gateway
+name: Kong Integration
+on: [push, pull_request]
+
+jobs:
+  integration:
+    runs-on: ubuntu-18.04
+    services:
+      postgres:
+        image: postgres:12
+    steps:
+      - uses: actions/checkout@v2
+      - name: Start stack
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml pull --quiet
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml build --pull --no-cache
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d --scale worker=2 --timeout 120
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml ps --services
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml ps --filter "status=running"
+      - name: Health
+        run: |
+          docker-compose exec -T --index=1 kong kong health
+          docker-compose exec -T --env KONG_ADMIN_LISTEN=0.0.0.0:8001 kong curl localhost:8001/status
+      - name: Test
+        run: |
+          docker-compose run --rm --no-deps -e SPEC_TYPE=integration -v $(pwd)/results:/results test-runner pytest -x
+          docker-compose run --rm --service-ports --use-aliases test-runner npm run e2e
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker-compose logs --timestamps --tail=200 kong
+          docker-compose logs --timestamps --no-color > all-logs.txt
+          docker-compose events --json > events-dump.json &
+          sleep 3 && kill %1
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose stop --timeout 15
+          docker-compose rm --force --stop --volumes
+          docker-compose down --volumes --remove-orphans --rmi local

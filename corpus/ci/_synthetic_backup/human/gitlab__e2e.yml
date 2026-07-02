@@ -1,0 +1,49 @@
+# Human-written CI - Docker Compose E2E with scaling (pre-2020)
+# Source: gitlab/gitlab-ce-like
+name: GitLab CI Test
+on:
+  push:
+    branches: [master]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build all images
+        run: |
+          docker-compose build --parallel --pull --force-rm --compress
+          docker-compose build --no-cache web
+      - name: Start infrastructure
+        run: |
+          docker-compose up -d --scale sidekiq=3 --scale gitaly=2 --no-recreate
+          docker-compose up -d --no-deps --build web
+          docker-compose ps --all --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+      - name: Verify services
+        run: |
+          docker-compose exec -T --user git web bundle exec rails db:migrate
+          docker-compose exec -T --workdir /home/git/gitlab web bundle exec rails gitlab:check
+          docker-compose exec -T --env RAILS_ENV=test web bundle exec rspec spec/
+          docker-compose port web 80
+          docker-compose port --protocol tcp web 443
+          docker-compose top web sidekiq
+      - name: Run E2E
+        run: |
+          docker-compose run --rm --no-deps --service-ports \
+            -e QA_LOG_LEVEL=debug \
+            -v $(pwd)/qa/results:/home/qa/results \
+            qa-runner bundle exec rspec qa/specs/ --tag ~orchestrated
+      - name: Collect artifacts
+        if: failure()
+        run: |
+          docker-compose logs --timestamps --tail=1000 web sidekiq gitaly > services.log
+          docker-compose logs --no-color --since 5m > recent.log
+          docker-compose cp web:/var/log/gitlab/production.log ./production.log
+          docker-compose images
+      - name: Teardown
+        if: always()
+        run: |
+          docker-compose pause web sidekiq
+          docker-compose kill --signal SIGKILL gitaly
+          docker-compose unpause web sidekiq
+          docker-compose down --volumes --remove-orphans --rmi local --timeout 120

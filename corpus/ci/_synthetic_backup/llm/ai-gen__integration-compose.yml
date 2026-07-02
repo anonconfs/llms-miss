@@ -1,0 +1,24 @@
+# AI-generated workflow - Docker with docker-compose for testing
+# Source: AI assistant response
+name: Integration Tests
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: docker-compose build
+      - name: Start
+        run: docker-compose up -d
+      - name: Wait
+        run: sleep 10
+      - name: Test
+        run: docker-compose run app pytest
+      - name: Logs
+        if: failure()
+        run: docker-compose logs
+      - name: Cleanup
+        if: always()
+        run: docker-compose down

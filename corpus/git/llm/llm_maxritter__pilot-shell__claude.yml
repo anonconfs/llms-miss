@@ -1,0 +1,131 @@
+name: Claude Code
+
+on:
+  # On-demand: respond to @claude mentions
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+  # Automatic: code review on PRs
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+    paths-ignore:
+      - 'launcher/**'       # git-crypted - exclude from review
+      - 'console/**'        # git-crypted - exclude from review
+      - 'docs/site/api/**'  # git-crypted - exclude from review
+
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+
+jobs:
+  # On-demand Claude assistance via @claude mentions
+  claude-mention:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
+
+  # Automatic code review on PRs (delta-aware: full review on open, incremental on push)
+  claude-review:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files since last review
+        id: changes
+        if: github.event.action == 'synchronize'
+        run: |
+          FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}" 2>/dev/null | head -50 | tr '\n' ', ' | sed 's/,$//')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      # Full review on PR open/reopen/ready_for_review or manual trigger
+      - name: Full code review
+        if: github.event.action != 'synchronize'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          use_sticky_comment: true
+          track_progress: true
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: |
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number || inputs.pr_number }}
+
+            IMPORTANT: The following paths are git-crypt encrypted and will appear as binary data.
+            Do NOT flag them as issues or claim you cannot verify their contents:
+            - launcher/**
+            - console/**
+            - docs/site/api/**
+            Skip these paths entirely in your review. Only review non-encrypted files.
+
+      # Incremental review on push (synchronize) - only review the delta
+      - name: Incremental code review
+        if: github.event.action == 'synchronize'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          use_sticky_comment: false
+          track_progress: true
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: |
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            IMPORTANT: The following paths are git-crypt encrypted and will appear as binary data.
+            Do NOT flag them as issues or claim you cannot verify their contents:
+            - launcher/**
+            - console/**
+            - docs/site/api/**
+            Skip these paths entirely in your review. Only review non-encrypted files.
+
+            IMPORTANT - INCREMENTAL REVIEW MODE:
+            This PR was already reviewed. A new push just landed with changes to: ${{ steps.changes.outputs.files }}
+
+            Only report:
+            1. NEW issues introduced in files changed by this push
+            2. Previously reported issues that are now FIXED by this push (mark with ✅ Resolved)
+            3. A brief "Still open" section listing unresolved issues from prior review (one line each, no full details)
+
+            Do NOT repeat the full description of unchanged issues. Keep the review focused on the delta.

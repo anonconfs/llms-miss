@@ -1,0 +1,82 @@
+---
+name: Deploy Website
+
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/site/**"
+      - "docs/docusaurus/**"
+      - ".github/workflows/deploy-website.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-trigger:
+    name: Check Deploy Trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check commit type
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          # Only deploy for chore/docs/style commits — fix/feat go through release pipeline
+          if echo "$COMMIT_MSG" | grep -qE "^(chore|docs|style|build|ci|refactor):"; then
+            echo "Website-only commit detected — deploying"
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release commit (fix/feat) — skipping, release pipeline handles deploy"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_deploy == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install git-crypt
+        run: sudo apt-get update && sudo apt-get install -y git-crypt
+
+      - name: Unlock repository
+        env:
+          GIT_CRYPT_KEY: ${{ secrets.GIT_CRYPT_KEY }}
+        run: bash .github/workflows/scripts/setup-git-crypt.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (Production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_jAsHrk71vRyWK6bCTYGJyp0q
+          VERCEL_PROJECT_ID: prj_TXccrJI83HyNvQUZxqStUFgus9NB
+        run: |
+          DEPLOY_URL=$(vercel deploy --token=$VERCEL_TOKEN --prod)
+          echo "Deployed to: $DEPLOY_URL"
