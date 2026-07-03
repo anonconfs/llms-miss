@@ -1,0 +1,8 @@
+dataset,population,opt_occurrences,valid_occurrences,invalid_occurrences,invalid_pct,distinct_invalid_options
+ci,human,218,99,119,54.59,32
+ci,llm,149,121,28,18.79,17
+git,human,665,665,0,0.00,0
+git,llm,1521,1518,3,0.20,3
+gnu,human,2171,2165,6,0.28,5
+gnu,kernel,4502,4420,82,1.82,46
+gnu,llm,3023,2984,39,1.29,25

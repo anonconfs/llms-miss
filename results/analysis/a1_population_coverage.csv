@@ -1,0 +1,8 @@
+dataset,population,units_used,opts_used,gt_options,reach_pct
+ci,human,37,39,1864,2.09
+ci,llm,35,30,1864,1.61
+git,human,22,97,5024,1.93
+git,llm,21,137,5024,2.73
+gnu,human,62,146,2716,5.38
+gnu,kernel,73,191,2716,7.03
+gnu,llm,64,148,2716,5.45

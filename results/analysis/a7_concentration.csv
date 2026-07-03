@@ -1,0 +1,7 @@
+dataset,population,n_options_used,norm_entropy,gini
+ci,human,39,0.901,0.440
+ci,llm,30,0.720,0.614
+git,human,97,0.675,0.720
+git,llm,137,0.730,0.752
+gnu,human,146,0.747,0.755
+gnu,llm,148,0.727,0.759

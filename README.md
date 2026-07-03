@@ -1,5 +1,7 @@
 # What Language Models Miss in the Option Spaces of the Programs They Call
 
+The artifacts were committed on time, but the repository had to be recreated because an author's identifying information was leaked.
+
 Replication package for the ICSE 2027 paper (submission #450).
 
 We measure how far language models reach into the documented option spaces of 403 programs (GNU coreutils, Git, CI tooling), comparing them against human authors and a Linux kernel expert reference. About nine in ten options go unused by everyone, and models land on the same narrow slice as the average human.

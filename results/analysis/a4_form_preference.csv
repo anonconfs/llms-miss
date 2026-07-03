@@ -1,0 +1,8 @@
+dataset,population,short_uses,long_uses,short_pct,long_pct
+gnu,human,1637,11,99.3,0.7
+gnu,llm,1812,5,99.7,0.3
+gnu,kernel,3508,12,99.7,0.3
+git,human,31,50,38.3,61.7
+git,llm,137,81,62.8,37.2
+ci,human,61,15,80.3,19.7
+ci,llm,18,14,56.2,43.8
