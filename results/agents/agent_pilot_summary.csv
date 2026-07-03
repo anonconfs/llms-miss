@@ -1,0 +1,3 @@
+agent,dataset,invocations,pct_zero_option,mean_opts_per_call,distinct_options,invalid_distinct,reach_pct
+llama-70b,gnu,1779,29.51,0.717,22,5,0.63
+kimi-k2,gnu,14369,28.18,1.298,64,28,1.33
