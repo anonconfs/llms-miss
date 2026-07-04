@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+# 04-mine-human-and-llm-scripts.sh
+#
+# Mines 300 human-written + 300 LLM-written bash/shell scripts from 50+ repos.
+#
+# Provenance guarantees (100% certain):
+#   HUMAN: files from repo tree at a commit BEFORE 2020-01-01
+#          (GPT-3: Jun 2020, Codex: Aug 2021, Copilot: Oct 2021 — nothing existed)
+#   LLM:   file contains explicit AI-attribution string, verified after download
+#
+# Output: ../corpus/gnu/human/              (300 scripts)
+#         ../corpus/gnu/llm/                (300 scripts)
+#         ../data/mining-manifest.csv (provenance metadata)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HUMAN_DIR="$SCRIPT_DIR/../corpus/gnu/human"
+LLM_DIR="$SCRIPT_DIR/../corpus/gnu/llm"
+MANIFEST="$SCRIPT_DIR/../data/mining-manifest.csv"
+
+HUMAN_TARGET=300
+LLM_TARGET=300
+CUTOFF="2020-01-01T00:00:00Z"
+
+mkdir -p "$HUMAN_DIR" "$LLM_DIR"
+
+log() { echo "[$(date +%H:%M:%S)] $*"; }
+
+# Helpers
+
+download_file() {
+    local repo="$1" path="$2" ref="$3" outfile="$4"
+    local url="repos/$repo/contents/$path"
+    [[ -n "$ref" ]] && url="${url}?ref=$ref"
+    local content
+    content=$(gh api "$url" --jq '.content' 2>/dev/null) || return 1
+    [[ -z "$content" || "$content" == "null" ]] && return 1
+    echo "$content" | base64 -d > "$outfile" 2>/dev/null || return 1
+    [[ -s "$outfile" ]] || { rm -f "$outfile"; return 1; }
+    return 0
+}
+
+# PART 1: HUMAN SCRIPTS — get tree at pre-2020 commit (one API call per repo)
+
+log "PART 1: Mining HUMAN-written scripts"
+log "Method: file tree at last commit before $CUTOFF"
+
+# Repos with rich shell scripts, all created well before 2020
+HUMAN_REPOS=(
+    "systemd/systemd"
+    "git/git"
+    "openssl/openssl"
+    "curl/curl"
+    "vim/vim"
+    "ohmyzsh/ohmyzsh"
+    "nvm-sh/nvm"
+    "rbenv/rbenv"
+    "pyenv/pyenv"
+    "asdf-vm/asdf"
+    "rupa/z"
+    "junegunn/fzf"
+    "Bash-it/bash-it"
+    "scop/bash-completion"
+    "liquidprompt/liquidprompt"
+    "tj/n"
+    "bats-core/bats-core"
+    "koalaman/shellcheck"
+    "dokku/dokku"
+    "pi-hole/pi-hole"
+    "acmesh-official/acme.sh"
+    "dehydrated-io/dehydrated"
+    "discourse/discourse_docker"
+    "RetroPie/RetroPie-Setup"
+    "Homebrew/install"
+    "docker-library/postgres"
+    "docker-library/official-images"
+    "docker-library/mysql"
+    "docker-library/redis"
+    "docker-library/golang"
+    "docker-library/python"
+    "docker-library/node"
+    "dylanaraps/neofetch"
+    "dylanaraps/pure-bash-bible"
+    "CISOfy/lynis"
+    "drwetter/testssl.sh"
+    "zsh-users/zsh-autosuggestions"
+    "zsh-users/zsh-syntax-highlighting"
+    "sorin-ionescu/prezto"
+    "romkatv/powerlevel10k"
+    "mathiasbynens/dotfiles"
+    "holman/dotfiles"
+    "thoughtbot/dotfiles"
+    "cowboy/dotfiles"
+    "paulirish/dotfiles"
+    "skwp/dotfiles"
+    "aristocratos/bashtop"
+    "tmux/tmux"
+    "nginx/nginx"
+    "nodejs/node"
+    "rust-lang/rust"
+    "torvalds/linux"
+    "apache/httpd"
+    "FreeBSD/src"
+)
+
+# Init manifest if not exists or is empty
+[[ -s "$MANIFEST" ]] || echo "file,provenance,repo,path,evidence" > "$MANIFEST"
+
+human_count=$(find "$HUMAN_DIR" -type f | wc -l)
+log "Already have: $human_count human scripts"
+
+for repo in "${HUMAN_REPOS[@]}"; do
+    [[ $human_count -ge $HUMAN_TARGET ]] && break
+    log "  [$human_count/$HUMAN_TARGET] $repo"
+
+    # Get the SHA of the last commit before 2020
+    sha=$(gh api "repos/$repo/commits?until=$CUTOFF&per_page=1" \
+          --jq '.[0].sha' 2>/dev/null) || continue
+    [[ -z "$sha" || "$sha" == "null" ]] && { log "    (no pre-2020 commits)"; continue; }
+
+    # Get the tree at that commit — all files are guaranteed pre-LLM
+    mapfile -t paths < <(
+        gh api "repos/$repo/git/trees/$sha?recursive=1" \
+            --jq '.tree[] | select(.path | test("\\.(sh|bash)$")) | select(.type=="blob") | .path' \
+            2>/dev/null | shuf | head -20
+    )
+
+    log "    Found ${#paths[@]} shell files at pre-2020 commit"
+
+    for path in "${paths[@]}"; do
+        [[ $human_count -ge $HUMAN_TARGET ]] && break
+
+        safe_name="${repo//\//_}__${path//\//_}"
+        outfile="$HUMAN_DIR/$safe_name"
+
+        # Skip already downloaded
+        [[ -f "$outfile" ]] && { human_count=$((human_count + 1)); continue; }
+
+        if download_file "$repo" "$path" "$sha" "$outfile"; then
+            human_count=$((human_count + 1))
+            echo "$safe_name,human,$repo,$path,tree_at_commit_before_2020:${sha:0:8}" >> "$MANIFEST"
+        fi
+    done
+
+    # Pace: ~3 API calls per repo (commits + tree + downloads)
+    sleep 1
+done
+
+log "Human scripts: $human_count"
+
+# PART 2: LLM SCRIPTS — explicit attribution, verified in content
+
+log ""
+log "═══════════════════════════════════════"
+log "PART 2: Mining LLM-written scripts"
+log "Method: GitHub code search + content verification"
+log "═══════════════════════════════════════"
+
+LLM_QUERIES=(
+    '"Generated by ChatGPT" extension:sh'
+    '"generated by GPT" extension:sh'
+    '"Created by ChatGPT" extension:sh'
+    '"written by ChatGPT" extension:sh'
+    '"Generated by Claude" extension:sh'
+    '"AI generated" "#!/bin/bash" extension:sh'
+    '"generated by Copilot" extension:sh'
+    '"generated using ChatGPT" extension:sh'
+    '"created with ChatGPT" extension:sh'
+    '"generated by OpenAI" extension:sh'
+    '"generated by GPT-4" extension:sh'
+    '"written by AI" "#!/bin/bash" extension:sh'
+    '"created by AI" "#!/bin/bash" extension:sh'
+    '"vibe coded" extension:sh'
+    '"GitHub Copilot" "generated" extension:sh'
+    '"this code was generated" extension:sh'
+    '"auto-generated by" "GPT" extension:sh'
+    '"AI assistant" "generated" extension:sh'
+    '"generated by ChatGPT" extension:bash'
+    '"ChatGPT" "#!/bin/bash" extension:sh'
+    '"generated by an AI" extension:sh'
+    '"generated by Claude" extension:bash'
+    '"GPT-4" "generated" extension:sh'
+    '"generated by" "language model" extension:sh'
+    '"LLM generated" extension:sh'
+)
+
+# Verification pattern — must match at least one in the file content
+VERIFY_RE='(generated by (chatgpt|gpt|claude|copilot|openai|gpt-4|an ai|ai)|created (by|with) (chatgpt|ai|claude)|written by (chatgpt|ai|claude)|ai generated|vibe coded|github copilot.*generated|auto-generated by.*gpt|this (code|script) was generated|llm generated|generated by.*language model)'
+
+llm_count=$(find "$LLM_DIR" -type f | wc -l)
+declare -A llm_repos_seen=()
+log "Already have: $llm_count LLM scripts"
+
+for query in "${LLM_QUERIES[@]}"; do
+    [[ $llm_count -ge $LLM_TARGET ]] && break
+    log "  [$llm_count/$LLM_TARGET] Search: ${query:0:50}..."
+
+    # GitHub search API: 10 requests/minute for code search
+    for page in 1 2 3; do
+        [[ $llm_count -ge $LLM_TARGET ]] && break
+
+        mapfile -t results < <(
+            gh api "search/code?q=$(printf '%s' "$query" | jq -sRr @uri)&per_page=30&page=$page" \
+                --jq '.items[] | "\(.repository.full_name)\t\(.path)"' 2>/dev/null
+        )
+
+        [[ ${#results[@]} -eq 0 ]] && break
+
+        for result in "${results[@]}"; do
+            [[ $llm_count -ge $LLM_TARGET ]] && break
+            [[ -z "$result" ]] && continue
+
+            repo=$(echo "$result" | cut -f1)
+            path=$(echo "$result" | cut -f2)
+
+            safe_name="${repo//\//_}__${path//\//_}"
+            outfile="$LLM_DIR/$safe_name"
+
+            [[ -f "$outfile" ]] && { llm_count=$((llm_count + 1)); continue; }
+
+            if ! download_file "$repo" "$path" "" "$outfile"; then
+                continue
+            fi
+
+            # VERIFY: must contain explicit AI attribution
+            if grep -qiP "$VERIFY_RE" "$outfile" 2>/dev/null || grep -qiE "$VERIFY_RE" "$outfile" 2>/dev/null; then
+                llm_count=$((llm_count + 1))
+                attribution=$(grep -oiP "$VERIFY_RE" "$outfile" 2>/dev/null | head -1 || grep -oiE "$VERIFY_RE" "$outfile" 2>/dev/null | head -1)
+                echo "$safe_name,llm,$repo,$path,\"$attribution\"" >> "$MANIFEST"
+                llm_repos_seen["$repo"]=1
+            else
+                rm -f "$outfile"
+            fi
+        done
+
+        # Search rate limit: 10 req/min
+        sleep 7
+    done
+done
+
+log "LLM scripts: $llm_count from ${#llm_repos_seen[@]} repos"
+
+# Summary
+
+log ""
+log "----------------------------------------"
+log "MINING COMPLETE"
+log "----------------------------------------"
+log ""
+log "Human scripts: $(find "$HUMAN_DIR" -type f | wc -l)  (target: $HUMAN_TARGET)"
+log "LLM scripts:   $(find "$LLM_DIR" -type f | wc -l)  (target: $LLM_TARGET)"
+log "Manifest:      $MANIFEST ($(wc -l < "$MANIFEST") entries)"
+log ""
+log "Repos used:"
+log "  Human: $(grep ',human,' "$MANIFEST" | cut -d',' -f3 | sort -u | wc -l) distinct repos"
+log "  LLM:   $(grep ',llm,' "$MANIFEST" | cut -d',' -f3 | sort -u | wc -l) distinct repos"
