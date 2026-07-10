@@ -20,15 +20,14 @@ SUM_OUT="$AN/a1_dataset_summary.csv"
 SPLIT_OUT="$AN/a1_human_llm_split.csv"
 UNIT_OUT="$AN/a1_unit_coverage.csv"
 
-# -----------------------------------------------------------------------------
 # Single pass over ground truth + invocations.
 #   used[ds, pop, unit, opt] = 1  for every LEGAL option a population used
 #   seenunit[ds, pop, unit]  = 1  for every unit a population invoked at all
 # From these we derive per-population reach, the union/never region, and the
 # human-vs-llm split, without hard-coding the population set.
-# -----------------------------------------------------------------------------
+
 awk -F',' '
-    # ---- ground truth: legal (dataset,unit,option) ----
+    # ground truth: legal (dataset,unit,option)
     FNR==NR {
         if (FNR==1) next
         gt[$1, $2, $3]=1            # dataset, unit, option
@@ -37,7 +36,7 @@ awk -F',' '
         gtopts[$1]++
         next
     }
-    # ---- invocations ----
+    # invocations
     FNR==1 { next }
     {
         ds=$1; pop=$2; unit=$4; opt=$5
@@ -48,7 +47,7 @@ awk -F',' '
     }
     END {
         OFS=","
-        # ---- per (dataset,unit) tallies; also per-population reach ----
+        # per (dataset,unit) tallies; also per-population reach
         for (k in gtn) {
             split(k, a, SUBSEP); ds=a[1]; unit=a[2]
             for (g in gt) {
@@ -74,7 +73,7 @@ awk -F',' '
             unitsused[ds,pop]++
         }
 
-        # ---- a1_population_coverage.csv ----
+        # a1_population_coverage.csv
         print "dataset,population,units_used,opts_used,gt_options,reach_pct" > COV
         for (pk in pops) {
             split(pk, p, SUBSEP); ds=p[1]; pop=p[2]
@@ -83,7 +82,7 @@ awk -F',' '
             printf "%s,%s,%d,%d,%d,%.2f\n", ds, pop, uu, ou, gtopts[ds], pct > COV
         }
 
-        # ---- a1_dataset_summary.csv ----
+        # a1_dataset_summary.csv
         print "dataset,gt_units,gt_options,opts_union,opts_never,never_pct" > SUM
         for (ds in gtopts) {
             uni=(union[ds]+0); never=gtopts[ds]-uni
@@ -91,7 +90,7 @@ awk -F',' '
             printf "%s,%d,%d,%d,%d,%.2f\n", ds, gtunits[ds], gtopts[ds], uni, never, npct > SUM
         }
 
-        # ---- a1_human_llm_split.csv (the RQ3 contrast; kernel excluded) ----
+        # a1_human_llm_split.csv (the RQ3 contrast; kernel excluded)
         print "dataset,shared,human_only,llm_only,human_total,llm_total" > SPL
         for (ds in gtopts) {
             sh=0; ho=0; lo=0; ht=0; lt=0
@@ -110,7 +109,7 @@ awk -F',' '
             printf "%s,%d,%d,%d,%d,%d\n", ds, sh, ho, lo, ht, lt > SPL
         }
 
-        # ---- a1_unit_coverage.csv (long: dataset,unit,population,opts_used,gt_options) ----
+        # a1_unit_coverage.csv (long: dataset,unit,population,opts_used,gt_options)
         print "dataset,unit,population,opts_used,gt_options" > UNIT
         for (pk in pops) {
             split(pk, p, SUBSEP); ds=p[1]; pop=p[2]
@@ -144,11 +143,11 @@ echo "Wrote $SUM_OUT"
 echo "Wrote $SPLIT_OUT"
 echo "Wrote $UNIT_OUT"
 echo
-echo "================= DATASET SUMMARY ================="
+echo "DATASET SUMMARY"
 column -t -s',' "$SUM_OUT"
 echo
-echo "================= POPULATION REACH ================="
+echo "POPULATION REACH"
 column -t -s',' "$COV_OUT"
 echo
-echo "================= HUMAN vs LLM SPLIT ================="
+echo "HUMAN vs LLM SPLIT"
 column -t -s',' "$SPLIT_OUT"

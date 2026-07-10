@@ -21,10 +21,9 @@ export TERM=dumb
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
-# =============================================================================
 # extract_options <help_text>
 #   Prints one option per line. Short options: -X, Long options: --word
-# =============================================================================
+
 extract_options() {
     local text="$1"
     {
@@ -35,14 +34,13 @@ extract_options() {
     } | sort -u
 }
 
-# =============================================================================
 # extract_options_xstyle <help_text>
 #   Like extract_options but also captures X-style single-dash multi-character
 #   options (e.g. find's -name, -maxdepth; stty's -icanon, -ixon), which the
 #   generic short-option pattern misses. Only used for tools whose help
 #   documents such options (find, stty); applying it generally would pick up
 #   example clusters like "tar -xf" as phantom options.
-# =============================================================================
+
 extract_options_xstyle() {
     local text="$1"
     {
@@ -51,11 +49,10 @@ extract_options_xstyle() {
     } | sort -u
 }
 
-# =============================================================================
 # extract_options_git <help_text>
 #   Like extract_options but handles git's --[no-]xxx format.
 #   Emits both --xxx and --no-xxx for each --[no-]xxx found.
-# =============================================================================
+
 extract_options_git() {
     local text="$1"
     {
@@ -69,10 +66,9 @@ extract_options_git() {
     } | sort -u
 }
 
-# =============================================================================
 # write_and_record <study> <tool_name> <output_file>
 #   Counts short/long options in the file, appends to summary.csv
-# =============================================================================
+
 write_and_record() {
     local study="$1" tool="$2" file="$3"
 
@@ -88,10 +84,9 @@ write_and_record() {
     echo "${study},${tool},${short_count},${long_count},${total}" >> "$SUMMARY"
 }
 
-# =============================================================================
 # STUDY 1: GNU coreutils and common CLI tools
-# =============================================================================
-log "=== Study 1: GNU coreutils ==="
+
+log "Study 1: GNU coreutils"
 
 GNU_TOOLS=(
     arch awk b2sum base32 base64 basename basenc cat chcon chgrp chmod chown
@@ -138,14 +133,13 @@ done
 
 log "  Extracted options for $gnu_count GNU tools"
 
-# =============================================================================
 # STUDY 2: CI pipeline tools (docker, npm, pip) — ALL subcommands
-# =============================================================================
-log "=== Study 2: CI pipeline tools ==="
+
+log "Study 2: CI pipeline tools"
 
 ci_count=0
 
-# --- Docker direct commands (all from docker --help) ---
+# Docker direct commands (all from docker --help)
 DOCKER_CMDS=(
     attach build commit cp create diff events exec export history
     images import info inspect kill load login logout logs pause
@@ -161,7 +155,7 @@ for subcmd in "${DOCKER_CMDS[@]}"; do
     if [[ -s "$outfile" ]]; then ci_count=$((ci_count + 1)); fi
 done
 
-# --- Docker Compose subcommands ---
+# Docker Compose subcommands
 COMPOSE_CMDS=(
     build config cp create down events exec images kill logs ls
     pause port ps pull push restart rm run start stop top unpause
@@ -176,7 +170,7 @@ for subcmd in "${COMPOSE_CMDS[@]}"; do
     if [[ -s "$outfile" ]]; then ci_count=$((ci_count + 1)); fi
 done
 
-# --- npm — ALL subcommands ---
+# npm: ALL subcommands
 NPM_CMDS=(
     access adduser audit bugs cache ci completion config dedupe
     deprecate diff dist-tag docs doctor edit exec explain explore
@@ -196,7 +190,7 @@ for subcmd in "${NPM_CMDS[@]}"; do
     if [[ -s "$outfile" ]]; then ci_count=$((ci_count + 1)); fi
 done
 
-# --- pip — ALL subcommands ---
+# pip: ALL subcommands
 PIP_CMDS=(
     cache check completion config debug download freeze hash
     index inspect install list show uninstall wheel
@@ -212,10 +206,9 @@ done
 
 log "  Extracted options for $ci_count CI tools"
 
-# =============================================================================
 # STUDY 3: Git subcommands
-# =============================================================================
-log "=== Study 3: Git subcommands ==="
+
+log "Study 3: Git subcommands"
 
 GIT_SUBCMDS=(
     add am apply archive bisect blame branch checkout cherry-pick clean
@@ -243,13 +236,12 @@ done
 
 log "  Extracted options for $git_count git subcommands"
 
-# =============================================================================
 # FINAL REPORT
-# =============================================================================
+
 log ""
-log "=========================================="
+log "------------------------------------"
 log " GROUND TRUTH EXTRACTION COMPLETE"
-log "=========================================="
+log "------------------------------------"
 log " Results: $GROUNDTRUTH_DIR/"
 log "   GNU tools:    $gnu_count  (in gnu/)"
 log "   CI tools:     $ci_count  (in ci/)"
@@ -278,9 +270,9 @@ log "   docker:    $(docker --version | grep -oP '[0-9]+\.[0-9]+\.[0-9]+')"
 log "   npm:       $(npm --version)"
 log "   pip:       $(pip3 --version | grep -oP '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)"
 
-# =============================================================================
+
 # Write a versions manifest for reproducibility
-# =============================================================================
+
 VERSIONS="$GROUNDTRUTH_DIR/versions.txt"
 {
     echo "# Ground Truth Extraction — Tool Versions"

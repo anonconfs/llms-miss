@@ -24,9 +24,8 @@ VAL_OUT="$AN/a7_validity.csv"
 DIST_OUT="$AN/a7_distribution.csv"
 CONC_OUT="$AN/a7_concentration.csv"
 
-# -----------------------------------------------------------------------------
 # M7  Validity -- legal vs illegal option occurrences per dataset/population.
-# -----------------------------------------------------------------------------
+
 awk -F',' '
     FNR==NR { if (FNR>1) gt[$1,$2,$3]=1; next }      # ground truth
     FNR==1 { next }
@@ -49,7 +48,6 @@ awk -F',' '
 ' "$GT" "$INV" > "$VAL_OUT.tmp"
 { head -1 "$VAL_OUT.tmp"; tail -n +2 "$VAL_OUT.tmp" | sort -t, -k1,1 -k2,2; } > "$VAL_OUT"; rm -f "$VAL_OUT.tmp"
 
-# -----------------------------------------------------------------------------
 # M8  Distribution -- options per invocation, straight from the source result
 # files (each row there is exactly one invocation with an option_count column).
 #   gnu : results/gnu/{human,llm,coreutils}_invocations.csv  col 4 = option_count
@@ -101,13 +99,12 @@ awk -F',' '
 ' > "$DIST_OUT.tmp"
 { head -1 "$DIST_OUT.tmp"; tail -n +2 "$DIST_OUT.tmp" | sort -t, -k1,1 -k2,2; } > "$DIST_OUT"; rm -f "$DIST_OUT.tmp"
 
-# -----------------------------------------------------------------------------
 # M2  Concentration -- normalised Shannon entropy and Gini of the per-option
 # usage counts, per dataset/population, from the invocation-weighted popularity
 # table (human_uses, llm_uses).  High entropy / low Gini = even usage; low
 # entropy / high Gini = a few options dominate.
 #   a2_option_popularity.csv: dataset,unit,option,human_uses,llm_uses,...
-# -----------------------------------------------------------------------------
+
 awk -F',' '
     NR==1 { next }
     { ds=$1; h=$4+0; l=$5+0

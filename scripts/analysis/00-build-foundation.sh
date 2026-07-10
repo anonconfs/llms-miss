@@ -22,7 +22,7 @@ OUT="$OUT_DIR/invocations_long.csv"
 
 echo "dataset,population,file,unit,option" > "$OUT"
 
-# --- helper: split a space-separated option string into one row per option ----
+# helper: split a space-separated option string into one row per option
 # Reads CSV lines "dataset,population,file,unit,<options>" on stdin where the
 # options field is already unquoted. Emits one output row per option token,
 # or a single empty-option row when there were no options.
@@ -49,7 +49,7 @@ emit_rows() {
     }'
 }
 
-# --- GNU -----------------------------------------------------------------------
+# GNU 
 # Source: results/gnu/{human,llm}_invocations.csv  (general OSS humans + LLMs)
 #         results/gnu/coreutils_invocations.csv     (Linux-kernel = EXPERT humans)
 #   columns: file, tool, "options", option_count
@@ -67,7 +67,7 @@ gnu_emit "$BASE/results/gnu/human_invocations.csv"     human
 gnu_emit "$BASE/results/gnu/llm_invocations.csv"       llm
 gnu_emit "$BASE/results/gnu/coreutils_invocations.csv" kernel
 
-# --- GIT -----------------------------------------------------------------------
+# GIT
 # Source: results/git/git_invocations_raw.csv
 #   columns: group, source_file, line_number, subcommand, "options_all", ...
 # unit = subcommand; we use options_all (every option seen, valid or not).
@@ -77,7 +77,7 @@ tail -n +2 "$BASE/results/git/git_invocations_raw.csv" | awk -F',' '{
     printf "git\t%s\t%s\t%s\t%s\n", pop, file, scmd, opt
 }' | emit_rows >> "$OUT"
 
-# --- CI ------------------------------------------------------------------------
+# CI
 # Source: results/ci/{human,llm}_ci_invocations.csv
 #   columns: file, program, subcommand, options, option_count   (options unquoted)
 # unit = program_subcommand to match ground-truth file names.
@@ -91,12 +91,11 @@ for pop in human llm; do
     }' | emit_rows >> "$OUT"
 done
 
-# =============================================================================
 # Ground-truth long table: every option that each analysed unit *can* take.
 #   dataset, unit, option
 # Source: data/groundtruth/{gnu,git,ci}/<unit>.txt  (one option per line)
 # We skip a couple of non-unit helper files (help.txt dumps) that are not tools.
-# =============================================================================
+
 GT_OUT="$OUT_DIR/groundtruth_long.csv"
 echo "dataset,unit,option" > "$GT_OUT"
 
@@ -114,7 +113,7 @@ for ds in gnu git ci; do
     done
 done >> "$GT_OUT"
 
-# --- report --------------------------------------------------------------------
+# report
 echo "Wrote $OUT"
 echo "Rows per dataset/population (option-level, incl. empty-option rows):"
 tail -n +2 "$OUT" | awk -F',' '{print $1, $2}' | sort | uniq -c

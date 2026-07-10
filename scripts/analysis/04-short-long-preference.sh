@@ -21,7 +21,7 @@ RAW_OUT="$AN/a4_form_preference_raw.csv"
 DETAIL_OUT="$AN/a4_alias_usage_detail.csv"
 
 awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="$RAW_OUT" '
-    # ---- file 1: alias map -------------------------------------------------
+    # file 1: alias map
     ARGIND==1 {
         if (FNR==1) next
         ds=$1; unit=$2; short=$3; long=$4
@@ -30,7 +30,7 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
         paired[ds,unit,long]=1         # this logical option has two spellings
         next
     }
-    # ---- file 2: ground truth ---------------------------------------------
+    # file 2: ground truth
     ARGIND==2 {
         if (FNR==1) next
         ds=$1; unit=$2; opt=$3
@@ -38,7 +38,7 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
         gtlog[ds,unit,lg]=1
         next
     }
-    # ---- file 3: invocations ----------------------------------------------
+    # file 3: invocations
     ARGIND==3 {
         if (FNR==1) next
         ds=$1; pop=$2; unit=$4; opt=$5
@@ -57,7 +57,7 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
     END {
         OFS=","
 
-        # ---------- alias usage detail + cross-spelling tallies ------------
+        # alias usage detail + cross-spelling tallies
         print "dataset,unit,logical_option,paired,human_short,human_long,llm_short,llm_long" > DETAIL
         for (k in usedlog) {
             split(k, a, SUBSEP); ds=a[1]; unit=a[2]; pop=a[3]; lg=a[4]
@@ -88,7 +88,7 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
         # gt logical total = distinct logical options in ground truth
         for (k in gtlog) { split(k,a,SUBSEP); gtl[a[1]]++ }
 
-        # ---------- logical coverage rollup --------------------------------
+        # logical coverage rollup
         print "dataset,gt_logical_options,human_logical,llm_logical,shared_logical,shared_same_spelling,shared_diff_spelling" > COV
         for (ds in gtl) {
             printf "%s,%d,%d,%d,%d,%d,%d\n", ds, gtl[ds],
@@ -99,7 +99,7 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
                 (ds in shared_diff?shared_diff[ds]:0) >> COV
         }
 
-        # ---------- form preference (two views) ----------------------------
+        # form preference (two views)
         # RAW counts every legal option token as written; FORM keeps only the
         # options that offer both a short and a long spelling (a real choice).
         print "dataset,population,short_uses,long_uses,short_pct,long_pct" > FORM
@@ -126,9 +126,9 @@ awk -F',' -v DETAIL="$DETAIL_OUT" -v COV="$COV_OUT" -v FORM="$FORM_OUT" -v RAW="
 mv "$DETAIL_OUT.s" "$DETAIL_OUT"
 
 echo "Wrote $COV_OUT"; echo "Wrote $FORM_OUT"; echo "Wrote $RAW_OUT"; echo "Wrote $DETAIL_OUT"
-echo; echo "================= LOGICAL COVERAGE ================="
+echo; echo "LOGICAL COVERAGE"
 column -t -s',' "$COV_OUT"
-echo; echo "========= FORM PREFERENCE (syntactic, all tokens) ========="
+echo; echo "FORM PREFERENCE (syntactic, all tokens)"
 column -t -s',' "$RAW_OUT"
-echo; echo "========= FORM PREFERENCE (alias-resolved) ========="
+echo; echo "FORM PREFERENCE (alias-resolved)"
 column -t -s',' "$FORM_OUT"

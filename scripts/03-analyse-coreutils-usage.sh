@@ -184,7 +184,7 @@ function process_command(cmd, fname,    nw, words, cmdword, w, word, body,
         # Must look like an option
         if (word !~ /^-[a-zA-Z]/ && word !~ /^--[a-z]/) continue
 
-        # ── Long option: strip =value, count 1 ──
+        # Long option: strip =value, count 1
         if (word ~ /^--/) {
             sub(/=.*$/, "", word)
             if (opts != "") opts = opts " "
@@ -193,7 +193,7 @@ function process_command(cmd, fname,    nw, words, cmdword, w, word, body,
             continue
         }
 
-        # ── Short option: classify and possibly expand ──
+        # Short option: classify and possibly expand
         body = substr(word, 2)
 
         # Case A: all-alpha body, length > 1 → possible combined options
@@ -383,9 +383,9 @@ log "Co-occurrence pairs: $cooc_pairs"
 rm -f "$TOOL_LIST"
 
 log ""
-log "═══════════════════════════════════════"
+log "------------------------------------"
 log "ANALYSIS COMPLETE"
-log "═══════════════════════════════════════"
+log "------------------------------------"
 log ""
 log "Output:"
 log "  $INVOCATIONS_CSV  ($total_invocations rows)"

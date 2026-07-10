@@ -19,7 +19,7 @@ OUT="$AN/aliases_long.csv"
 mkdir -p "$RAW"/{gnu,git,ci}
 echo "dataset,unit,short,long" > "$OUT"
 
-# --- resolve the help command for a given dataset+unit, print help to stdout ---
+# resolve the help command for a given dataset+unit, print help to stdout
 get_help() {
     local ds="$1" unit="$2"
     case "$ds" in
@@ -42,7 +42,7 @@ get_help() {
     esac
 }
 
-# --- pull "short, long" (and npm "short|long") pairs out of help text ----------
+# pull "short, long" (and npm "short|long") pairs out of help text ----------
 extract_pairs() {
     # comma form: -x, --long      (gnu, git, docker, pip)
     grep -oP '(?<!\S)-[a-zA-Z0-9], --[a-z][a-z0-9-]+' || true
