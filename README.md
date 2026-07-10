@@ -1,8 +1,5 @@
 # What Language Models Miss in the Option Spaces of the Programs They Call
 
-> [!NOTE]
-> The artifacts were committed on time, but the repository had to be recreated because an author's identifying information was leaked in a last commit.
-
 Replication package for the ICSE 2027 paper (submission #450).
 
 ## What we measure
@@ -39,3 +36,6 @@ The mining scripts (02, 04, 06, `git/02`) re-clone upstream repos and are only n
 ## Datasets
 
 403 programs, 9,604 documented options, 31,145 invocations across three domains (GNU coreutils, Git subcommands, CI tooling), each split into a human and a model cohort, with a kernel expert reference for GNU. Exact per-program option counts are in [data/groundtruth/summary.csv](data/groundtruth/summary.csv); tool versions in [data/groundtruth/versions.txt](data/groundtruth/versions.txt).
+
+> [!NOTE]
+> The artifacts were committed on time, but the repository had to be recreated because an author's identifying information was leaked in a last commit.
