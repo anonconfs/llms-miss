@@ -99,5 +99,16 @@ The agent trajectories come from two public Hugging Face datasets,
 [nebius/SWE-agent-trajectories](https://huggingface.co/datasets/nebius/SWE-agent-trajectories)
 (600 runs, 570 with Llama 70B and 30 with Llama 8B) and
 [SWE-Factory/DeepSWE-Agent-Kimi-K2-Trajectories-2.8K](https://huggingface.co/datasets/SWE-Factory/DeepSWE-Agent-Kimi-K2-Trajectories-2.8K)
-(600 runs with Kimi K2). The scripts and workflows in the corpus come from
-public repositories and keep the licences of their projects.
+(600 runs with Kimi K2).
+
+## Licence
+
+The scripts are released under the MIT licence, and our data and results
+(ground truth, tables, and figures) under CC BY 4.0, see [LICENSE](LICENSE).
+The scripts and workflows in `corpus/` and the agent trajectories come from
+public repositories and datasets and keep the licences of their projects.
+
+## Use of generative AI
+
+Claude Opus 4.6 and 5.5 assisted in writing the analysis scripts and charts,
+all of which the authors verified.
