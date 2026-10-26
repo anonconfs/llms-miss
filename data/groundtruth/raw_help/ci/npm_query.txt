@@ -1,0 +1,12 @@
+Retrieve a filtered list of packages
+
+Usage:
+npm query <selector>
+
+Options:
+[-g|--global]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--package-lock-only]
+[--expect-results|--expect-result-count <count>]
+
+Run "npm help query" for more info

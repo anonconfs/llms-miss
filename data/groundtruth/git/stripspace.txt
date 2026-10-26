@@ -1,0 +1,4 @@
+-c
+--comment-lines
+-s
+--strip-comments

@@ -1,0 +1,13 @@
+Remove extraneous packages
+
+Usage:
+npm prune [[<@scope>/]<pkg>...]
+
+Options:
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+[--dry-run] [--json] [--foreground-scripts] [--ignore-scripts]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+Run "npm help prune" for more info

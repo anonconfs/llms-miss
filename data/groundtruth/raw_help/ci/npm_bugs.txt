@@ -1,0 +1,13 @@
+Report bugs for a package in a web browser
+
+Usage:
+npm bugs [<pkgname> [<pkgname> ...]]
+
+Options:
+[--no-browser|--browser <browser>] [--registry <registry>]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root]
+
+alias: issues
+
+Run "npm help bugs" for more info

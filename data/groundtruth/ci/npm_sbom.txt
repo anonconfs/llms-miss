@@ -1,0 +1,7 @@
+--omit
+--package-lock-only
+--sbom-format
+--sbom-type
+-w
+--workspace
+--workspaces

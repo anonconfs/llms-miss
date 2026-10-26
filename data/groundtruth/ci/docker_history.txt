@@ -1,0 +1,7 @@
+--format
+-H
+--human
+--no-trunc
+--platform
+-q
+--quiet

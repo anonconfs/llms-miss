@@ -1,0 +1,8 @@
+--equal-width
+-f
+--format
+--help
+-s
+--separator
+--version
+-w

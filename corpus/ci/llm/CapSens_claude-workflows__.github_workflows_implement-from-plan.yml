@@ -1,0 +1,374 @@
+name: Implement from Plan
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write     # Create branches and push
+  issues: write       # Post comments and read issue
+  pull-requests: write # Create pull requests
+  id-token: write     # Claude Code OAuth
+
+jobs:
+  implement-feature:
+    runs-on: ubuntu-latest
+    # Only run if ready-for-pr label is added AND issue contains YAML frontmatter
+    if: |
+      github.event.label.name == 'ready-for-pr'
+    timeout-minutes: 60
+
+    steps:
+      # Step 1: Checkout this repository (for system prompt file)
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+
+      # Step 2: Parse YAML frontmatter to extract repository field
+      - name: Parse YAML frontmatter
+        id: parse-yaml
+        run: |
+          # Extract content between first --- and second ---
+          ISSUE_BODY="${{ github.event.issue.body }}"
+
+          # Parse YAML frontmatter
+          YAML_CONTENT=$(echo "$ISSUE_BODY" | sed -n '/^---$/,/^---$/p' | sed '1d;$d')
+
+          # Extract repository field
+          REPOSITORY=$(echo "$YAML_CONTENT" | grep -E '^repository:' | sed 's/^repository:[[:space:]]*//' | tr -d '\r\n')
+
+          # Validate format (owner/repo)
+          if [[ ! "$REPOSITORY" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
+            echo "::error::Invalid or missing repository field in YAML frontmatter"
+            echo "::error::Expected format: repository: owner/repo"
+            exit 1
+          fi
+
+          echo "repository=$REPOSITORY" >> $GITHUB_OUTPUT
+          echo "Parsed repository: $REPOSITORY"
+
+      # Step 3: Validate repository access
+      - name: Validate repository access
+        run: |
+          REPO="${{ steps.parse-yaml.outputs.repository }}"
+          echo "Validating access to $REPO..."
+
+          # Check if repository exists and is accessible
+          gh repo view "$REPO" --json name,owner > /dev/null 2>&1 || {
+            echo "::error::Cannot access repository $REPO"
+            echo "::error::Ensure repository exists and GH_PAT has access"
+            exit 1
+          }
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      # Step 4: Determine default branch
+      - name: Get default branch
+        id: get-branch
+        run: |
+          REPO="${{ steps.parse-yaml.outputs.repository }}"
+
+          # Get default branch from GitHub API
+          DEFAULT_BRANCH=$(gh repo view "$REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')
+
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "::warning::Could not determine default branch, using 'main'"
+            DEFAULT_BRANCH="main"
+          fi
+
+          echo "branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+          echo "Default branch: $DEFAULT_BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      # Step 5: Fetch ALL issue comments to get implementation plan
+      - name: Fetch issue comments
+        id: fetch-comments
+        run: |
+          echo "Fetching comments for issue #${{ github.event.issue.number }}..."
+
+          # Get comment count first
+          COMMENT_COUNT=$(gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq 'length')
+
+          echo "Found $COMMENT_COUNT comment(s)"
+          echo "comment_count=$COMMENT_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$COMMENT_COUNT" -gt 0 ]; then
+            # Fetch all comments and format as markdown
+            gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments \
+              --paginate \
+              --jq '.[] | "### Comment by @\(.user.login)\n**Posted:** \(.created_at | sub("T"; " ") | sub("Z"; " UTC"))\n\n\(.body)\n\n---\n"' \
+              > /tmp/issue-comments.md
+
+            echo "Comments saved to /tmp/issue-comments.md"
+
+            # Show preview (first 20 lines)
+            echo "Preview of comments:"
+            head -n 20 /tmp/issue-comments.md
+          else
+            echo "::error::No comments found. Implementation plan should be in a comment."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 6: Checkout target repository
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.parse-yaml.outputs.repository }}
+          ref: ${{ steps.get-branch.outputs.branch }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          path: target-repo
+
+      # Step 7: Create new branch for implementation
+      - name: Create implementation branch
+        run: |
+          cd target-repo
+
+          BRANCH_NAME="performance/issue-${{ github.event.issue.number }}"
+          echo "Creating branch: $BRANCH_NAME"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        id: create-branch
+
+      # Step 8: Prepare system prompt
+      - name: Prepare system prompt
+        run: |
+          # Copy system prompt to /tmp so Claude Code can access it
+          cp .github/prompts/implementation-system.md /tmp/system-prompt.txt
+          echo "System prompt prepared at /tmp/system-prompt.txt"
+
+      # Step 9: Run Claude Code Implementation
+      - name: Implement Feature with Claude Code
+        id: claude-implementation
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          working_directory: target-repo
+          system_prompt_file: /tmp/system-prompt.txt
+          prompt: |
+            Implement the feature described in GitHub issue #${{ github.event.issue.number }} following the implementation plan.
+
+            **Issue URL**: ${{ github.event.issue.html_url }}
+            **Repository**: ${{ steps.parse-yaml.outputs.repository }}
+            **Branch**: ${{ steps.create-branch.outputs.branch_name }}
+            **Comment Count**: ${{ steps.fetch-comments.outputs.comment_count }}
+
+            ## Your Task
+
+            1. Read the GitHub issue body to understand the feature context
+            2. Read the implementation plan from `/tmp/issue-comments.md`
+               - The plan was posted as a comment and contains phases, tasks, and technical details
+               - Look for the "Implementation Plan" heading in the comments
+               - If multiple plans exist, use only the most recent one
+            3. Analyze the codebase structure and locate files mentioned in the plan
+            4. Execute each phase and task in the implementation plan:
+               - Phase 1: Foundation tasks
+               - Phase 2: Core feature implementation
+               - Phase 3: Testing & polish
+               - Phase 4: Documentation
+            5. Follow the technical approach and patterns specified in the plan
+            6. Create/modify all files as specified
+            7. Write tests according to the testing strategy
+            8. Make atomic commits with clear messages for each logical unit of work
+
+            **IMPORTANT**:
+            - When multiple implementation plans exist, implement only the most recent one
+            - Make commits as you complete tasks (use git commands)
+            - DO NOT open a pull request - the workflow will handle that
+            - If you encounter issues, document them and continue with other tasks
+            - Focus on implementing what's in the plan, not adding extras
+          claude_args: "--model claude-sonnet-4-20250514 --permission-mode bypassPermissions"
+
+      # Step 10: Push the branch
+      - name: Push implementation branch
+        run: |
+          cd target-repo
+
+          # Check if there are any commits
+          if git log origin/${{ steps.get-branch.outputs.branch }}..${{ steps.create-branch.outputs.branch_name }} --oneline | grep -q .; then
+            echo "Pushing branch ${{ steps.create-branch.outputs.branch_name }}..."
+            git push origin "${{ steps.create-branch.outputs.branch_name }}"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::No commits were made. Branch will not be pushed."
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+        id: push-branch
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      # Step 11: Create Pull Request
+      - name: Create Pull Request
+        if: steps.push-branch.outputs.has_changes == 'true'
+        id: create-pr
+        run: |
+          cd target-repo
+
+          # Generate PR title from issue title
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          PR_TITLE="[Performance] $ISSUE_TITLE"
+
+          # Create PR body
+          cat > pr-body.md << 'EOF'
+          ## Implementation from Issue
+
+          This PR implements the feature described in issue #${{ github.event.issue.number }}.
+
+          **Original Issue**: ${{ github.event.issue.html_url }}
+          **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Implementation Summary
+
+          This PR was automatically generated by Claude Code following the implementation plan.
+
+          The implementation includes:
+          - Code changes according to the implementation plan
+          - Tests as specified in the testing strategy
+          - Documentation updates as needed
+
+          ### Review Checklist
+
+          - [ ] Review all code changes for correctness
+          - [ ] Verify tests are passing
+          - [ ] Check for any security issues
+          - [ ] Validate performance improvements
+          - [ ] Review error handling
+          - [ ] Confirm documentation is updated
+
+          ### Notes
+
+          Please review the changes carefully. While this implementation follows the plan, human review is essential to ensure quality and correctness.
+
+          ---
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+          Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+          EOF
+
+          # Create the PR
+          PR_URL=$(gh pr create \
+            --title "$PR_TITLE" \
+            --body-file pr-body.md \
+            --base "${{ steps.get-branch.outputs.branch }}" \
+            --head "${{ steps.create-branch.outputs.branch_name }}" \
+            --repo "${{ steps.parse-yaml.outputs.repository }}")
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "PR created: $PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      # Step 12: Post success comment on issue
+      - name: Post success comment
+        if: success() && steps.push-branch.outputs.has_changes == 'true'
+        run: |
+          cat > comment.md << 'EOF'
+          ## ✅ Implementation Complete
+
+          The feature has been implemented and a pull request has been created!
+
+          **Pull Request**: ${{ steps.create-pr.outputs.pr_url }}
+          **Branch**: `${{ steps.create-branch.outputs.branch_name }}`
+          **Repository**: ${{ steps.parse-yaml.outputs.repository }}
+
+          ### Next Steps
+
+          1. Review the pull request for correctness
+          2. Run any additional tests or validation
+          3. Merge the PR when ready
+
+          ---
+
+          <sub>🤖 Implemented by Claude Code • Triggered by `ready-for-pr` label • [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
+          EOF
+
+          gh issue comment ${{ github.event.issue.number }} \
+            --body-file comment.md \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 13: Handle no changes scenario
+      - name: Handle no changes
+        if: success() && steps.push-branch.outputs.has_changes == 'false'
+        run: |
+          cat > comment.md << 'EOF'
+          ## ⚠️ No Changes Made
+
+          The implementation process completed, but no commits were made to the branch.
+
+          This could mean:
+          - The implementation plan was empty or unclear
+          - Claude Code encountered issues during implementation
+          - All specified changes already exist in the codebase
+
+          **Repository**: ${{ steps.parse-yaml.outputs.repository }}
+          **Branch**: `${{ steps.create-branch.outputs.branch_name }}`
+
+          Please review the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+          EOF
+
+          gh issue comment ${{ github.event.issue.number }} \
+            --body-file comment.md \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 14: Handle implementation failure
+      - name: Handle implementation failure
+        if: failure()
+        run: |
+          cat > error-comment.md << 'EOF'
+          ## ⚠️ Implementation Failed
+
+          The automatic implementation encountered an error.
+
+          **Repository**: ${{ steps.parse-yaml.outputs.repository }}
+          **Issue**: #${{ github.event.issue.number }}
+          **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Troubleshooting
+
+          Please verify:
+          1. Implementation plan exists in issue comments
+          2. Repository exists and is accessible
+          3. All specified files and dependencies are available
+          4. The plan contains clear, actionable tasks
+
+          Check the workflow logs for detailed error information.
+
+          ### Manual Implementation
+
+          If the automated implementation failed, you can:
+          1. Review the implementation plan in the comments
+          2. Manually create branch `performance/issue-${{ github.event.issue.number }}`
+          3. Implement the changes following the plan
+          4. Create a PR manually
+          EOF
+
+          gh issue comment ${{ github.event.issue.number }} \
+            --body-file error-comment.md \
+            --repo ${{ github.repository }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 15: Debug information
+      - name: Debug information
+        if: always()
+        run: |
+          echo "=== Debug Information ==="
+          echo "Issue Number: ${{ github.event.issue.number }}"
+          echo "Repository: ${{ steps.parse-yaml.outputs.repository }}"
+          echo "Branch: ${{ steps.create-branch.outputs.branch_name }}"
+          echo "Label Added: ${{ github.event.label.name }}"
+          echo "Comment Count: ${{ steps.fetch-comments.outputs.comment_count }}"
+          echo "Has Changes: ${{ steps.push-branch.outputs.has_changes }}"
+          echo "Workflow Status: ${{ job.status }}"

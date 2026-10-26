@@ -1,0 +1,14 @@
+Usage: unlink FILE
+  or:  unlink OPTION
+Call the unlink function to remove the specified FILE.
+
+      --help
+         display this help and exit
+      --version
+         output version information and exit
+
+Report bugs to: bug-coreutils@gnu.org
+GNU coreutils home page: <https://www.gnu.org/software/coreutils/>
+General help using GNU software: <https://www.gnu.org/gethelp/>
+Full documentation <https://www.gnu.org/software/coreutils/unlink>
+or available locally via: info '(coreutils) unlink invocation'

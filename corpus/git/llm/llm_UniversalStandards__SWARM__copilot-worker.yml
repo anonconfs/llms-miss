@@ -1,0 +1,311 @@
+name: Copilot Worker Executor
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      worker_issue:
+        description: 'Worker issue number'
+        required: true
+      parent_issue:
+        description: 'Parent issue number'
+        required: false
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  execute-worker:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'copilot-worker')) ||
+      github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Parse Worker Task
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number || parseInt('${{ github.event.inputs.worker_issue }}');
+            
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Parse configuration from issue body
+            const configMatch = issue.body.match(/```json\n([\s\S]*?)\n```/);
+            let config = {};
+            
+            if (configMatch) {
+              config = JSON.parse(configMatch[1]);
+            }
+            
+            // Extract parent issue from labels
+            const parentLabel = issue.labels.find(l => l.name.startsWith('parent:'));
+            const parentIssue = parentLabel ? parentLabel.name.split(':')[1] : null;
+            
+            core.setOutput('config', JSON.stringify(config));
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('parent_issue', parentIssue || '${{ github.event.inputs.parent_issue }}');
+            core.setOutput('worker_id', config.id || issueNumber);
+            core.setOutput('task_type', config.type || 'copilot-task');
+            
+            return { config, issueNumber, parentIssue };
+      
+      - name: Update Worker Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.parse.outputs.issue_number }};
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['status:running', 'worker:active']
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: \`🤖 **Copilot Worker Started**
+
+**Worker ID**: ${{ steps.parse.outputs.worker_id }}
+**Run**: [#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+**Started**: ${new Date().toISOString()}
+
+Copilot is now analyzing and executing this task...\`
+            });
+      
+      - name: Execute with Copilot/Codex
+        id: execute
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+        run: |
+          echo "🤖 Copilot Worker Executing..."
+          
+          WORKER_ID="${{ steps.parse.outputs.worker_id }}"
+          TASK_TYPE="${{ steps.parse.outputs.task_type }}"
+          CONFIG='${{ steps.parse.outputs.config }}'
+          
+          mkdir -p .copilot-workers/${{ github.run_id }}
+          
+          # Execute based on task type
+          case $TASK_TYPE in
+            "copilot-code-gen")
+              echo "Generating code with Copilot..."
+              node .github/scripts/copilot-code-gen.js \
+                --config "$CONFIG" \
+                --output .copilot-workers/${{ github.run_id }}
+              ;;
+            
+            "copilot-ai-task")
+              echo "Executing AI task..."
+              node .github/scripts/copilot-ai-task.js \
+                --config "$CONFIG" \
+                --output .copilot-workers/${{ github.run_id }}
+              ;;
+            
+            "copilot-task")
+              echo "Executing general task..."
+              node .github/scripts/copilot-task.js \
+                --config "$CONFIG" \
+                --output .copilot-workers/${{ github.run_id }}
+              ;;
+            
+            *)
+              echo "Executing generic worker task..."
+              echo "$CONFIG" > .copilot-workers/${{ github.run_id }}/task.json
+              node .github/scripts/agent-executor.js \
+                --agent-type worker \
+                --task-file .copilot-workers/${{ github.run_id }}/task.json \
+                --output-dir .copilot-workers/${{ github.run_id }}
+              ;;
+          esac
+          
+          echo "✅ Execution completed"
+      
+      - name: Create Branch and PR (if code generated)
+        id: create_pr
+        if: success()
+        run: |
+          WORKER_ID="${{ steps.parse.outputs.worker_id }}"
+          ISSUE_NUM="${{ steps.parse.outputs.issue_number }}"
+          
+          # Check if code was generated
+          if [ -d ".copilot-workers/${{ github.run_id }}" ] && [ -n "$(ls -A .copilot-workers/${{ github.run_id }}/*.js .copilot-workers/${{ github.run_id }}/*.ts .copilot-workers/${{ github.run_id }}/*.py 2>/dev/null)" ]; then
+            BRANCH_NAME="copilot-worker-${WORKER_ID}-${ISSUE_NUM}"
+            
+            git config user.name "Copilot Worker"
+            git config user.email "copilot-worker@github.com"
+            
+            git checkout -b "$BRANCH_NAME"
+            
+            # Copy generated files to appropriate locations
+            if [ -d ".copilot-workers/${{ github.run_id }}/src" ]; then
+              cp -r .copilot-workers/${{ github.run_id }}/src/* src/ 2>/dev/null || true
+            fi
+            
+            git add .
+            git commit -m "feat: Copilot worker $WORKER_ID - Generated code for issue #$ISSUE_NUM" || true
+            git push origin "$BRANCH_NAME" || true
+            
+            echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: steps.create_pr.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.create_pr.outputs.branch_name }}';
+            const issueNumber = ${{ steps.parse.outputs.issue_number }};
+            const workerId = '${{ steps.parse.outputs.worker_id }}';
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: \`[Copilot Worker] ${workerId} - Generated code\`,
+              head: branchName,
+              base: 'main',
+              body: \`## 🤖 Copilot Worker Generated Code
+
+**Worker Issue**: #${issueNumber}
+**Worker ID**: ${workerId}
+**Parent Issue**: #${{ steps.parse.outputs.parent_issue }}
+
+### Changes
+
+This PR contains code automatically generated by the Copilot Worker as part of parallel execution.
+
+### Generated By
+
+- GitHub Copilot
+- GitHub Codex
+- AI Agent Orchestrator
+
+### Review Checklist
+
+- [ ] Code follows project standards
+- [ ] Tests included (if applicable)
+- [ ] Documentation updated
+- [ ] No security issues
+
+**Note**: This is one of multiple parallel workers. Check parent issue for overall progress.
+
+Closes #${issueNumber}\`
+            });
+            
+            console.log(\`Created PR #${pr.number}\`);
+      
+      - name: Report Results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.parse.outputs.issue_number }};
+            const parentIssue = '${{ steps.parse.outputs.parent_issue }}';
+            const success = '${{ job.status }}' === 'success';
+            const hasPR = '${{ steps.create_pr.outputs.has_changes }}' === 'true';
+            
+            // Read results if available
+            const fs = require('fs');
+            let results = {};
+            try {
+              const resultsPath = \`.copilot-workers/${{ github.run_id }}/results.json\`;
+              if (fs.existsSync(resultsPath)) {
+                results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              }
+            } catch (error) {
+              console.log('No results file found');
+            }
+            
+            const statusEmoji = success ? '✅' : '❌';
+            const statusText = success ? 'Completed' : 'Failed';
+            
+            // Update worker issue
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              name: 'status:running'
+            }).catch(() => {});
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [success ? 'status:completed' : 'status:failed']
+            });
+            
+            const workerComment = \`${statusEmoji} **Worker ${statusText}**
+
+**Execution Time**: ${new Date().toISOString()}
+**Status**: ${statusText}
+${hasPR ? '**Pull Request**: Created with generated code' : '**Output**: Task completed successfully'}
+
+${results.output || 'Task executed'}
+
+${results.artifacts ? \`### Artifacts\n${results.artifacts.map(a => \`- ${a.name}\`).join('\n')}\` : ''}
+
+[View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: workerComment
+            });
+            
+            // Close worker issue if successful
+            if (success) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                state: 'closed'
+              });
+            }
+            
+            // Report back to parent issue
+            if (parentIssue && parentIssue !== 'null') {
+              const parentComment = \`${statusEmoji} **Worker #${issueNumber} ${statusText}**
+
+Worker ID: ${{ steps.parse.outputs.worker_id }}
+Status: ${statusText}
+${hasPR ? 'Generated code available in PR' : 'Task completed'}
+
+[View Worker Issue](#${issueNumber})\`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(parentIssue),
+                body: parentComment
+              });
+            }

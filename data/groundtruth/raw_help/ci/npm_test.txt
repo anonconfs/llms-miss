@@ -1,0 +1,11 @@
+Test a package
+
+Usage:
+npm test [-- <args>]
+
+Options:
+[--ignore-scripts] [--script-shell <script-shell>]
+
+aliases: tst, t
+
+Run "npm help test" for more info

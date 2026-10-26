@@ -1,0 +1,692 @@
+name: Promote Release to Latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to promote to latest (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  models: read
+
+jobs:
+  promote-to-latest:
+    name: Promote Release to Latest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      models: read
+
+    steps:
+      - name: Validate release exists and get details
+        id: release
+        run: |
+          RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}")
+
+          if [ "$(echo $RELEASE | jq -r '.message')" = "Not Found" ]; then
+            echo "Release ${{ inputs.release_tag }} not found"
+            exit 1
+          fi
+
+          echo "Release found: ${{ inputs.release_tag }}"
+
+          # Extract release details for later steps
+          echo "release_id=$(echo $RELEASE | jq -r '.id')" >> $GITHUB_OUTPUT
+          echo "release_name=$(echo $RELEASE | jq -r '.name')" >> $GITHUB_OUTPUT
+          echo "release_url=$(echo $RELEASE | jq -r '.html_url')" >> $GITHUB_OUTPUT
+
+          # Handle multiline body
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "release_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE" | jq -r '.body' >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Mark release as latest
+        run: |
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.release.outputs.release_id }}" \
+            -d '{"make_latest": "true", "prerelease": false, "draft": false}'
+
+          echo "Marked ${{ inputs.release_tag }} as latest release"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest for Server (GHCR)
+        run: |
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
+            ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
+
+      - name: Create multi-arch manifest for Daemon (GHCR)
+        run: |
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
+            ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
+
+      - name: Checkout scanopy repo (dev branch for latest fixtures)
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout website repo
+        uses: actions/checkout@v4
+        with:
+          repository: scanopy/website
+          token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
+          path: website
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.90.0
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Generate UI fixtures and service logos
+        run: cd backend && cargo run --release --bin generate-fixtures
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Copy fixtures to website repo
+        run: |
+          mkdir -p website/src/lib/fixtures/
+          cp ui/static/services.json website/src/lib/fixtures/
+          cp ui/src/lib/data/features.json website/src/lib/fixtures/
+          cp ui/src/lib/data/billing-plans.json website/src/lib/fixtures/
+          cp ui/static/openapi-public.json website/src/lib/fixtures/openapi.json
+          cp ui/static/schema.mermaid website/src/lib/fixtures/schema.mermaid
+          cp ui/static/schema-er.mermaid website/src/lib/fixtures/schema-er.mermaid
+          cp ui/static/entity-metadata.json website/src/lib/fixtures/entity-metadata.json
+          mkdir -p website/static/logos/services/
+          cp -r ui/static/logos/services/ website/static/logos/services/
+
+      - name: Generate daemon config fixture
+        run: |
+          cd ui && npm ci --ignore-scripts
+          npx svelte-kit sync
+          npx paraglide-js compile --outdir ./src/lib/paraglide --silent
+          npx vite-node scripts/export-daemon-field-defs.ts docs --output=../website/src/lib/fixtures/daemon-config.json 2>/dev/null
+
+      - name: Get previous release tag
+        id: prev_tag
+        run: |
+          # Get all version tags sorted, find the one before current release
+          PREV_TAG=$(git tag -l 'v*' | sort -V | grep -B1 "^${{ inputs.release_tag }}$" | head -1)
+          if [ "$PREV_TAG" = "${{ inputs.release_tag }}" ] || [ -z "$PREV_TAG" ]; then
+            # Fallback: get the tag before this one by commit order
+            PREV_TAG=$(git describe --tags --abbrev=0 ${{ inputs.release_tag }}^ 2>/dev/null || echo "")
+          fi
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, using initial commit"
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Generate commit diff for AI
+        id: diff
+        run: |
+          # Get commits between tags (non-merge commits only)
+          # Include hash for potential PR lookup
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | head -100)
+
+          # Get merge commits to extract PR numbers
+          MERGES=$(git log --pretty=format:"%s" --merges \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | grep -oE '#[0-9]+' | sort -u | tr '\n' ' ')
+
+          # Get contributors
+          CONTRIBUTORS=$(git log --pretty=format:"%an" \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | sort -u | grep -v "github-actions" | tr '\n' ', ' | sed 's/,$//')
+
+          # Store for AI prompt
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "commits<<$EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "Related PRs: $MERGES" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          echo "contributors=$CONTRIBUTORS" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes with AI
+        id: ai_notes
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          max-tokens: 2048
+          system-prompt: |
+            You are a technical writer creating release notes for Scanopy, a network discovery and topology visualization tool. Write concise, user-focused release notes. Aim for quality over coverage — a shorter changelog that users actually read is better than an exhaustive one they skip.
+
+            Format requirements:
+            - Do NOT include a top-level title heading (e.g., "# Scanopy vX.Y.Z Release Notes"). The title is generated separately.
+            - If the changes have a clear theme or focus (e.g., "This release is all about topology navigation"), start with 1-2 sentences summarizing it before the first ## section. Keep it conversational and brief. If there's no cohesive theme, skip this and go straight to the sections.
+            - Use markdown with ## headers for sections: New Features, Improvements, Bug Fixes (only include sections with content)
+            - Each item should be a bullet point starting with an action verb (Add, Introduce, Improve, Fix, etc.)
+            - Each item should be 1 sentence explaining the user-facing benefit. Write for an end-user, not a developer — describe what they can now do or what got better, not how it was implemented internally.
+            - Format PR/issue references as markdown links: ([#123](https://github.com/scanopy/scanopy/pull/123))
+            - Combine related commits into single items
+            - For notable visual features (new UI views, redesigned pages, new modals/panels), include a markdown image reference showing where a screenshot should go. Use the path format: /changelog/VERSION/descriptive-name.png. Use descriptive alt text that explains what the screenshot should show. Example: ![Topology view showing SNMP-discovered devices with interface connections](/changelog/v0.14.0/snmp-topology.png). Only include 1-3 images for the most visually compelling features — not every bullet point needs one.
+
+            CRITICAL — Deduplication rules:
+            - If a feature is NEW in this release, do NOT list its related improvements, polish, or bug fixes as separate items. Those are part of shipping the feature — fold them into the New Features entry or omit them entirely. Only list improvements/fixes for EXISTING features that users already had before this release.
+            - Multiple commits touching the same feature should be ONE bullet point, not several.
+
+            Brevity rules:
+            - Aim for 3-6 New Features, 3-6 Improvements, and 3-6 Bug Fixes maximum. Fewer is fine. Not every commit needs representation.
+            - Skip trivial fixes, minor UI polish, and internal changes that users won't notice.
+            - Avoid implementation details. Bad: "Gate controls based on FirstDiscoveryCompleted milestone instead of rebuild". Good: "Hide advanced controls until your first scan completes, so the UI is less overwhelming for new users".
+
+            Example of good release note items:
+            - Add topology sharing, allowing you to share network maps via direct link or embed code ([#95](https://github.com/scanopy/scanopy/pull/95)).
+
+              ![Share dialog with link and embed options](/changelog/v0.13.0/topology-sharing.png)
+
+            - Improve subnet layout so large networks render without overlapping nodes ([#107](https://github.com/scanopy/scanopy/pull/107)).
+            - Fix duplicate host entries that could appear after re-running network discovery ([#108](https://github.com/scanopy/scanopy/pull/108)).
+
+            Do NOT include:
+            - Version bump commits (chore: bump version)
+            - Merge commits
+            - CI/CD or workflow changes
+            - Test-only changes
+            - Internal refactoring unless user-visible
+            - Improvements or fixes to features that are brand new in this same release
+          prompt: |
+            Generate release notes for Scanopy ${{ inputs.release_tag }}.
+            Previous version: ${{ steps.prev_tag.outputs.prev_tag }}
+            Repository: https://github.com/scanopy/scanopy
+            Image path prefix: /changelog/${{ inputs.release_tag }}/
+
+            Commits since last release:
+            ${{ steps.diff.outputs.commits }}
+
+      - name: Post-process release notes
+        id: cleaned_notes
+        env:
+          RAW_NOTES: ${{ steps.ai_notes.outputs.response }}
+        run: |
+          # Strip any h1 headings the AI might have added (title is in frontmatter)
+          NOTES=$(echo "$RAW_NOTES" | sed '/^# /d')
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate title and social post
+        id: social
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          max-tokens: 512
+          system-prompt: |
+            Generate a title and social media post for a software release.
+
+            Requirements:
+            1. TITLE: A short, descriptive title (3-6 words) summarizing the key changes. NOT promotional. Examples: "Topology Sharing & Demo Mode", "Performance Improvements & Bug Fixes", "Enhanced Network Discovery"
+
+            2. SOCIAL_POST: A short post for Twitter/Bluesky (max 175 characters). Version number and changelog URL are auto-added, so exclude them. Requirements:
+               - Use bullet points (•) to list key highlights, formatted as a single string with \n between bullets (e.g., "• First item\n• Second item")
+               - Write naturally and clearly - prioritize readability over cramming in content
+               - NOT promotional language
+               - No version number, hashtags, or URLs
+
+            Output format (exactly like this):
+            TITLE: Your Title Here
+            SOCIAL_POST: Your social post text here
+          prompt: |
+            Based on these release notes for Scanopy ${{ inputs.release_tag }}:
+
+            ${{ steps.cleaned_notes.outputs.notes }}
+
+      - name: Parse social outputs
+        id: parsed
+        env:
+          RESPONSE: ${{ steps.social.outputs.response }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          # Extract title
+          TITLE=$(echo "$RESPONSE" | grep "^TITLE:" | head -1 | sed 's/^TITLE: //')
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+
+          # Extract social post
+          SOCIAL_POST=$(echo "$RESPONSE" | grep "^SOCIAL_POST:" | head -1 | sed 's/^SOCIAL_POST: //')
+          echo "social_post=$SOCIAL_POST" >> $GITHUB_OUTPUT
+
+          # Get version without v prefix
+          VERSION=$(echo "$RELEASE_TAG" | sed 's/^v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          echo "Title: $TITLE"
+          echo "Social post: $SOCIAL_POST"
+
+      - name: Categorize release
+        id: ai_category
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          max-tokens: 256
+          system-prompt: |
+            You are categorizing releases for Scanopy, a self-hosted network discovery and topology mapping tool. Scanopy deploys as Docker containers: a server and one or more daemons that scan networks to discover hosts, services, subnets, and physical connections (via SNMP, LLDP/CDP, ARP, ping sweep). It generates interactive topology maps. Target audience: homelabbers, sysadmins, and IT teams. Existing capabilities include: host/service/subnet discovery, interactive topology visualization, topology sharing, SNMP polling, daemon management, API keys, and a free tier.
+
+            Categorize the release into one of three categories:
+
+            Category A (Major): A brand-new capability that didn't exist before. Examples: new discovery protocol (SNMP), major UI overhaul, topology sharing, v1.0 milestone.
+
+            Category B (Notable): A meaningful feature that solves a real user problem but isn't a brand-new capability. Examples: API key management, topology export formats, OIDC support, free tier, setup wizard.
+
+            Category C (Incremental): Bug fixes, performance tweaks, polish, minor UI improvements, backwards-compatibility fixes.
+
+            When in doubt between A and B, pick B. When in doubt between B and C, pick B.
+
+            Output exactly one line in this format:
+            CATEGORY: A
+          prompt: |
+            Categorize this release:
+
+            ${{ steps.cleaned_notes.outputs.notes }}
+
+      - name: Generate Reddit drafts
+        id: ai_reddit
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          max-tokens: 1500
+          system-prompt: |
+            Generate two Reddit post drafts for a Scanopy release.
+
+            About Scanopy: A self-hosted network discovery and topology mapping tool built for homelabbers, sysadmins, and IT teams. It deploys as Docker containers — a server and one or more daemons. Daemons scan your network using ping sweep, ARP, and SNMP to discover hosts, services (200+ recognized, including Docker, PostgreSQL, nginx, Prometheus, Active Directory), and subnets. It maps physical connections via LLDP/CDP neighbor discovery and generates interactive topology visualizations. It has a free tier for small networks. GitHub: https://github.com/scanopy/scanopy
+
+            Draft 1 — r/scanopy (own subreddit):
+            - For existing users who already know what Scanopy is
+            - Include version number in title: "Scanopy vX.Y.Z — <descriptive title>"
+            - Full technical details, changelog style
+            - Link to full changelog: https://scanopy.net/changelog
+
+            Draft 2 — r/selfhosted or r/homelab (community subreddit):
+            - Written as if the reader has NEVER heard of Scanopy
+            - NO version number in title — title is a benefit statement
+            - Opening line: "I built Scanopy, a self-hosted tool that..."
+            - 2-3 highlights framed as problems solved, not features shipped
+            - Founder voice ("I built...", "Just shipped...")
+            - Mention it's free for small networks and runs as Docker containers
+            - End with: GitHub link (https://github.com/scanopy/scanopy), docs (https://scanopy.net/docs), and mention r/scanopy for updates
+
+            Output format (use these exact labels on their own lines):
+            SCANOPY_TITLE: <title>
+            SCANOPY_BODY:
+            <body text>
+            COMMUNITY_TITLE: <title>
+            COMMUNITY_BODY:
+            <body text>
+          prompt: |
+            Generate Reddit post drafts for Scanopy ${{ inputs.release_tag }}:
+
+            ${{ steps.cleaned_notes.outputs.notes }}
+
+      - name: Generate email content
+        id: ai_email
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          max-tokens: 1500
+          system-prompt: |
+            Generate a product update email for a Scanopy release.
+
+            About Scanopy: A self-hosted network discovery and topology mapping tool for homelabbers, sysadmins, and IT teams. Deploys as Docker containers (server + daemons). Discovers hosts, services, subnets via ping sweep, ARP, and SNMP. Maps physical connections via LLDP/CDP. Generates interactive topology maps. Free tier for small networks.
+
+            The email goes to registered users who opted into product updates. They already use or have tried Scanopy — don't re-explain the product, just highlight what's new and why it matters to them.
+
+            Requirements:
+            - Subject: 5-10 words, benefit-oriented, no version number
+            - Body: Simple inline HTML only — use <p>, <ul>, <li>, <strong> tags
+            - Structure: 1-2 sentence intro paragraph, 3-5 bulleted highlights framed as problems solved or workflows improved
+            - Do NOT include a changelog link or CTA — the email template adds those automatically
+            - Do NOT copy-paste the changelog — write a concise, scannable email
+            - Do NOT include unsubscribe links (Brevo adds these automatically)
+
+            Output format (use these exact labels):
+            EMAIL_SUBJECT: <subject line>
+            EMAIL_BODY:
+            <html content>
+          prompt: |
+            Generate a product update email for Scanopy ${{ inputs.release_tag }}:
+
+            ${{ steps.cleaned_notes.outputs.notes }}
+
+      - name: Parse new AI outputs
+        id: ai_parsed
+        env:
+          CATEGORY_RESPONSE: ${{ steps.ai_category.outputs.response }}
+          REDDIT_RESPONSE: ${{ steps.ai_reddit.outputs.response }}
+          EMAIL_RESPONSE: ${{ steps.ai_email.outputs.response }}
+        run: |
+          # Parse category
+          CATEGORY=$(echo "$CATEGORY_RESPONSE" | grep "^CATEGORY:" | head -1 | sed 's/^CATEGORY: *//' | tr -d '[:space:]')
+          if [[ ! "$CATEGORY" =~ ^[ABC]$ ]]; then
+            CATEGORY="B"
+          fi
+          echo "category=$CATEGORY" >> $GITHUB_OUTPUT
+          echo "Category: $CATEGORY"
+
+          # Parse Reddit - scanopy title
+          SCANOPY_TITLE=$(echo "$REDDIT_RESPONSE" | grep "^SCANOPY_TITLE:" | head -1 | sed 's/^SCANOPY_TITLE: *//')
+          echo "scanopy_title=$SCANOPY_TITLE" >> $GITHUB_OUTPUT
+
+          # Parse Reddit - scanopy body (between SCANOPY_BODY: and COMMUNITY_TITLE:)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          SCANOPY_BODY=$(echo "$REDDIT_RESPONSE" | awk '/^SCANOPY_BODY:/{found=1; sub(/^SCANOPY_BODY: */, ""); if(length>0) print; next} /^COMMUNITY_TITLE:/{exit} found{print}')
+          echo "scanopy_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$SCANOPY_BODY" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          # Parse Reddit - community title
+          COMMUNITY_TITLE=$(echo "$REDDIT_RESPONSE" | grep "^COMMUNITY_TITLE:" | head -1 | sed 's/^COMMUNITY_TITLE: *//')
+          echo "community_title=$COMMUNITY_TITLE" >> $GITHUB_OUTPUT
+
+          # Parse Reddit - community body (after COMMUNITY_BODY: to end)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          COMMUNITY_BODY=$(echo "$REDDIT_RESPONSE" | awk '/^COMMUNITY_BODY:/{found=1; sub(/^COMMUNITY_BODY: */, ""); if(length>0) print; next} found{print}')
+          echo "community_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$COMMUNITY_BODY" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          # Parse email subject
+          EMAIL_SUBJECT=$(echo "$EMAIL_RESPONSE" | grep "^EMAIL_SUBJECT:" | head -1 | sed 's/^EMAIL_SUBJECT: *//')
+          echo "email_subject=$EMAIL_SUBJECT" >> $GITHUB_OUTPUT
+
+          # Parse email body (after EMAIL_BODY: to end)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          EMAIL_BODY=$(echo "$EMAIL_RESPONSE" | awk '/^EMAIL_BODY:/{found=1; sub(/^EMAIL_BODY: */, ""); if(length>0) print; next} found{print}')
+          echo "email_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$EMAIL_BODY" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Create changelog file
+        env:
+          VERSION: ${{ steps.parsed.outputs.version }}
+          TITLE: ${{ steps.parsed.outputs.title }}
+          SOCIAL_POST: ${{ steps.parsed.outputs.social_post }}
+          CONTRIBUTORS: ${{ steps.diff.outputs.contributors }}
+          CATEGORY: ${{ steps.ai_parsed.outputs.category }}
+          EMAIL_SUBJECT: ${{ steps.ai_parsed.outputs.email_subject }}
+          NOTES: ${{ steps.cleaned_notes.outputs.notes }}
+          REPO: ${{ github.repository }}
+          PREV_TAG: ${{ steps.prev_tag.outputs.prev_tag }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p website/src/lib/changelog
+          DATE=$(date -u +%Y-%m-%d)
+
+          {
+            echo "---"
+            echo "version: ${VERSION}"
+            echo "date: ${DATE}"
+            echo "title: ${TITLE}"
+            echo "social_post: ${SOCIAL_POST}"
+            echo "contributors: ${CONTRIBUTORS}"
+            echo "category: ${CATEGORY}"
+            echo "email_subject: ${EMAIL_SUBJECT}"
+            echo "---"
+            echo ""
+            printf '%s\n' "$NOTES"
+            echo ""
+            echo "---"
+            echo ""
+            echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${RELEASE_TAG}"
+          } > "website/src/lib/changelog/${RELEASE_TAG}.md"
+
+      - name: Create image directory and extract expected paths
+        id: images
+        env:
+          NOTES: ${{ steps.cleaned_notes.outputs.notes }}
+        run: |
+          # Create the static directory for this version's images
+          mkdir -p website/static/changelog/${{ inputs.release_tag }}
+
+          # Add a .gitkeep so the directory is committed even before images are added
+          touch website/static/changelog/${{ inputs.release_tag }}/.gitkeep
+
+          # Extract image paths from the release notes for the PR checklist
+          IMAGE_PATHS=$(echo "$NOTES" | grep -oE '/changelog/[^)]+\.(png|jpg|gif|webp)' | sort -u || true)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "paths<<$EOF" >> $GITHUB_OUTPUT
+          echo "$IMAGE_PATHS" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          if [ -n "$IMAGE_PATHS" ]; then
+            echo "Expected images:"
+            echo "$IMAGE_PATHS"
+          else
+            echo "No image references found in release notes"
+          fi
+
+      - name: Create email HTML file
+        env:
+          EMAIL_BODY: ${{ steps.ai_parsed.outputs.email_body }}
+        run: |
+          # Write email HTML alongside the changelog .md
+          printf '%s\n' "$EMAIL_BODY" > website/src/lib/changelog/${{ inputs.release_tag }}.email.html
+
+      - name: Commit and push fixtures to website repo
+        working-directory: website
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/lib/fixtures/ static/logos/services/
+          if git diff --staged --quiet; then
+            echo "No fixture changes to commit"
+          else
+            git commit -m "chore: sync fixtures from ${{ inputs.release_tag }}"
+            git push
+          fi
+
+      - name: Check content plan cross-references
+        id: content_xref
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
+          RELEASE_NOTES: ${{ steps.cleaned_notes.outputs.notes }}
+        run: |
+          # Best-effort: check if any content plan pieces relate to this release
+          QUEUE_URL="https://raw.githubusercontent.com/scanopy/scanopy-content/main/queue.md"
+          QUEUE=$(curl -sf -H "Authorization: token $GH_TOKEN" "$QUEUE_URL" 2>/dev/null || echo "")
+
+          if [ -z "$QUEUE" ]; then
+            echo "Content queue not accessible — skipping cross-reference"
+            echo "xref=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract keywords from release notes
+          KEYWORDS=$(echo "$RELEASE_NOTES" | grep -oiE '\b(snmp|topology|discovery|export|oidc|daemon|billing|onboarding|api.key|free.tier|lldp|cdp|mermaid|svg|confluence)\b' | sort -uf | tr '\n' '|' | sed 's/|$//')
+
+          if [ -z "$KEYWORDS" ]; then
+            echo "No keywords extracted — skipping cross-reference"
+            echo "xref=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          MATCHES=$(echo "$QUEUE" | grep -iE "$KEYWORDS" | head -5)
+
+          if [ -n "$MATCHES" ]; then
+            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "xref<<$EOF" >> $GITHUB_OUTPUT
+            echo "$MATCHES" >> $GITHUB_OUTPUT
+            echo "$EOF" >> $GITHUB_OUTPUT
+          else
+            echo "xref=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR for changelog review
+        working-directory: website
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
+          CATEGORY: ${{ steps.ai_parsed.outputs.category }}
+          SOCIAL_POST: ${{ steps.parsed.outputs.social_post }}
+          SCANOPY_TITLE: ${{ steps.ai_parsed.outputs.scanopy_title }}
+          SCANOPY_BODY: ${{ steps.ai_parsed.outputs.scanopy_body }}
+          COMMUNITY_TITLE: ${{ steps.ai_parsed.outputs.community_title }}
+          COMMUNITY_BODY: ${{ steps.ai_parsed.outputs.community_body }}
+          EMAIL_SUBJECT: ${{ steps.ai_parsed.outputs.email_subject }}
+          EMAIL_BODY: ${{ steps.ai_parsed.outputs.email_body }}
+          IMAGE_PATHS: ${{ steps.images.outputs.paths }}
+          CONTENT_XREF: ${{ steps.content_xref.outputs.xref }}
+        run: |
+          BRANCH="changelog/${{ inputs.release_tag }}"
+
+          # Delete remote branch if it exists (from a previous failed run)
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
+          # Create and switch to new branch
+          git checkout -b "$BRANCH"
+
+          # Add changelog, email, and image directory
+          git add src/lib/changelog/ static/changelog/
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changelog changes to commit"
+            exit 0
+          fi
+
+          git commit -m "docs: add release notes for ${{ inputs.release_tag }}"
+          git push -u origin "$BRANCH"
+
+          # Build category label
+          case "$CATEGORY" in
+            A) CAT_LABEL="A (Major)" ;;
+            B) CAT_LABEL="B (Notable)" ;;
+            C) CAT_LABEL="C (Incremental)" ;;
+            *) CAT_LABEL="$CATEGORY" ;;
+          esac
+
+          # Build PR body into a temp file to avoid quoting issues
+          {
+            echo "## Release Notes: ${{ inputs.release_tag }}"
+            echo "**Category:** ${CAT_LABEL}"
+            echo ""
+            echo "### Review Checklist"
+            echo "- [ ] Verify accuracy of feature descriptions"
+            echo "- [ ] Check category — override in frontmatter if wrong"
+            echo "- [ ] Review title and social post"
+            echo "- [ ] Review Reddit r/scanopy draft"
+
+            if [ "$CATEGORY" != "C" ]; then
+              echo "- [ ] Review email subject and body"
+            fi
+
+            if [ "$CATEGORY" = "A" ]; then
+              echo "- [ ] Review Reddit community post draft"
+            fi
+
+            echo ""
+            echo "### Auto-published on merge"
+            echo "- Changelog on scanopy.net"
+            echo "- Discord notification"
+            echo "- Tweet + Bluesky post"
+
+            if [ "$CATEGORY" != "C" ]; then
+              echo "- Brevo email campaign draft (list 9) — preview and send from Brevo UI"
+            fi
+
+            echo ""
+            echo "### Manual after merge"
+
+            if [ -n "$IMAGE_PATHS" ]; then
+              echo "- [ ] Take screenshots and commit to \`static/changelog/${{ inputs.release_tag }}/\`"
+            fi
+
+            echo "- [ ] Post to r/scanopy (copy draft below)"
+
+            if [ "$CATEGORY" = "A" ]; then
+              echo "- [ ] Post to r/selfhosted OR r/homelab (copy draft below)"
+            fi
+
+            echo ""
+            echo "---"
+            echo "### Draft: Social Post"
+            echo "> ${SOCIAL_POST}"
+            echo ""
+            echo "### Draft: r/scanopy"
+            echo "**Title:** ${SCANOPY_TITLE}"
+            echo ""
+            printf '%s\n' "$SCANOPY_BODY"
+
+            if [ "$CATEGORY" = "A" ]; then
+              echo ""
+              echo "### Draft: r/selfhosted or r/homelab"
+              echo "**Title:** ${COMMUNITY_TITLE}"
+              echo ""
+              printf '%s\n' "$COMMUNITY_BODY"
+            fi
+
+            if [ "$CATEGORY" != "C" ]; then
+              echo ""
+              echo "### Draft: Email"
+              echo "**Subject:** ${EMAIL_SUBJECT}"
+              echo ""
+              printf '%s\n' "$EMAIL_BODY"
+            fi
+
+            if [ -n "$IMAGE_PATHS" ]; then
+              echo ""
+              echo "### Screenshots to Add"
+              echo "Commit these to the PR branch at \`static/changelog/${{ inputs.release_tag }}/\`:"
+              echo ""
+              echo '```'
+              printf '%s\n' "$IMAGE_PATHS"
+              echo '```'
+              echo ""
+              echo "The changelog references these paths — images will appear on the website, in email, and in-app once committed."
+            fi
+
+            if [ -n "$CONTENT_XREF" ]; then
+              echo ""
+              echo "### Related Content Pieces"
+              echo "The following content plan items may relate to this release (coordinate timing):"
+              echo ""
+              printf '%s\n' "$CONTENT_XREF"
+            fi
+
+            echo ""
+            echo "---"
+            echo "*Generated with GitHub Models AI*"
+          } > /tmp/pr_body.md
+
+          # Create PR
+          gh pr create \
+            --title "Release Notes: ${{ inputs.release_tag }} - ${{ steps.parsed.outputs.title }}" \
+            --body-file /tmp/pr_body.md \
+            --base main \
+            --head "$BRANCH"
+
+          echo "PR created for changelog review"

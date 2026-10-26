@@ -1,0 +1,121 @@
+name: 🚀 AI Dev Suite (React.js Optimized)
+
+on:
+  push:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ai-dev-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 💾 Cache Ollama Models
+        id: cache-ollama
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ollama-qwen-coder-1.5b
+          restore-keys: |
+            ollama-qwen-
+
+      - name: 🦙 Install Ollama & Pull Model
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          sleep 10
+          if [ "${{ steps.cache-ollama.outputs.cache-hit }}" != "true" ]; then
+            ollama pull qwen2.5-coder:1.5b
+          fi
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Python Dependencies
+        run: pip install requests
+
+      - name: 🤖 Generate Docs & React Tests
+        run: |
+          python << 'EOF'
+          import os, requests, subprocess
+
+          MODEL_NAME = "qwen2.5-coder:1.5b"
+          target_dirs = ["src/components", "src/hooks", "src/utils", "src/pages"]
+
+          # محاولة الحصول على الملفات المتغيرة بأمان لتجنب خطأ 128
+          try:
+              changed_files = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD~1', 'HEAD']).decode('utf-8').splitlines()
+          except:
+              print("⚠️ Could not get diff, scanning target directories...")
+              changed_files = []
+              for d in target_dirs:
+                  if os.path.exists(d):
+                      for root, dirs, files in os.walk(d):
+                          for file in files:
+                              changed_files.append(os.path.join(root, file))
+
+          all_updates = ""
+
+          for path in changed_files:
+              if any(path.startswith(d) for d in target_dirs) and path.endswith(('.js', '.jsx', '.ts', '.tsx')) and os.path.exists(path):
+                  if ".test." in path: continue # تخطي ملفات التيست نفسها
+                  
+                  print(f"🧠 AI is working on: {path}")
+                  with open(path, 'r') as f:
+                      code_content = f.read()
+
+                  # 1. توليد التوثيق
+                  doc_prompt = f"Create a markdown table for this React component/code. List Props, Description, and Usage. ONLY the markdown.\n\n{code_content}"
+                  try:
+                      res_doc = requests.post("http://localhost:11434/api/generate",
+                                            json={"model": MODEL_NAME, "prompt": doc_prompt, "stream": False}, timeout=120)
+                      if res_doc.status_code == 200:
+                          all_updates += f"\n### ⚛️ Component: {path}\n{res_doc.json().get('response', '')}\n"
+                  except Exception as e: print(f"❌ Doc Error: {e}")
+
+                  # 2. توليد الاختبارات (Vitest/Jest)
+                  test_prompt = f"Write a Vitest or Jest test for this React code. Return ONLY the code starting with imports.\n\n{code_content}"
+                  try:
+                      res_test = requests.post("http://localhost:11434/api/generate",
+                                             json={"model": MODEL_NAME, "prompt": test_prompt, "stream": False}, timeout=180)
+                      if res_test.status_code == 200:
+                          test_code = res_test.json().get('response', '')
+                          ext = ".test" + os.path.splitext(path)[1]
+                          test_path = path.replace(os.path.splitext(path)[1], ext)
+                          with open(test_path, 'w') as f_test:
+                              f_test.write(test_code)
+                          print(f"✅ Test Generated: {test_path}")
+                  except Exception as e: print(f"❌ Test Error: {e}")
+
+          if all_updates:
+              header = "# 📘 AI Generated React Documentation\n\n"
+              existing = ""
+              if os.path.exists("REACT_DOCS.md"):
+                  with open("REACT_DOCS.md", "r") as f:
+                      existing = f.read().replace(header, "")
+              with open("REACT_DOCS.md", "w") as f:
+                  f.write(header + all_updates + "\n---\n" + existing)
+          EOF
+
+      - name: 📤 Push Changes
+        run: |
+          git config --global user.name 'AI React Dev Bot'
+          git config --global user.email 'ai-bot@yourdomain.com'
+          git add REACT_DOCS.md src/
+          
+          # تجنب خطأ 128 عبر التأكد من وجود تغييرات حقيقية
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Skipping..."
+          else
+            git commit -m "docs & tests: auto-generate via AI [skip ci]"
+            git push
+          fi

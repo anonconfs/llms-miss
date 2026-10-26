@@ -1,0 +1,6 @@
+===== git submodule--helper -h =====
+usage: git submodule--helper <command>
+===== man option definition lines =====
+
+===== completion helper =====
+

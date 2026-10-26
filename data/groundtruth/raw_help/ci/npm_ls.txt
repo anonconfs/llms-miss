@@ -1,0 +1,16 @@
+List installed packages
+
+Usage:
+npm ls <package-spec>
+
+Options:
+[-a|--all] [--json] [-l|--long] [-p|--parseable] [-g|--global] [--depth <depth>]
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+[--link] [--package-lock-only] [--no-unicode]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+alias: list
+
+Run "npm help ls" for more info

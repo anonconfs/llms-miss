@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.1"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  npm-publish:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Set package version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd npm
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
+            npm version "$VERSION" --no-git-tag-version
+          else
+            echo "Version unchanged, skipping 'npm version'"
+          fi
+
+      - name: Check if version already published
+        id: check-npm
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG_NAME=$(node -p "require('./npm/package.json').name")
+
+          set +e
+          NPM_VIEW_OUTPUT=$(npm view "${PKG_NAME}@${VERSION}" version 2>&1)
+          NPM_VIEW_STATUS=$?
+          set -e
+
+          if [ "$NPM_VIEW_STATUS" -eq 0 ]; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "✅ ${PKG_NAME}@${VERSION} already exists on npm — skipping publish."
+          elif printf '%s\n' "$NPM_VIEW_OUTPUT" | grep -Eq 'E404|ETARGET'; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ ${PKG_NAME}@${VERSION} was not found on npm — proceeding with publish."
+          else
+            echo "❌ Failed to determine whether ${PKG_NAME}@${VERSION} exists on npm." >&2
+            printf '%s\n' "$NPM_VIEW_OUTPUT" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        if: steps.check-npm.outputs.already_published != 'true'
+        run: cd npm && npm publish --access public

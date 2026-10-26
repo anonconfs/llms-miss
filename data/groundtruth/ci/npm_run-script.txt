@@ -1,0 +1,8 @@
+--foreground-scripts
+--if-present
+--ignore-scripts
+--include-workspace-root
+--script-shell
+-w
+--workspace
+--workspaces

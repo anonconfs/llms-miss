@@ -1,0 +1,9 @@
+--details
+-f
+--follow
+-n
+--since
+-t
+--tail
+--timestamps
+--until

@@ -1,0 +1,10 @@
+--all
+--dry-run
+--expire
+--expire-unreachable
+-n
+--rewrite
+--single-worktree
+--stale-fix
+--updateref
+--verbose

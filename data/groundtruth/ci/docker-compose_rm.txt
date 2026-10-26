@@ -1,0 +1,7 @@
+--dry-run
+-f
+--force
+-s
+--stop
+-v
+--volumes

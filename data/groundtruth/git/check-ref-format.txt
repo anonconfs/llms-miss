@@ -1,0 +1,5 @@
+--allow-onelevel
+--branch
+--no-allow-onelevel
+--normalize
+--refspec-pattern

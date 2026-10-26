@@ -1,0 +1,17 @@
+-1
+--blkio-weight
+-c
+--cpu-period
+--cpu-quota
+--cpu-rt-period
+--cpu-rt-runtime
+--cpus
+--cpuset-cpus
+--cpuset-mems
+--cpu-shares
+-m
+--memory
+--memory-reservation
+--memory-swap
+--pids-limit
+--restart

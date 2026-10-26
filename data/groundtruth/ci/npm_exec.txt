@@ -1,0 +1,7 @@
+-c
+--call
+--include-workspace-root
+--package
+-w
+--workspace
+--workspaces

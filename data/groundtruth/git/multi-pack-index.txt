@@ -1,0 +1,14 @@
+--
+--batch-size
+--bitmap
+--incremental
+--no-bitmap
+--no-incremental
+--no-object-dir
+--no-progress
+--no-stdin-packs
+--object-dir
+--preferred-pack
+--progress
+--refs-snapshot
+--stdin-packs

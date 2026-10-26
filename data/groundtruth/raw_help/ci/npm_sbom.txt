@@ -1,0 +1,13 @@
+Generate a Software Bill of Materials (SBOM)
+
+Usage:
+npm sbom
+
+Options:
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--package-lock-only] [--sbom-format <cyclonedx|spdx>]
+[--sbom-type <library|application|framework>]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces]
+
+Run "npm help sbom" for more info

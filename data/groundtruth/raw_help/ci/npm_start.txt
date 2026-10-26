@@ -1,0 +1,9 @@
+Start a package
+
+Usage:
+npm start [-- <args>]
+
+Options:
+[--ignore-scripts] [--script-shell <script-shell>]
+
+Run "npm help start" for more info

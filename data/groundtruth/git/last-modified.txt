@@ -1,0 +1,9 @@
+--
+--max-depth
+--no-recursive
+--no-show-trees
+-r
+--recursive
+--show-trees
+-t
+-z

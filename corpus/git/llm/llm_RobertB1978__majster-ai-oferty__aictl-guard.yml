@@ -1,0 +1,226 @@
+name: "AI Mission Control — Scope Fence Guard (warning-only)"
+
+# v1: warning-only. This workflow NEVER fails on scope violations.
+# It emits GitHub warning annotations and a step summary only.
+# It must NOT be set as a required status check.
+# Promotion to required check: after 2+ weeks and 5+ PRs with zero false-positives.
+#
+# v1.1 (PR-AICTL-05-01): WARN/UNKNOWN results post one PR comment (update-or-create).
+# PASS does not comment. Comment is idempotent — identified by <!-- aictl-guard-comment --> marker.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scope-fence-guard:
+    name: "Scope Fence Guard (warning-only)"
+    runs-on: ubuntu-latest
+    # Never block merge — always succeed.
+    continue-on-error: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$BASE" "$HEAD" > /tmp/changed-files.txt
+          echo "Changed files:"
+          cat /tmp/changed-files.txt
+          COUNT=$(wc -l < /tmp/changed-files.txt | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Extract PR body to file
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr-body.txt
+          echo "PR body length: $(wc -c < /tmp/pr-body.txt) chars"
+
+      - name: Run scope fence validator
+        id: guard
+        run: |
+          RESULT=$(node scripts/aictl/validate-scope-fence.mjs \
+            --pr-body /tmp/pr-body.txt \
+            --files   /tmp/changed-files.txt \
+            2>&1)
+          # The last stdout line is the result code; stderr is mixed in above.
+          # Re-run cleanly splitting stdout from stderr.
+          CODE=$(node scripts/aictl/validate-scope-fence.mjs \
+            --pr-body /tmp/pr-body.txt \
+            --files   /tmp/changed-files.txt \
+            2>/dev/null)
+          echo "result=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Scope fence result: $CODE"
+
+      - name: Write step summary
+        env:
+          RESULT: ${{ steps.guard.outputs.result }}
+          CHANGED_COUNT: ${{ steps.changed.outputs.count }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          {
+            echo "## AI Mission Control — Scope Fence Guard"
+            echo ""
+            echo "**PR:** #${PR_NUMBER} — ${PR_TITLE}"
+            echo "**Changed files:** ${CHANGED_COUNT}"
+            echo ""
+
+            if [ "$RESULT" = "PASS_SCOPE_FENCE" ]; then
+              echo "### ✅ PASS_SCOPE_FENCE"
+              echo "All changed files are within the declared ALLOWED scope fence."
+            elif [ "$RESULT" = "WARN_SCOPE_FENCE_VIOLATION" ]; then
+              echo "### ⚠️ WARN_SCOPE_FENCE_VIOLATION"
+              echo ""
+              echo "One or more changed files are **outside** the declared ALLOWED scope fence."
+              echo ""
+              echo "**Action required (before merge):**"
+              echo "1. Check the GitHub warning annotations on the diff."
+              echo "2. Decide: is this file legitimately part of the Work Order?"
+              echo "   - YES → add it to the ALLOWED section in the PR description."
+              echo "   - NO → this may be scope creep. Remove the change or open a separate PR."
+              echo ""
+              echo "> This is a **warning-only** guard (v1). It does not block merge."
+              echo "> Do not merge until Robert or ChatGPT confirms the decision."
+              echo ""
+              echo "See: \`docs/ai-control/SCOPE_FENCE_FORMAT.md\`"
+            elif [ "$RESULT" = "UNKNOWN_MISSING_SCOPE_FENCE" ]; then
+              echo "### ❓ UNKNOWN_MISSING_SCOPE_FENCE"
+              echo ""
+              echo "The PR description has no parseable **Scope Fence / ALLOWED** section."
+              echo ""
+              echo "**Action required:**"
+              echo "Add a scope fence block to your PR description:"
+              echo '```'
+              echo '## Scope Fence'
+              echo '### ALLOWED'
+              echo '- path/to/file.ts'
+              echo '- docs/some-dir/**'
+              echo '```'
+              echo ""
+              echo "See: \`docs/ai-control/SCOPE_FENCE_FORMAT.md\`"
+            else
+              echo "### ❓ UNKNOWN result: ${RESULT}"
+            fi
+
+            echo ""
+            echo "---"
+            echo "_This check is advisory-only (v1). It will become a required gate"
+            echo "after 2+ weeks and 5+ PRs without false-positives._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update PR comment for WARN/UNKNOWN
+        # Only runs when guard detected a problem. PASS creates no comment.
+        # Uses update-or-create pattern: finds existing comment by <!-- aictl-guard-comment --> marker.
+        # continue-on-error: true so a comment API failure never fails the workflow.
+        if: steps.guard.outputs.result != 'PASS_SCOPE_FENCE'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          GUARD_RESULT: ${{ steps.guard.outputs.result }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const result = process.env.GUARD_RESULT;
+            const marker = '<!-- aictl-guard-comment -->';
+
+            let body = '';
+            if (result === 'WARN_SCOPE_FENCE_VIOLATION') {
+              body = `${marker}
+            ## ⚠️ AI Mission Control — Scope Fence Guard: WARN
+
+            **Result:** \`WARN_SCOPE_FENCE_VIOLATION\`
+
+            One or more changed files are **outside** the declared ALLOWED scope fence.
+
+            **Action required (before merge):**
+            1. Check the GitHub warning annotations on the diff.
+            2. Decide: is this file legitimately part of the Work Order?
+               - **YES** → add it to the \`ALLOWED\` section in the PR description, then push. The guard will re-run and should emit \`PASS_SCOPE_FENCE\`.
+               - **NO** → this may be scope creep. Remove the change or open a separate PR.
+
+            > This is a **warning-only** guard (v1). It does **not** block merge.
+            > Do not merge until Robert or ChatGPT confirms the decision.
+
+            See: \`docs/ai-control/SCOPE_FENCE_FORMAT.md\`
+
+            ---
+            _This check is advisory-only (v1). It will become a required gate after 2+ weeks and 5+ PRs without false-positives._`;
+            } else if (result === 'UNKNOWN_MISSING_SCOPE_FENCE') {
+              body = `${marker}
+            ## ❓ AI Mission Control — Scope Fence Guard: UNKNOWN
+
+            **Result:** \`UNKNOWN_MISSING_SCOPE_FENCE\`
+
+            The PR description has no parseable **Scope Fence / ALLOWED** section.
+
+            **Action required:**
+            Add a scope fence block to your PR description:
+
+            \`\`\`markdown
+            ## Scope Fence
+
+            ### ALLOWED
+            - path/to/file.ts
+            - docs/some-dir/**
+            \`\`\`
+
+            Then push any change to re-trigger this workflow.
+
+            See: \`docs/ai-control/SCOPE_FENCE_FORMAT.md\`
+
+            ---
+            _This check is advisory-only (v1). It will become a required gate after 2+ weeks and 5+ PRs without false-positives._`;
+            }
+
+            if (!body) {
+              console.log('No comment body generated — skipping.');
+              return;
+            }
+
+            // Find existing bot comment with our marker to avoid spamming.
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              console.log(`Updated existing aictl-guard comment (id=${existing.id}).`);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+              console.log('Created new aictl-guard comment.');
+            }
+
+      - name: Guard result — always succeed (v1 warning-only)
+        # This step ensures the job always exits 0 regardless of scope violations.
+        # In v1 this guard must NEVER block a merge.
+        run: |
+          RESULT="${{ steps.guard.outputs.result }}"
+          echo "Scope fence guard completed with result: $RESULT"
+          echo "v1 policy: exit 0 always. No merge blocked."
+          exit 0

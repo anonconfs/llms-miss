@@ -1,0 +1,8 @@
+-a
+--help
+--multiple
+-s
+--suffix
+--version
+-z
+--zero

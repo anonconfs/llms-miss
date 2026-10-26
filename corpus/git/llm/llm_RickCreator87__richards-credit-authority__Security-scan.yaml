@@ -1,0 +1,339 @@
+name: Security Scanning
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Every Monday at 2 AM
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/**'
+      - '**/*.js'
+      - '**/*.yaml'
+      - '**/*.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Run npm audit
+      id: npm_audit
+      continue-on-error: true
+      run: |
+        echo "🔒 Running npm audit..."
+        if [ -f "package.json" ]; then
+          npm audit --audit-level=high 2>&1 | tee npm-audit.log
+          
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            echo "✅ No high severity vulnerabilities found"
+            echo "npm_audit_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ High severity vulnerabilities found"
+            echo "npm_audit_passed=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "📭 No package.json found, skipping npm audit"
+          echo "npm_audit_passed=skipped" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Check for secrets in code
+      id: secret_scan
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const patterns = [
+            // AWS
+            /AKIA[0-9A-Z]{16}/,
+            // Generic API keys
+            /[a-zA-Z0-9]{32,}/,
+            // Passwords in code
+            /password\s*[:=]\s*['"][^'"]+['"]/i,
+            // Private keys
+            /-----BEGIN (RSA|DSA|EC|PGP) PRIVATE KEY-----/,
+          ];
+          
+          const core = require('@actions/core');
+          const { readFileSync } = require('fs');
+          const { execSync } = require('child_process');
+          
+          try {
+            // Get list of files in the commit
+            let files = [];
+            if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
+              files = execSync('git diff --name-only HEAD^ HEAD').toString().split('\n');
+            } else {
+              files = execSync('git ls-files').toString().split('\n');
+            }
+            
+            let secretsFound = [];
+            
+            for (const file of files) {
+              if (!file || !file.trim()) continue;
+              
+              try {
+                const content = readFileSync(file, 'utf8');
+                
+                for (const pattern of patterns) {
+                  if (pattern.test(content)) {
+                    // Skip known false positives
+                    if (file.includes('test') || file.includes('example') || file.includes('template')) {
+                      continue;
+                    }
+                    
+                    secretsFound.push({
+                      file: file,
+                      pattern: pattern.toString(),
+                      line: content.match(pattern)[0].substring(0, 50) + '...'
+                    });
+                  }
+                }
+              } catch (error) {
+                // File might be binary or unreadable
+                continue;
+              }
+            }
+            
+            if (secretsFound.length > 0) {
+              console.log('❌ Potential secrets found:');
+              secretsFound.forEach(secret => {
+                console.log(`  ${secret.file}: ${secret.line}`);
+              });
+              core.setFailed('Potential secrets found in code');
+              core.setOutput('secrets_found', 'true');
+            } else {
+              console.log('✅ No secrets found in code');
+              core.setOutput('secrets_found', 'false');
+            }
+          } catch (error) {
+            console.error('Error scanning for secrets:', error);
+            core.setOutput('secrets_found', 'error');
+          }
+          
+    - name: Check file permissions
+      id: file_permissions
+      run: |
+        echo "📁 Checking file permissions..."
+        
+        # Check for world-writable files
+        WORLD_WRITABLE=$(find . -type f -perm -o+w -not -path "./.git/*" -not -path "./node_modules/*")
+        
+        if [ -n "$WORLD_WRITABLE" ]; then
+          echo "❌ World-writable files found:"
+          echo "$WORLD_WRITABLE"
+          echo "file_permissions_secure=false" >> $GITHUB_OUTPUT
+        else
+          echo "✅ No world-writable files found"
+          echo "file_permissions_secure=true" >> $GITHUB_OUTPUT
+        fi
+        
+        # Check script permissions
+        SCRIPTS=$(find scripts -name "*.sh" -o -name "*.js" 2>/dev/null || true)
+        
+        for script in $SCRIPTS; do
+          if [ -x "$script" ]; then
+            echo "  ✅ $script is executable"
+          else
+            echo "  ⚠️  $script is not executable"
+          fi
+        done
+        
+    - name: Validate YAML safety
+      id: yaml_safety
+      run: |
+        echo "⚠️  Checking YAML for unsafe constructs..."
+        
+        YAML_FILES=$(find . -name "*.yaml" -o -name "*.yml" -not -path "./node_modules/*")
+        UNSAFE_FOUND=false
+        
+        for file in $YAML_FILES; do
+          echo "Checking $file..."
+          
+          # Check for potential unsafe YAML tags
+          if grep -q '!!' "$file"; then
+            echo "  ❌ $file contains potentially unsafe YAML tags"
+            UNSAFE_FOUND=true
+          fi
+          
+          # Check for Python object tags
+          if grep -q '!!python/' "$file"; then
+            echo "  ❌ $file contains Python object tags (unsafe)"
+            UNSAFE_FOUND=true
+          fi
+        done
+        
+        if [ "$UNSAFE_FOUND" = true ]; then
+          echo "yaml_safe=false" >> $GITHUB_OUTPUT
+          exit 1
+        else
+          echo "✅ No unsafe YAML constructs found"
+          echo "yaml_safe=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Dependency check
+      id: dependency_check
+      run: |
+        echo "📦 Checking dependencies..."
+        
+        if [ -f "package.json" ]; then
+          echo "Package.json found, checking for outdated dependencies..."
+          
+          # Check for deprecated packages
+          npm outdated 2>&1 | tee outdated.log || true
+          
+          # Check for known vulnerable packages
+          if command -v npx &> /dev/null; then
+            npx audit-ci --critical 2>&1 | tee audit-ci.log || true
+          fi
+          
+          echo "dependency_check_completed=true" >> $GITHUB_OUTPUT
+        else
+          echo "No package.json found"
+          echo "dependency_check_completed=skipped" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Run security validation scripts
+      id: security_validation
+      run: |
+        echo "🛡️  Running security validation..."
+        
+        # Check if security validation script exists
+        if [ -f "scripts/validate-security.js" ]; then
+          if node scripts/validate-security.js; then
+            echo "✅ Security validation passed"
+            echo "security_validation_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Security validation failed"
+            echo "security_validation_passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        else
+          echo "📭 No security validation script found"
+          echo "security_validation_passed=skipped" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Generate security report
+      if: always()
+      run: |
+        echo "📊 Generating security report..."
+        
+        mkdir -p security-reports
+        
+        # Create summary report
+        cat > security-reports/summary.md << EOF
+        # Security Scan Report
+        
+        Generated: $(date)
+        
+        ## Scan Results
+        
+        | Check | Status | Details |
+        |-------|--------|---------|
+        | NPM Audit | ${{ steps.npm_audit.outputs.npm_audit_passed }} | |
+        | Secrets Scan | ${{ steps.secret_scan.outputs.secrets_found == 'false' ? '✅ Passed' : '❌ Failed' }} | |
+        | File Permissions | ${{ steps.file_permissions.outputs.file_permissions_secure }} | |
+        | YAML Safety | ${{ steps.yaml_safety.outputs.yaml_safe }} | |
+        | Dependency Check | ${{ steps.dependency_check.outputs.dependency_check_completed }} | |
+        | Security Validation | ${{ steps.security_validation.outputs.security_validation_passed }} | |
+        
+        ## Recommendations
+        
+        1. **Regular Updates**: Keep dependencies updated
+        2. **Secret Management**: Use GitHub Secrets for sensitive data
+        3. **Permission Review**: Regularly review file permissions
+        4. **Security Validation**: Run security checks before commits
+        
+        ## Next Steps
+        
+        - Review any failures in the logs above
+        - Update dependencies if needed
+        - Rotate any exposed secrets immediately
+        EOF
+        
+        # Compile logs
+        cat npm-audit.log 2>/dev/null > security-reports/npm-audit.log || true
+        cat outdated.log 2>/dev/null > security-reports/outdated.log || true
+        cat audit-ci.log 2>/dev/null > security-reports/audit-ci.log || true
+        
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          security-reports/
+          
+    - name: Post security summary
+      if: always()
+      run: |
+        echo "## Security Scan Results 🛡️" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.npm_audit.outputs.npm_audit_passed }}" == "true" ]; then
+          echo "✅ **NPM Audit**: No high severity vulnerabilities" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.npm_audit.outputs.npm_audit_passed }}" == "false" ]; then
+          echo "❌ **NPM Audit**: High severity vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "➖ **NPM Audit**: Skipped" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ steps.secret_scan.outputs.secrets_found }}" == "false" ]; then
+          echo "✅ **Secrets Scan**: No secrets found" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.secret_scan.outputs.secrets_found }}" == "true" ]; then
+          echo "❌ **Secrets Scan**: Potential secrets found" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "➖ **Secrets Scan**: Error" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ steps.file_permissions.outputs.file_permissions_secure }}" == "true" ]; then
+          echo "✅ **File Permissions**: Secure" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **File Permissions**: World-writable files found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ steps.yaml_safety.outputs.yaml_safe }}" == "true" ]; then
+          echo "✅ **YAML Safety**: Safe" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **YAML Safety**: Unsafe constructs found" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📁 Detailed reports available in artifacts" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Create security issue on failure
+      if: failure() && github.event_name == 'push'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: ['security']
+          });
+          
+          const existingIssue = issues.find(issue => 
+            issue.title.includes('Security Scan Failed')
+          );
+          
+          if (!existingIssue) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Security Scan Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: `Security scan failed on commit ${context.sha}. Please check the workflow run for details.\n\n[View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ['security', 'bug']
+            });
+          }

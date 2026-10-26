@@ -1,0 +1,9 @@
+Display npm root
+
+Usage:
+npm root
+
+Options:
+[-g|--global]
+
+Run "npm help root" for more info

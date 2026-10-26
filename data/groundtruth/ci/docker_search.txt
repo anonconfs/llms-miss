@@ -1,0 +1,5 @@
+-f
+--filter
+--format
+--limit
+--no-trunc

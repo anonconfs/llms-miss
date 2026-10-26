@@ -1,0 +1,11 @@
+--
+-a
+--all
+--cached
+--no-all
+--no-cached
+--no-source
+--no-stdin
+--source
+--stdin
+-z

@@ -1,0 +1,13 @@
+--append
+--changed-paths
+--max-new-filters
+--no-max-new-filters
+--no-object-dir
+--no-progress
+--object-dir
+--progress
+--reachable
+--shallow
+--split
+--stdin-commits
+--stdin-packs

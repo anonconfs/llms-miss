@@ -1,0 +1,12 @@
+--author
+-b
+--dry-run
+--keep-non-patch
+-n
+--no-author
+--no-dry-run
+--no-keep-non-patch
+--no-patches
+--no-series
+--patches
+--series

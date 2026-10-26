@@ -1,0 +1,84 @@
+dataset,part,option,developer_uses,llm_uses
+GNU,shared,echo -e,189,671
+GNU,shared,rm -f,180,182
+GNU,shared,cut -f,232,82
+GNU,shared,mkdir -p,113,200
+GNU,shared,cut -d,217,63
+GNU,shared,grep -q,37,165
+GNU,shared,grep -E,19,137
+GNU,shared,tr -d,89,51
+GNU,shared,sed -e,106,11
+GNU,shared,rm -r,50,52
+GNU,developer only,find -user,31,0
+GNU,developer only,install -D,17,0
+GNU,developer only,cmp -s,14,0
+GNU,developer only,install -T,11,0
+GNU,developer only,gunzip -c,10,0
+GNU,developer only,sed -f,9,0
+GNU,developer only,grep -P,8,0
+GNU,developer only,install -o,8,0
+GNU,developer only,cp -v,6,0
+GNU,developer only,mktemp -t,6,0
+GNU,LLM only,tar --exclude,0,22
+GNU,LLM only,find -path,0,19
+GNU,LLM only,grep -r,0,17
+GNU,LLM only,du -s,0,11
+GNU,LLM only,grep -h,0,11
+GNU,LLM only,tar -v,0,11
+GNU,LLM only,grep -I,0,10
+GNU,LLM only,du -h,0,8
+GNU,LLM only,date -f,0,7
+GNU,LLM only,grep --include,0,6
+Git,shared,config --global,259,272
+Git,shared,commit -m,25,158
+Git,shared,diff --name-only,27,88
+Git,shared,diff --quiet,13,102
+Git,shared,diff --cached,5,107
+Git,shared,checkout -b,12,56
+Git,shared,config --local,27,25
+Git,shared,status --porcelain,15,33
+Git,shared,add -A,4,40
+Git,shared,diff --staged,4,35
+Git,developer only,config --bool,10,0
+Git,developer only,diff --color,6,0
+Git,developer only,fetch --quiet,5,0
+Git,developer only,commit -v,4,0
+Git,developer only,switch -c,4,0
+Git,developer only,checkout --theirs,3,0
+Git,developer only,log --name-status,3,0
+Git,developer only,pull --no-rebase,3,0
+Git,developer only,show --no-patch,3,0
+Git,developer only,commit -a,2,0
+Git,LLM only,push -u,0,22
+Git,LLM only,branch --show-current,0,18
+Git,LLM only,status --short,0,12
+Git,LLM only,tag -a,0,9
+Git,LLM only,tag --sort,0,8
+Git,LLM only,branch -D,0,5
+Git,LLM only,checkout -B,0,5
+Git,LLM only,cherry-pick --continue,0,5
+Git,LLM only,config -f,0,5
+Git,LLM only,log --grep,0,5
+CI,shared,pip install -r,3,4
+CI,shared,docker run --rm,4,1
+CI,shared,docker run --name,1,1
+CI,developer only,docker exec -t,7,0
+CI,developer only,docker run -v,4,0
+CI,developer only,docker build --build-arg,2,0
+CI,developer only,docker build -f,2,0
+CI,developer only,docker build -t,2,0
+CI,developer only,docker ps --all,2,0
+CI,developer only,docker run --interactive,2,0
+CI,developer only,docker run -c,2,0
+CI,developer only,docker exec -w,1,0
+CI,developer only,docker rm -f,1,0
+CI,LLM only,npm install -g,0,30
+CI,LLM only,npm audit --audit-level,0,5
+CI,LLM only,npm audit --json,0,3
+CI,LLM only,npm install --save-dev,0,3
+CI,LLM only,npm install --package-lock-only,0,2
+CI,LLM only,npm outdated --json,0,2
+CI,LLM only,docker run -d,0,1
+CI,LLM only,docker-compose down --remove-orphans,0,1
+CI,LLM only,docker-compose down -v,0,1
+CI,LLM only,docker-compose up -d,0,1

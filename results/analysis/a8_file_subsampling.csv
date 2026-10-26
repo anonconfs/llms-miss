@@ -1,0 +1,8 @@
+dataset,population,files,options_50,options_75,options_90,options_100,gain_last10_pct
+gnu,human,242,107.2,128.3,139.6,146,4.4
+gnu,llm,290,113.1,133.3,142.4,148,3.8
+gnu,kernel,925,138.3,166.9,181.6,191,4.9
+git,human,174,66.0,83.0,91.9,97,5.3
+git,llm,305,101.1,121.8,131.7,137,3.9
+ci,human,31,12.0,16.0,18.6,20,7.0
+ci,llm,60,12.3,16.9,19.4,21,7.6

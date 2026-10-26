@@ -1,0 +1,6 @@
+--first-parent
+--no-checkout
+--term-
+--term-bad
+--term-good
+--term-new

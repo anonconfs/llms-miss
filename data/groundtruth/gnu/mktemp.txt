@@ -1,0 +1,12 @@
+-d
+--directory
+--dry-run
+--help
+-p
+-q
+--quiet
+--suffix
+-t
+--tmpdir
+-u
+--version

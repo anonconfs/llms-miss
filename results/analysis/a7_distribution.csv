@@ -1,0 +1,8 @@
+dataset,population,n_invocations,mean_options,median_options,pct_zero_option,p90_options,max_options
+ci,human,96,0.979,0,54.17,3,5
+ci,llm,186,0.527,0,55.91,1,3
+git,human,564,1.179,1,0.00,2,4
+git,llm,1268,1.200,1,0.00,2,4
+gnu,human,4837,0.449,0,66.28,1,6
+gnu,kernel,15271,0.295,0,75.95,1,5
+gnu,llm,8795,0.344,0,73.36,1,26

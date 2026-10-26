@@ -1,0 +1,7 @@
+-a
+--author
+-c
+--change
+-m
+--message
+--no-pause

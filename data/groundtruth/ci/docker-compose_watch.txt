@@ -1,0 +1,4 @@
+--dry-run
+--no-up
+--prune
+--quiet

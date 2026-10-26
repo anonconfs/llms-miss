@@ -1,0 +1,7 @@
+--help
+--ignore-fail-on-non-empty
+-p
+--parents
+-v
+--verbose
+--version

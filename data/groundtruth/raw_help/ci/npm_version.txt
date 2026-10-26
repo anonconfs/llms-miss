@@ -1,0 +1,14 @@
+Bump a package version
+
+Usage:
+npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git]
+
+Options:
+[--allow-same-version] [--no-commit-hooks] [--no-git-tag-version] [--json]
+[--preid prerelease-id] [--sign-git-tag]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--no-workspaces-update] [--include-workspace-root]
+
+alias: verison
+
+Run "npm help version" for more info

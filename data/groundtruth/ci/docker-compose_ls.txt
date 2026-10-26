@@ -1,0 +1,7 @@
+-a
+--all
+--dry-run
+--filter
+--format
+-q
+--quiet

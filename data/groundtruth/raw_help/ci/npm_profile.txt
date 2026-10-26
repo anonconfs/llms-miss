@@ -1,0 +1,12 @@
+Change settings on your registry profile
+
+Usage:
+npm profile enable-2fa [auth-only|auth-and-writes]
+npm profile disable-2fa
+npm profile get [<key>]
+npm profile set <key> <value>
+
+Options:
+[--registry <registry>] [--json] [-p|--parseable] [--otp <otp>]
+
+Run "npm help profile" for more info

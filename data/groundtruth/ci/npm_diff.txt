@@ -1,0 +1,15 @@
+--diff
+--diff-dst-prefix
+--diff-ignore-all-space
+--diff-name-only
+--diff-no-prefix
+--diff-src-prefix
+--diff-text
+--diff-unified
+-g
+--global
+--include-workspace-root
+--tag
+-w
+--workspace
+--workspaces

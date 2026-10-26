@@ -1,0 +1,7 @@
+-a
+--all
+--archive
+--dry-run
+--follow-link
+--index
+-L

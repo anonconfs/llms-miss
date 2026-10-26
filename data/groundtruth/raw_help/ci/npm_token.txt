@@ -1,0 +1,12 @@
+Manage your authentication tokens
+
+Usage:
+npm token list
+npm token revoke <id|token>
+npm token create [--read-only] [--cidr=list]
+
+Options:
+[--read-only] [--cidr <cidr> [--cidr <cidr> ...]] [--registry <registry>]
+[--otp <otp>]
+
+Run "npm help token" for more info

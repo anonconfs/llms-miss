@@ -1,0 +1,15 @@
+-d
+--detach
+--detach-keys
+-e
+--env
+--env-file
+-i
+--interactive
+--privileged
+-t
+--tty
+-u
+--user
+-w
+--workdir

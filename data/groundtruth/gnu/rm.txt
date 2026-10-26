@@ -1,0 +1,17 @@
+-d
+--dir
+-f
+--force
+--help
+-i
+-I
+--interactive
+--no-preserve-root
+--one-file-system
+--preserve-root
+-r
+-R
+--recursive
+-v
+--verbose
+--version

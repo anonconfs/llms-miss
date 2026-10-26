@@ -1,0 +1,6 @@
+-a
+--archive
+--follow-link
+-L
+-q
+--quiet

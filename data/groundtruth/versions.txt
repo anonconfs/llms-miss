@@ -1,0 +1,57 @@
+# Ground Truth Extraction — Tool Versions
+# Generated: 2026-05-22T16:12:26+02:00
+# OS: Fedora Linux 44 (Workstation Edition)
+# Kernel: 7.0.4-200.fc44.x86_64
+
+## GNU coreutils and common CLI
+coreutils=9.10
+gawk=5.3.2
+grep=3.12
+sed=4.9
+tar=1.35
+find=4.10.0
+diff=3.12
+gzip=1.14
+xz=5.8.2
+
+## CI/CD tools
+docker=29.4.2
+docker-compose=5.1.2
+npm=10.9.7
+pip=26.0.1
+python=3.14.4
+
+## Git
+git=2.54.0
+
+## GitHub Actions (ground truth from action.yml at tagged version)
+actions/checkout=v4
+actions/setup-node=v4
+actions/setup-python=v5
+actions/setup-java=v4
+actions/setup-go=v5
+actions/setup-dotnet=v4
+actions/cache=v4
+actions/upload-artifact=v4
+actions/download-artifact=v4
+actions/github-script=v7
+actions/create-release=v1
+actions/labeler=v5
+actions/stale=v9
+docker/build-push-action=v6
+docker/setup-buildx-action=v3
+docker/login-action=v3
+docker/setup-qemu-action=v3
+docker/metadata-action=v5
+peter-evans/create-pull-request=v7
+codecov/codecov-action=v4
+softprops/action-gh-release=v2
+aws-actions/configure-aws-credentials=v4
+pnpm/action-setup=v4
+peaceiris/actions-gh-pages=v4
+JamesIves/github-pages-deploy-action=v4
+google-github-actions/setup-gcloud=v2
+azure/login=v2
+hashicorp/setup-terraform=v3
+dorny/paths-filter=v3
+EndBug/add-and-commit=v9

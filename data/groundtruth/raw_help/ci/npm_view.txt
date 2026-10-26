@@ -1,0 +1,12 @@
+View registry info
+
+Usage:
+npm view [<package-spec>] [<field>[.subfield]...]
+
+Options:
+[--json] [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root]
+
+aliases: info, show, v
+
+Run "npm help view" for more info

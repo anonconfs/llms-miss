@@ -1,0 +1,17 @@
+--base16
+--base2lsbf
+--base2msbf
+--base32
+--base32hex
+--base58
+--base64
+--base64url
+-d
+--decode
+--help
+-i
+--ignore-garbage
+--version
+-w
+--wrap
+--z85

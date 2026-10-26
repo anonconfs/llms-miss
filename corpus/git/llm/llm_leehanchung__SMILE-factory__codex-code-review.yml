@@ -1,0 +1,568 @@
+name: Codex Code Review
+
+# Reviews each PR via the OpenAI Codex CLI authenticated against the
+# repo owner's ChatGPT account (NOT an OPENAI_API_KEY). Cost lives on
+# the ChatGPT plan rather than per-token API billing.
+#
+# Auth lifecycle (see prd/codex-ci-auth.md for the full design):
+#
+#   1. The repo owner runs `codex login` once on a trusted local
+#      machine. This produces ~/.codex/auth.json — an OAuth bundle
+#      that Codex auto-refreshes (~8-day window, plus on-401 retry).
+#
+#   2. The contents of auth.json are stored in the GitHub secret
+#      CODEX_AUTH_JSON. This secret is the *seed* — used only when
+#      the durable copy on the droplet is missing or unreachable.
+#
+#   3. The durable copy lives at /root/.codex-ci/auth.json on the
+#      DigitalOcean droplet that already hosts the delulu bot
+#      container (same DROPLET_HOST / DROPLET_SSH_KEY secrets the
+#      delulu-discord-deploy job uses). On every CI run we scp the
+#      file down before invoking codex and scp it back up after,
+#      so any token refresh codex performed during the run lands
+#      back on the durable copy.
+#
+#   4. The job's concurrency.group is "codex-auth" with
+#      cancel-in-progress: false — only one Codex job runs at a time
+#      across the whole repo, so two simultaneous auth.json writers
+#      can't corrupt each other. The trade-off is that rapid PR
+#      pushes serialize instead of cancel; for a one-user repo
+#      that's the right call.
+#
+# Failure mode escalation:
+#
+#   - Droplet unreachable on entry  → fall back to CODEX_AUTH_JSON
+#     seed for this run; persist back will retry on the next run.
+#   - codex auth fails (expired token, etc.) → re-run `codex login`
+#     locally and overwrite the GitHub secret. The next run will
+#     reseed the droplet from the fresh secret.
+#   - Persist back fails → the job FAILS LOUDLY (no `|| true`).
+#     Silent persist failure is what the PRD §"Risks: token drift"
+#     warns against — better to fail one PR and notice than ship a
+#     broken seed for weeks.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Workflow-level: serialize across the whole repo so the auth.json
+# read-modify-write on the droplet is single-writer. Per-PR cancel
+# semantics are sacrificed for auth safety — a noisy PR queue is
+# fine; a clobbered auth.json takes a manual `codex login` to fix.
+concurrency:
+  group: codex-auth
+  cancel-in-progress: false
+
+jobs:
+  review:
+    name: Codex PR review
+    if: >-
+      github.event.pull_request.draft == false
+      && github.event.pull_request.user.login != 'claude[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      # Centralize the path so every step references the same file.
+      # CODEX_HOME is what the codex CLI actually consults — putting
+      # it on $GITHUB_ENV via this top-level env block exports it to
+      # every step automatically.
+      CODEX_HOME: ${{ github.workspace }}/.codex-home
+      AUTH_JSON_PATH: ${{ github.workspace }}/.codex-home/auth.json
+      DROPLET_AUTH_PATH: /root/.codex-ci/auth.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+
+      - name: Pre-fetch base and head refs
+        env:
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git fetch --no-tags origin \
+            "$PR_BASE_REF" \
+            "+refs/pull/$PR_NUMBER/head"
+
+      - name: Set up SSH key for droplet
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          # No `set -x` anywhere in this job — leaks would echo the
+          # SSH key or auth.json into runner logs.
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DROPLET_SSH_KEY" > ~/.ssh/codex_droplet
+          chmod 600 ~/.ssh/codex_droplet
+
+          # Trust the droplet's host key on first contact. Without
+          # this, scp/ssh would refuse the connection on a fresh
+          # runner. ssh-keyscan is read-only so it's safe to do
+          # unconditionally.
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Restore auth.json (droplet → fallback to secret seed)
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          # The secret is only read if the droplet copy is missing.
+          # On a healthy steady state this branch is taken once at
+          # bootstrap and never again.
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$CODEX_HOME"
+          chmod 700 "$CODEX_HOME"
+
+          # Try the durable droplet copy first. `scp -q` suppresses
+          # progress chatter; the `&& echo`/`|| echo` lines are the
+          # only signal we surface to logs (no token bytes ever).
+          if scp -q \
+              -i ~/.ssh/codex_droplet \
+              -o StrictHostKeyChecking=yes \
+              "root@${DROPLET_HOST}:${DROPLET_AUTH_PATH}" \
+              "$AUTH_JSON_PATH" 2>/dev/null; then
+            echo "auth.json: restored from droplet"
+          else
+            # Bootstrap path: droplet doesn't have a copy yet (first
+            # ever run) or scp failed. Seed from the GitHub secret.
+            # `printf '%s'` is safer than `echo` — no trailing
+            # newline ambiguity, no backslash interpretation.
+            if [ -z "${CODEX_AUTH_JSON:-}" ]; then
+              echo "::error::Droplet copy unreachable AND CODEX_AUTH_JSON secret is empty. Run 'codex login' locally and store the resulting ~/.codex/auth.json as the CODEX_AUTH_JSON repo secret."
+              exit 1
+            fi
+            printf '%s' "$CODEX_AUTH_JSON" > "$AUTH_JSON_PATH"
+            echo "auth.json: seeded from CODEX_AUTH_JSON secret (droplet copy missing)"
+          fi
+
+          chmod 600 "$AUTH_JSON_PATH"
+
+      # We deliberately do NOT install bubblewrap here. An earlier
+      # commit added `apt-get install -y bubblewrap` hoping to give
+      # codex's `--sandbox workspace-write` a real local sandbox to
+      # use; turns out the system bwrap fails the same way the
+      # vendored one does — `bwrap: loopback: Failed RTM_NEWADDR:
+      # Operation not permitted` — because GitHub-hosted runners
+      # don't grant CAP_NET_ADMIN to the unprivileged container they
+      # spawn jobs in, and bwrap needs that cap to bring up the
+      # loopback interface inside its private network namespace.
+      # No flag toggles around it on hosted runners.
+      #
+      # When bwrap fails to set up, codex correctly fails-closed:
+      # it refuses to shell out and falls back to its GitHub MCP +
+      # web-search tools to read the diff over the network. That's
+      # the steady state — slower per review and noisier in the
+      # logs, but the sandbox semantics stay honest. Reviews still
+      # land with accurate findings. Acceptable tradeoff vs.
+      # disabling the sandbox (which would expose secrets-on-disk
+      # to prompt-injected codex; see the `--sandbox` comment
+      # below for that history).
+
+      - name: Install Codex CLI
+        # Pin to a specific version so a breaking upstream release
+        # can't silently change auth or output formats. Bump
+        # deliberately when reviewing the codex changelog.
+        # 0.59.0 was too old for the gpt-5.4+ models under
+        # ChatGPT-account auth ("requires a newer version of
+        # Codex"); 0.128.0 is the current stable.
+        run: npm install -g @openai/codex@0.128.0
+
+      - name: Run Codex
+        id: run_codex
+        env:
+          PROMPT: |
+            You are reviewing PR #${{ github.event.pull_request.number }}
+            for ${{ github.repository }}.
+
+            Look ONLY at the changes introduced by the PR:
+              git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}
+
+            Pull request title and body:
+            ----
+            ${{ github.event.pull_request.title }}
+            ${{ github.event.pull_request.body }}
+            ----
+
+            Output a single JSON object matching this schema, with
+            no markdown fence and no surrounding prose:
+
+            {
+              "event": "APPROVE" | "COMMENT" | "REQUEST_CHANGES",
+              "body": "<one short paragraph summarizing the review>",
+              "comments": [
+                {
+                  "path": "<repo-relative file path that exists in the diff>",
+                  "line": <integer line number in the file's NEW (head) version>,
+                  "side": "RIGHT",
+                  "body": "<concise comment scoped to this single line>"
+                }
+              ]
+            }
+
+            Rules:
+            - Use APPROVE only if there is nothing worth flagging.
+            - Use COMMENT for advisory findings; REQUEST_CHANGES only
+              for genuine blockers.
+            - Each entry in `comments` MUST anchor to a line that
+              actually appears in the diff (use `git diff` to verify
+              before emitting). Prefer fewer, sharper comments over
+              many noisy ones.
+            - For comments on lines REMOVED by the PR, set "side":
+              "LEFT" and reference the line number in the OLD version.
+            - If you have a finding that doesn't anchor to a single
+              line (cross-file design issue, missing test coverage,
+              etc.), put it in the top-level `body` instead of
+              forcing a `comments` entry.
+            - Output an empty `comments` array if there are no
+              line-specific findings.
+            - The output is parsed by `jq` and posted to the GitHub
+              Reviews API verbatim — invalid JSON or invalid
+              path/line refs will fail the workflow loudly. Be precise.
+        run: |
+          set -euo pipefail
+
+          OUT_FILE="$RUNNER_TEMP/codex-output.txt"
+
+          # CODEX_HOME comes from the workflow-level env block.
+          # `--skip-git-repo-check` matches the prior openai/codex-
+          # action behavior. Output goes to a file so we can hand
+          # it to the Submit step without quoting drama.
+          #
+          # `gpt-5.5` is the current ChatGPT-account default (per
+          # https://developers.openai.com/codex/models). The CLI's
+          # auto-default can land on API-key-only models (we hit
+          # `gpt-5.1-codex-max` and `gpt-5-codex` rejections under
+          # account auth on the way here), so the explicit pin is
+          # load-bearing. Avoid `gpt-5.3-codex*` — known flaky on
+          # ChatGPT auth (codex#14181, #14306).
+          #
+          # `--sandbox workspace-write` is load-bearing for
+          # security. Codex is reviewing untrusted PR content
+          # (title/body/diff) and is susceptible to prompt
+          # injection. By the time this step runs we have two
+          # sensitive files on disk:
+          #   - $CODEX_HOME/auth.json     (ChatGPT OAuth bundle)
+          #   - ~/.ssh/codex_droplet      (root SSH to the delulu
+          #                               droplet)
+          # An attacker-supplied PR that successfully injected
+          # codex could read either and exfiltrate via codex's
+          # network access. The sandbox blocks reads outside the
+          # workspace and is the primary defense — the runner
+          # being ephemeral does not protect secrets that exist
+          # on disk during the job.
+          #
+          # Trade-off accepted: bubblewrap isn't on the runner
+          # image and the vendored fallback can't set up network
+          # namespaces inside the runner's already-unprivileged
+          # container. Codex falls back to its GitHub MCP + web
+          # search to read the diff over the network instead of
+          # using local `git`. That burns some extra tokens per
+          # review but keeps the sandbox honest. (A previous
+          # commit tried `--sandbox danger-full-access` to save
+          # tokens; codex itself reviewed that commit and called
+          # out the credential-exfiltration risk — reverted.)
+          codex exec \
+            --skip-git-repo-check \
+            --sandbox workspace-write \
+            --model gpt-5.5 \
+            --output-last-message "$OUT_FILE" \
+            "$PROMPT"
+
+          # Hand the result to the Submit step via the file on
+          # $RUNNER_TEMP (which persists across steps in the same
+          # job). Don't push the message text through $GITHUB_OUTPUT:
+          # a previous attempt used a heredoc delimiter and broke
+          # with "Unable to process file command 'output'" — Codex
+          # was reviewing THIS workflow file and quoted the literal
+          # delimiter back in its review, closing the heredoc
+          # mid-content. The file path is constant + private to the
+          # runner; the next step reads it directly.
+          echo "output-file=$OUT_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Persist refreshed auth.json back to droplet
+        # `if: always()` so we still upload a refresh even when codex
+        # exec errors mid-run — the refresh might be the very thing
+        # that would unbreak the next run.
+        if: always()
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          set -euo pipefail
+
+          # Skip if the file disappeared (e.g. the restore step
+          # itself failed before writing it). Nothing to persist.
+          if [ ! -f "$AUTH_JSON_PATH" ]; then
+            echo "auth.json: nothing to persist (file missing)"
+            exit 0
+          fi
+
+          # Ensure the destination directory exists with the right
+          # mode. Idempotent — `mkdir -p` is a no-op if it's already
+          # there.
+          ssh \
+            -i ~/.ssh/codex_droplet \
+            -o StrictHostKeyChecking=yes \
+            "root@${DROPLET_HOST}" \
+            "mkdir -p /root/.codex-ci && chmod 700 /root/.codex-ci"
+
+          scp -q \
+            -i ~/.ssh/codex_droplet \
+            -o StrictHostKeyChecking=yes \
+            "$AUTH_JSON_PATH" \
+            "root@${DROPLET_HOST}:${DROPLET_AUTH_PATH}"
+
+          # Tighten the mode on the durable copy too — scp preserves
+          # the source mode, but belt-and-suspenders.
+          ssh \
+            -i ~/.ssh/codex_droplet \
+            -o StrictHostKeyChecking=yes \
+            "root@${DROPLET_HOST}" \
+            "chmod 600 ${DROPLET_AUTH_PATH}"
+
+          echo "auth.json: persisted refreshed copy to droplet"
+
+      - name: Mint installation token for the codex-code-reviewer App
+        # Without this step the Submit step would post the review
+        # under `github-actions[bot]` (the default token's identity),
+        # which makes Codex's reviews indistinguishable from any
+        # other workflow comment in the PR UI. The custom App lets
+        # the review surface as `codex-code-reviewer[bot]` (or
+        # whatever slug the App was registered under).
+        #
+        # CODEX_APP_ID and CODEX_APP_PRIVATE_KEY are repo secrets
+        # the App owner sets manually; the action mints a short-
+        # lived installation access token (default 1h, revoked at
+        # job end) that's then used for the Reviews API call below.
+        # Same shape Anthropic's claude-code-action uses, minus the
+        # OIDC-exchange round trip — they hold the App's private
+        # key server-side, we hold ours in repo secrets.
+        #
+        # We gate on `steps.run_codex.conclusion`, NOT `success()`.
+        # `success()` would also include the Persist step (which
+        # runs `if: always()` and may legitimately fail on a
+        # transient SSH blip to the droplet) — and a Persist
+        # failure shouldn't drop the review submission. The
+        # explicit conclusion check decouples "did codex produce
+        # a review?" from "did we save the refreshed auth.json?"
+        # while still skipping Mint when codex itself errored.
+        if: >-
+          steps.run_codex.conclusion == 'success'
+          && steps.run_codex.outputs.output-file != ''
+        id: app_token
+        # Pinned to a full commit SHA (per supply-chain hygiene for
+        # an action that handles a long-lived signing key). The
+        # trailing comment records the human-readable version we
+        # resolved from. Bump deliberately when reviewing the
+        # action's changelog. SHA below is `v1` as of 2026-05-06.
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547  # v1
+        with:
+          app-id: ${{ secrets.CODEX_APP_ID }}
+          private-key: ${{ secrets.CODEX_APP_PRIVATE_KEY }}
+
+      - name: Snapshot bot's existing unresolved review threads
+        # Captures the IDs of currently-unresolved threads authored
+        # by THIS bot BEFORE the new review posts. The post-Submit
+        # step resolves these snapshotted IDs — i.e. only threads
+        # that existed before the new run, never threads that the
+        # new review just created. Without this snapshot/resolve
+        # split a fresh review's brand-new findings would be
+        # auto-resolved within seconds of being posted.
+        #
+        # The bot login is `<app-slug>[bot]` — actions/create-
+        # github-app-token exposes `app-slug` as a step output,
+        # so we don't have to hardcode it.
+        id: snapshot
+        if: >-
+          steps.run_codex.conclusion == 'success'
+          && steps.run_codex.outputs.output-file != ''
+          && steps.app_token.conclusion == 'success'
+          && steps.app_token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          BOT_LOGIN: ${{ steps.app_token.outputs.app-slug }}[bot]
+        run: |
+          set -euo pipefail
+
+          SNAPSHOT_FILE="$RUNNER_TEMP/codex-thread-snapshot.txt"
+
+          # GraphQL: list this PR's review threads + the first
+          # comment author of each. We only resolve threads we
+          # authored, so an unrelated reviewer (Claude, a human)
+          # is never touched.
+          gh api graphql -f query='
+            query($owner: String!, $repo: String!, $pr: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pr) {
+                  reviewThreads(first: 100) {
+                    nodes {
+                      id
+                      isResolved
+                      comments(first: 1) {
+                        nodes { author { login } }
+                      }
+                    }
+                  }
+                }
+              }
+            }' \
+            -F owner="${{ github.repository_owner }}" \
+            -F repo="${{ github.event.repository.name }}" \
+            -F pr=${{ github.event.pull_request.number }} \
+            | jq -r --arg bot "$BOT_LOGIN" '
+              .data.repository.pullRequest.reviewThreads.nodes[]
+              | select(.isResolved == false)
+              | select(.comments.nodes[0].author.login == $bot)
+              | .id' \
+            > "$SNAPSHOT_FILE"
+
+          COUNT=$(wc -l < "$SNAPSHOT_FILE" | tr -d ' ')
+          echo "Snapshotted $COUNT unresolved thread(s) from $BOT_LOGIN"
+          echo "snapshot-file=$SNAPSHOT_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Submit review
+        id: submit
+        # Same rationale as the Mint step: we gate on per-step
+        # conclusions, NOT `success()`. `success()` would include
+        # the Persist step (`if: always()`) and a transient
+        # persist failure shouldn't silently drop the review.
+        #
+        # The token-non-empty check catches the case where Mint
+        # ran but didn't produce a token (e.g. private key parsed
+        # but installation token request came back malformed) —
+        # without it, gh api would post with GH_TOKEN='' and
+        # surface as an opaque 401 instead of a clear earlier
+        # failure.
+        #
+        # Cannot use `hashFiles()` for the codex-output check
+        # because it only sees files under $GITHUB_WORKSPACE — our
+        # output lives under $RUNNER_TEMP. The zero-byte / missing-
+        # file case is handled with `test -s` inside the step body
+        # instead. (Codex's own review of an earlier push caught
+        # the original hashFiles bug — thanks codex.)
+        if: >-
+          steps.run_codex.conclusion == 'success'
+          && steps.run_codex.outputs.output-file != ''
+          && steps.app_token.conclusion == 'success'
+          && steps.app_token.outputs.token != ''
+        env:
+          CODEX_OUTPUT_FILE: ${{ steps.run_codex.outputs.output-file }}
+          # Use the App's installation token, not github.token, so
+          # the review posts under the App's bot identity. See the
+          # Mint step above for the rationale.
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -s "$CODEX_OUTPUT_FILE" ]; then
+            echo "Codex output file is missing or empty; nothing to submit"
+            exit 0
+          fi
+
+          # Codex now emits a JSON object with `event`, `body`, and
+          # an optional `comments` array of {path, line, side, body}
+          # entries — the review posts as inline diff comments,
+          # matching how anthropics/claude-code-action surfaces.
+          # See the prompt above for the schema.
+          #
+          # Defensive cleanup: in practice codex sometimes wraps the
+          # JSON in a ```json fence despite the explicit "no markdown
+          # fence" instruction. Strip leading/trailing fences before
+          # parsing so we don't fail on a known model quirk.
+          RAW=$(cat "$CODEX_OUTPUT_FILE")
+          CLEAN=$(printf '%s' "$RAW" \
+            | sed -E 's/^```(json)?[[:space:]]*//' \
+            | sed -E 's/[[:space:]]*```$//')
+
+          if ! echo "$CLEAN" | jq empty 2>/dev/null; then
+            echo "::error::Codex output is not valid JSON. Raw output:"
+            printf '%s\n' "$RAW"
+            exit 1
+          fi
+
+          # Build the Reviews API payload in jq so the body / comment
+          # text never round-trips through shell quoting. `--input`
+          # below sends the file as the request body; we do NOT pass
+          # `-f event=...` flags because `gh api --input` puts those
+          # in the query string instead of the body (codex itself
+          # warned about this exact pattern in an earlier review).
+          PAYLOAD=$(mktemp -p "$RUNNER_TEMP" review.XXXXXX.json)
+          echo "$CLEAN" \
+            | jq --arg sha "${{ github.event.pull_request.head.sha }}" \
+                '{commit_id: $sha, event: .event, body: .body, comments: (.comments // [])}' \
+            > "$PAYLOAD"
+
+          # Sanity-check the event value before posting — GitHub
+          # only accepts APPROVE / REQUEST_CHANGES / COMMENT and
+          # 422s on anything else, so fail fast with a useful
+          # message if the model freelanced.
+          EVENT=$(jq -r .event "$PAYLOAD")
+          case "$EVENT" in
+            APPROVE|REQUEST_CHANGES|COMMENT) ;;
+            *)
+              echo "::error::Codex returned unsupported event '$EVENT'. Expected APPROVE / REQUEST_CHANGES / COMMENT."
+              exit 1
+              ;;
+          esac
+
+          NUM_COMMENTS=$(jq '.comments | length' "$PAYLOAD")
+          echo "Posting $EVENT review with $NUM_COMMENTS inline comment(s)"
+
+          gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews" \
+            --method POST \
+            --input "$PAYLOAD" \
+            --jq '.html_url'
+
+      - name: Resolve snapshotted prior threads
+        # Branch protection requires all conversations resolved
+        # before merge. After every successful review post, walk
+        # the snapshot from the pre-Submit step and resolve each
+        # thread — these are by definition the bot's own threads
+        # from earlier runs (the snapshot was taken BEFORE the
+        # new review's threads existed). The user's PRs unblock
+        # automatically as soon as the bot agrees the new commit
+        # addressed the prior feedback.
+        #
+        # Idempotent on already-resolved threads (the GraphQL
+        # mutation is a no-op there). A failure to resolve a
+        # specific thread is non-fatal — we log and continue,
+        # because a partial resolve is still useful and the
+        # alternative (failing the workflow) would prevent the
+        # actual review from being merged.
+        if: >-
+          steps.submit.conclusion == 'success'
+          && steps.snapshot.outputs.snapshot-file != ''
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          SNAPSHOT_FILE: ${{ steps.snapshot.outputs.snapshot-file }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -s "$SNAPSHOT_FILE" ]; then
+            echo "No prior threads to resolve."
+            exit 0
+          fi
+
+          OK=0
+          FAIL=0
+          while IFS= read -r THREAD_ID; do
+            [ -z "$THREAD_ID" ] && continue
+            if gh api graphql -f query='
+                mutation($id: ID!) {
+                  resolveReviewThread(input: {threadId: $id}) {
+                    thread { id isResolved }
+                  }
+                }' -f id="$THREAD_ID" >/dev/null 2>&1; then
+              OK=$((OK + 1))
+            else
+              FAIL=$((FAIL + 1))
+              echo "warning: failed to resolve thread $THREAD_ID"
+            fi
+          done < "$SNAPSHOT_FILE"
+
+          echo "Resolved $OK prior thread(s); $FAIL failure(s)."

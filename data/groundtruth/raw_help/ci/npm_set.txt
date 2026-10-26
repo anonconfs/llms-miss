@@ -1,0 +1,9 @@
+Set a value in the npm configuration
+
+Usage:
+npm set <key>=<value> [<key>=<value> ...] (See `npm config`)
+
+Options:
+[-g|--global] [-L|--location <global|user|project>]
+
+Run "npm help set" for more info

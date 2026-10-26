@@ -1,0 +1,112 @@
+# CI Workflow
+# Single required status check for all PRs to main
+# Consolidates: lint, agent-validation, policy-compliance-check
+# Runs markdown linting + all Node.js validators + handoff validation
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/*]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-repo
+
+      - name: Install bats
+        run: sudo apt-get install -y bats
+
+      - name: Scan for secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gitleaks-action@v2 still ships as a Node 20 action. Opt into the
+          # Node 24 runtime now so the deprecation auto-flip on 2026-06-02
+          # doesn't surprise CI. See:
+          # https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+      - name: Lint Markdown
+        run: npm run lint:md
+
+      - name: Run Node.js validators (CI-safe)
+        run: npm run validate:_node-ci
+
+      - name: Validate hooks
+        run: npm run validate:hooks
+
+      - name: Run hook tests
+        run: npm run test:hooks
+
+      - name: Re-render SKU manifest MD and check for drift
+        run: |
+          # Deterministic renderer must produce byte-equal MD for every
+          # JSON. Drift here indicates an agent hand-edited the MD or
+          # forgot to re-render after mutating JSON — both forbidden.
+          # See: .github/instructions/sku-manifest.instructions.md
+          shopt -s nullglob
+          for json in agent-output/*/sku-manifest.json; do
+            project=$(basename "$(dirname "$json")")
+            echo "  rendering $project"
+            node tools/scripts/render-sku-manifest-md.mjs "$project"
+          done
+          if ! git diff --exit-code -- '**/sku-manifest.md'; then
+            echo "::error::sku-manifest.md is stale relative to JSON. Run 'node tools/scripts/render-sku-manifest-md.mjs <project>' and commit the result."
+            exit 1
+          fi
+
+      - name: Validate handoff references
+        run: bash tools/scripts/validate-handoff-references.sh
+
+  external-tests:
+    name: External Python tests (apex-recall + azure-pricing MCP)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node-repo
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: "pip"
+
+      - name: Install Python test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # apex-recall ships its own deps via pyproject; install in editable mode
+          # so its tests can import the package without sys.path hacks.
+          python -m pip install -e tools/apex-recall
+          # azure-pricing tests live under the server's tests/ directory and
+          # import the server module via the same pattern. Install with [dev]
+          # extras so pytest-asyncio (required by the async fixtures) is present.
+          python -m pip install -e 'tools/mcp-servers/azure-pricing[dev]'
+          python -m pip install pytest
+
+      - name: Run apex-recall test suite
+        run: npm run test:apex-recall
+
+      - name: Run azure-pricing MCP test suite
+        run: npm run test:azure-pricing-mcp

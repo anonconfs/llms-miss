@@ -1,0 +1,13 @@
+--bytes
+-c
+--help
+--lines
+-n
+-q
+--quiet
+--silent
+-v
+--verbose
+--version
+-z
+--zero-terminated

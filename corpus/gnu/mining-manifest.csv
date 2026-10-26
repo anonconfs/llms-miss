@@ -1,0 +1,592 @@
+file,provenance,repo,path,evidence
+systemd_systemd__coccinelle_run-coccinelle.sh,human,systemd/systemd,coccinelle/run-coccinelle.sh,committed_before_2020
+systemd_systemd__man_50-xdg-data-dirs.sh,human,systemd/systemd,man/50-xdg-data-dirs.sh,committed_before_2020
+systemd_systemd__man_yubikey-crypttab.sh,human,systemd/systemd,man/yubikey-crypttab.sh,committed_before_2020
+systemd_systemd__src_basic_generate-af-list.sh,human,systemd/systemd,src/basic/generate-af-list.sh,committed_before_2020
+systemd_systemd__src_basic_generate-arphrd-list.sh,human,systemd/systemd,src/basic/generate-arphrd-list.sh,committed_before_2020
+systemd_systemd__src_basic_generate-errno-list.sh,human,systemd/systemd,src/basic/generate-errno-list.sh,committed_before_2020
+systemd_systemd__src_shared_generate-ip-protocol-list.sh,human,systemd/systemd,src/shared/generate-ip-protocol-list.sh,committed_before_2020
+systemd_systemd__src_udev_generate-keyboard-keys-gperf.sh,human,systemd/systemd,src/udev/generate-keyboard-keys-gperf.sh,committed_before_2020
+systemd_systemd__src_udev_generate-keyboard-keys-list.sh,human,systemd/systemd,src/udev/generate-keyboard-keys-list.sh,committed_before_2020
+systemd_systemd__test_hwdb-test.sh,human,systemd/systemd,test/hwdb-test.sh,committed_before_2020
+git_git__Documentation_install-doc-quick.sh,human,git/git,Documentation/install-doc-quick.sh,committed_before_2020
+git_git__Documentation_install-webdoc.sh,human,git/git,Documentation/install-webdoc.sh,committed_before_2020
+git_git__Documentation_technical_api-index.sh,human,git/git,Documentation/technical/api-index.sh,committed_before_2020
+git_git__ci_install-dependencies.sh,human,git/git,ci/install-dependencies.sh,committed_before_2020
+git_git__ci_lib.sh,human,git/git,ci/lib.sh,committed_before_2020
+git_git__ci_make-test-artifacts.sh,human,git/git,ci/make-test-artifacts.sh,committed_before_2020
+git_git__ci_mount-fileshare.sh,human,git/git,ci/mount-fileshare.sh,committed_before_2020
+git_git__ci_print-test-failures.sh,human,git/git,ci/print-test-failures.sh,committed_before_2020
+git_git__ci_run-build-and-tests.sh,human,git/git,ci/run-build-and-tests.sh,committed_before_2020
+git_git__ci_run-static-analysis.sh,human,git/git,ci/run-static-analysis.sh,committed_before_2020
+git_git__ci_run-test-slice.sh,human,git/git,ci/run-test-slice.sh,committed_before_2020
+git_git__ci_test-documentation.sh,human,git/git,ci/test-documentation.sh,committed_before_2020
+git_git__ci_util_extract-trash-dirs.sh,human,git/git,ci/util/extract-trash-dirs.sh,committed_before_2020
+git_git__contrib_completion_git-completion.bash,human,git/git,contrib/completion/git-completion.bash,committed_before_2020
+git_git__contrib_completion_git-prompt.sh,human,git/git,contrib/completion/git-prompt.sh,committed_before_2020
+git_git__contrib_credential_netrc_t-git-credential-netrc.sh,human,git/git,contrib/credential/netrc/t-git-credential-netrc.sh,committed_before_2020
+git_git__contrib_diff-highlight_t_t9400-diff-highlight.sh,human,git/git,contrib/diff-highlight/t/t9400-diff-highlight.sh,committed_before_2020
+openssl_openssl__demos_certs_apps_mkacerts.sh,human,openssl/openssl,demos/certs/apps/mkacerts.sh,committed_before_2020
+openssl_openssl__demos_certs_apps_mkxcerts.sh,human,openssl/openssl,demos/certs/apps/mkxcerts.sh,committed_before_2020
+openssl_openssl__demos_certs_mkcerts.sh,human,openssl/openssl,demos/certs/mkcerts.sh,committed_before_2020
+openssl_openssl__demos_certs_ocspquery.sh,human,openssl/openssl,demos/certs/ocspquery.sh,committed_before_2020
+openssl_openssl__demos_certs_ocsprun.sh,human,openssl/openssl,demos/certs/ocsprun.sh,committed_before_2020
+openssl_openssl__test_certs_mkcert.sh,human,openssl/openssl,test/certs/mkcert.sh,committed_before_2020
+openssl_openssl__test_certs_setup.sh,human,openssl/openssl,test/certs/setup.sh,committed_before_2020
+openssl_openssl__test_recipes_95-test_external_krb5_data_krb5.sh,human,openssl/openssl,test/recipes/95-test_external_krb5_data/krb5.sh,committed_before_2020
+openssl_openssl__test_recipes_95-test_external_pyca_data_cryptography.sh,human,openssl/openssl,test/recipes/95-test_external_pyca_data/cryptography.sh,committed_before_2020
+openssl_openssl__test_smime-certs_mksmime-certs.sh,human,openssl/openssl,test/smime-certs/mksmime-certs.sh,committed_before_2020
+curl_curl__scripts_contributors.sh,human,curl/curl,scripts/contributors.sh,committed_before_2020
+curl_curl__scripts_contrithanks.sh,human,curl/curl,scripts/contrithanks.sh,committed_before_2020
+curl_curl__scripts_coverage.sh,human,curl/curl,scripts/coverage.sh,committed_before_2020
+curl_curl__scripts_installcheck.sh,human,curl/curl,scripts/installcheck.sh,committed_before_2020
+tmux_tmux__autogen.sh,human,tmux/tmux,autogen.sh,committed_before_2020
+tmux_tmux__regress_capture-pane-sgr0.sh,human,tmux/tmux,regress/capture-pane-sgr0.sh,committed_before_2020
+tmux_tmux__regress_command-order.sh,human,tmux/tmux,regress/command-order.sh,committed_before_2020
+tmux_tmux__regress_conf-syntax.sh,human,tmux/tmux,regress/conf-syntax.sh,committed_before_2020
+tmux_tmux__regress_control-client-sanity.sh,human,tmux/tmux,regress/control-client-sanity.sh,committed_before_2020
+tmux_tmux__regress_control-client-size.sh,human,tmux/tmux,regress/control-client-size.sh,committed_before_2020
+tmux_tmux__regress_cursor-test1.sh,human,tmux/tmux,regress/cursor-test1.sh,committed_before_2020
+tmux_tmux__regress_cursor-test2.sh,human,tmux/tmux,regress/cursor-test2.sh,committed_before_2020
+tmux_tmux__regress_cursor-test3.sh,human,tmux/tmux,regress/cursor-test3.sh,committed_before_2020
+tmux_tmux__regress_cursor-test4.sh,human,tmux/tmux,regress/cursor-test4.sh,committed_before_2020
+tmux_tmux__regress_format-strings.sh,human,tmux/tmux,regress/format-strings.sh,committed_before_2020
+tmux_tmux__regress_has-session-return.sh,human,tmux/tmux,regress/has-session-return.sh,committed_before_2020
+tmux_tmux__regress_if-shell-TERM.sh,human,tmux/tmux,regress/if-shell-TERM.sh,committed_before_2020
+tmux_tmux__regress_if-shell-error.sh,human,tmux/tmux,regress/if-shell-error.sh,committed_before_2020
+tmux_tmux__regress_if-shell-nested.sh,human,tmux/tmux,regress/if-shell-nested.sh,committed_before_2020
+tmux_tmux__regress_kill-session-process-exit.sh,human,tmux/tmux,regress/kill-session-process-exit.sh,committed_before_2020
+tmux_tmux__regress_new-session-base-index.sh,human,tmux/tmux,regress/new-session-base-index.sh,committed_before_2020
+tmux_tmux__regress_new-session-command.sh,human,tmux/tmux,regress/new-session-command.sh,committed_before_2020
+tmux_tmux__regress_new-session-environment.sh,human,tmux/tmux,regress/new-session-environment.sh,committed_before_2020
+vim_vim__pixmaps_gen-inline-pixbufs.sh,human,vim/vim,pixmaps/gen-inline-pixbufs.sh,committed_before_2020
+vim_vim__runtime_macros_less.sh,human,vim/vim,runtime/macros/less.sh,committed_before_2020
+systemd_systemd__test_TEST-21-SYSUSERS_test.sh,human,systemd/systemd,test/TEST-21-SYSUSERS/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-03-JOBS_test-jobs.sh,human,systemd/systemd,test/TEST-03-JOBS/test-jobs.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-14-MACHINE-ID_test.sh,human,systemd/systemd,test/TEST-14-MACHINE-ID/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-04-JOURNAL_test-journal.sh,human,systemd/systemd,test/TEST-04-JOURNAL/test-journal.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-29-UDEV-ID_RENAMING_test.sh,human,systemd/systemd,test/TEST-29-UDEV-ID_RENAMING/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-22-TMPFILES_test.sh,human,systemd/systemd,test/TEST-22-TMPFILES/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-22-TMPFILES_test-03.sh,human,systemd/systemd,test/TEST-22-TMPFILES/test-03.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-15-DROPIN_test.sh,human,systemd/systemd,test/TEST-15-DROPIN/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__tools_find-tabs.sh,human,systemd/systemd,tools/find-tabs.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-27-STDOUTFILE_test.sh,human,systemd/systemd,test/TEST-27-STDOUTFILE/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-18-FAILUREACTION_testsuite.sh,human,systemd/systemd,test/TEST-18-FAILUREACTION/testsuite.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-37-RUNTIMEDIRECTORYPRESERVE_testsuite.sh,human,systemd/systemd,test/TEST-37-RUNTIMEDIRECTORYPRESERVE/testsuite.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-24-UNIT-TESTS_testsuite.sh,human,systemd/systemd,test/TEST-24-UNIT-TESTS/testsuite.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-37-RUNTIMEDIRECTORYPRESERVE_test.sh,human,systemd/systemd,test/TEST-37-RUNTIMEDIRECTORYPRESERVE/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-22-TMPFILES_test-02.sh,human,systemd/systemd,test/TEST-22-TMPFILES/test-02.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__travis-ci_managers_fuzzbuzz.sh,human,systemd/systemd,travis-ci/managers/fuzzbuzz.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-33-CLEAN-UNIT_test.sh,human,systemd/systemd,test/TEST-33-CLEAN-UNIT/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__tools_coverity.sh,human,systemd/systemd,tools/coverity.sh,tree_at_commit_before_2020:14157349
+git_git__t_t7201-co.sh,human,git/git,t/t7201-co.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t5601-clone.sh,human,git/git,t/t5601-clone.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t9811-git-p4-label-import.sh,human,git/git,t/t9811-git-p4-label-import.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t5526-fetch-submodules.sh,human,git/git,t/t5526-fetch-submodules.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t9814-git-p4-rename.sh,human,git/git,t/t9814-git-p4-rename.sh,tree_at_commit_before_2020:13185fd2
+git_git__contrib_vscode_init.sh,human,git/git,contrib/vscode/init.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t1300-config.sh,human,git/git,t/t1300-config.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t8011-blame-split-file.sh,human,git/git,t/t8011-blame-split-file.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t5542-push-http-shallow.sh,human,git/git,t/t5542-push-http-shallow.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_perf_repos_inflate-repo.sh,human,git/git,t/perf/repos/inflate-repo.sh,tree_at_commit_before_2020:13185fd2
+git_git__git-mergetool.sh,human,git/git,git-mergetool.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t5307-pack-missing-commit.sh,human,git/git,t/t5307-pack-missing-commit.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t4121-apply-diffs.sh,human,git/git,t/t4121-apply-diffs.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t4005-diff-rename-2.sh,human,git/git,t/t4005-diff-rename-2.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_perf_p7300-clean.sh,human,git/git,t/perf/p7300-clean.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_perf_p0002-read-cache.sh,human,git/git,t/perf/p0002-read-cache.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t6003-rev-list-topo-order.sh,human,git/git,t/t6003-rev-list-topo-order.sh,tree_at_commit_before_2020:13185fd2
+git_git__git-merge-one-file.sh,human,git/git,git-merge-one-file.sh,tree_at_commit_before_2020:13185fd2
+git_git__t_t4255-am-submodule.sh,human,git/git,t/t4255-am-submodule.sh,tree_at_commit_before_2020:13185fd2
+openssl_openssl__.travis-create-release.sh,human,openssl/openssl,.travis-create-release.sh,tree_at_commit_before_2020:5f95fbf3
+openssl_openssl__util_mktar.sh,human,openssl/openssl,util/mktar.sh,tree_at_commit_before_2020:5f95fbf3
+openssl_openssl__util_opensslwrap.sh,human,openssl/openssl,util/opensslwrap.sh,tree_at_commit_before_2020:5f95fbf3
+curl_curl__lib_firefox-db2pem.sh,human,curl/curl,lib/firefox-db2pem.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__scripts_travis_before_script.sh,human,curl/curl,scripts/travis/before_script.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__tests_objnames-test10.sh,human,curl/curl,tests/objnames-test10.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_vms_gnv_curl_configure.sh,human,curl/curl,packages/vms/gnv_curl_configure.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_vms_make_gnv_curl_install.sh,human,curl/curl,packages/vms/make_gnv_curl_install.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_OS400_initscript.sh,human,curl/curl,packages/OS400/initscript.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__tests_fuzz_download_fuzzer.sh,human,curl/curl,tests/fuzz/download_fuzzer.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__tests_certs_scripts_genroot.sh,human,curl/curl,tests/certs/scripts/genroot.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__scripts_travis_script.sh,human,curl/curl,scripts/travis/script.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__scripts_travis_iconv-env.sh,human,curl/curl,scripts/travis/iconv-env.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__tests_certs_scripts_genserv.sh,human,curl/curl,tests/certs/scripts/genserv.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_OS400_make-src.sh,human,curl/curl,packages/OS400/make-src.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__tests_objnames-test08.sh,human,curl/curl,tests/objnames-test08.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_OS400_make-lib.sh,human,curl/curl,packages/OS400/make-lib.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_OS400_make-tests.sh,human,curl/curl,packages/OS400/make-tests.sh,tree_at_commit_before_2020:a8d13336
+curl_curl__packages_OS400_makefile.sh,human,curl/curl,packages/OS400/makefile.sh,tree_at_commit_before_2020:a8d13336
+vim_vim__src_pathdef.sh,human,vim/vim,src/pathdef.sh,tree_at_commit_before_2020:87396072
+vim_vim__src_installml.sh,human,vim/vim,src/installml.sh,tree_at_commit_before_2020:87396072
+vim_vim__src_which.sh,human,vim/vim,src/which.sh,tree_at_commit_before_2020:87396072
+vim_vim__runtime_tools_vimspell.sh,human,vim/vim,runtime/tools/vimspell.sh,tree_at_commit_before_2020:87396072
+vim_vim__src_osdef.sh,human,vim/vim,src/osdef.sh,tree_at_commit_before_2020:87396072
+vim_vim__src_installman.sh,human,vim/vim,src/installman.sh,tree_at_commit_before_2020:87396072
+vim_vim__src_link.sh,human,vim/vim,src/link.sh,tree_at_commit_before_2020:87396072
+ohmyzsh_ohmyzsh__oh-my-zsh.sh,human,ohmyzsh/ohmyzsh,oh-my-zsh.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_catimg_catimg.sh,human,ohmyzsh/ohmyzsh,plugins/catimg/catimg.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_gitfast_git-completion.bash,human,ohmyzsh/ohmyzsh,plugins/gitfast/git-completion.bash,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_upgrade.sh,human,ohmyzsh/ohmyzsh,tools/upgrade.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_wd__wd.sh,human,ohmyzsh/ohmyzsh,plugins/wd/_wd.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_theme_chooser.sh,human,ohmyzsh/ohmyzsh,tools/theme_chooser.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_install.sh,human,ohmyzsh/ohmyzsh,tools/install.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_uninstall.sh,human,ohmyzsh/ohmyzsh,tools/uninstall.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_drush_drush.complete.sh,human,ohmyzsh/ohmyzsh,plugins/drush/drush.complete.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_require_tool.sh,human,ohmyzsh/ohmyzsh,tools/require_tool.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_wd_wd.sh,human,ohmyzsh/ohmyzsh,plugins/wd/wd.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_emacs_emacsclient.sh,human,ohmyzsh/ohmyzsh,plugins/emacs/emacsclient.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_z_z.sh,human,ohmyzsh/ohmyzsh,plugins/z/z.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_gitfast_git-prompt.sh,human,ohmyzsh/ohmyzsh,plugins/gitfast/git-prompt.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__plugins_frontend-search__frontend-search.sh,human,ohmyzsh/ohmyzsh,plugins/frontend-search/_frontend-search.sh,tree_at_commit_before_2020:d9e64344
+ohmyzsh_ohmyzsh__tools_check_for_upgrade.sh,human,ohmyzsh/ohmyzsh,tools/check_for_upgrade.sh,tree_at_commit_before_2020:d9e64344
+nvm-sh_nvm__update_test_mocks.sh,human,nvm-sh/nvm,update_test_mocks.sh,tree_at_commit_before_2020:ec8906b2
+nvm-sh_nvm__nvm.sh,human,nvm-sh/nvm,nvm.sh,tree_at_commit_before_2020:ec8906b2
+nvm-sh_nvm__rename_test.sh,human,nvm-sh/nvm,rename_test.sh,tree_at_commit_before_2020:ec8906b2
+nvm-sh_nvm__install.sh,human,nvm-sh/nvm,install.sh,tree_at_commit_before_2020:ec8906b2
+nvm-sh_nvm__test_common.sh,human,nvm-sh/nvm,test/common.sh,tree_at_commit_before_2020:ec8906b2
+rbenv_rbenv__completions_rbenv.bash,human,rbenv/rbenv,completions/rbenv.bash,tree_at_commit_before_2020:c46a9705
+rbenv_rbenv__test_test_helper.bash,human,rbenv/rbenv,test/test_helper.bash,tree_at_commit_before_2020:c46a9705
+rbenv_rbenv__rbenv.d_exec_gem-rehash.bash,human,rbenv/rbenv,rbenv.d/exec/gem-rehash.bash,tree_at_commit_before_2020:c46a9705
+pyenv_pyenv__pyenv.d_exec_pip-rehash.bash,human,pyenv/pyenv,pyenv.d/exec/pip-rehash.bash,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__completions_pyenv.bash,human,pyenv/pyenv,completions/pyenv.bash,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__pyenv.d_rehash_conda.bash,human,pyenv/pyenv,pyenv.d/rehash/conda.bash,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__plugins_python-build_test_test_helper.bash,human,pyenv/pyenv,plugins/python-build/test/test_helper.bash,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__plugins_python-build_install.sh,human,pyenv/pyenv,plugins/python-build/install.sh,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__pyenv.d_rehash_source.bash,human,pyenv/pyenv,pyenv.d/rehash/source.bash,tree_at_commit_before_2020:4e0ba2f4
+pyenv_pyenv__test_test_helper.bash,human,pyenv/pyenv,test/test_helper.bash,tree_at_commit_before_2020:4e0ba2f4
+asdf-vm_asdf__release_tag.sh,human,asdf-vm/asdf,release/tag.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__test_test_helpers.bash,human,asdf-vm/asdf,test/test_helpers.bash,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__lib_utils.sh,human,asdf-vm/asdf,lib/utils.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__lib_asdf.sh,human,asdf-vm/asdf,lib/asdf.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__asdf.sh,human,asdf-vm/asdf,asdf.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__lib_commands_reshim.sh,human,asdf-vm/asdf,lib/commands/reshim.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__lib_commands_version_commands.sh,human,asdf-vm/asdf,lib/commands/version_commands.sh,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__completions_asdf.bash,human,asdf-vm/asdf,completions/asdf.bash,tree_at_commit_before_2020:95e0f534
+asdf-vm_asdf__lint.sh,human,asdf-vm/asdf,lint.sh,tree_at_commit_before_2020:95e0f534
+rupa_z__z.sh,human,rupa/z,z.sh,tree_at_commit_before_2020:4f08e7fe
+junegunn_fzf__shell_completion.bash,human,junegunn/fzf,shell/completion.bash,tree_at_commit_before_2020:577024f1
+junegunn_fzf__shell_key-bindings.bash,human,junegunn/fzf,shell/key-bindings.bash,tree_at_commit_before_2020:577024f1
+Bash-it_bash-it__themes_tylenol_tylenol.theme.bash,human,Bash-it/bash-it,themes/tylenol/tylenol.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__themes_powerline-naked_powerline-naked.theme.bash,human,Bash-it/bash-it,themes/powerline-naked/powerline-naked.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__plugins_available_alias-completion.plugin.bash,human,Bash-it/bash-it,plugins/available/alias-completion.plugin.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__completion_available_travis.completion.bash,human,Bash-it/bash-it,completion/available/travis.completion.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__completion_available_todo.completion.bash,human,Bash-it/bash-it,completion/available/todo.completion.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__themes_simple_simple.theme.bash,human,Bash-it/bash-it,themes/simple/simple.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__test_fixtures_bash_it_aliases_available_a.aliases.bash,human,Bash-it/bash-it,test/fixtures/bash_it/aliases/available/a.aliases.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__themes_doubletime_multiline_doubletime_multiline.theme.bash,human,Bash-it/bash-it,themes/doubletime_multiline/doubletime_multiline.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__themes_dos_dos.theme.bash,human,Bash-it/bash-it,themes/dos/dos.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__completion_available_gh.completion.bash,human,Bash-it/bash-it,completion/available/gh.completion.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__themes_cupcake_cupcake.theme.bash,human,Bash-it/bash-it,themes/cupcake/cupcake.theme.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__plugins_available_z_autoenv.plugin.bash,human,Bash-it/bash-it,plugins/available/z_autoenv.plugin.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__completion_available_lerna.completion.bash,human,Bash-it/bash-it,completion/available/lerna.completion.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__completion_available_virsh.completion.bash,human,Bash-it/bash-it,completion/available/virsh.completion.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__aliases_available_jitsu.aliases.bash,human,Bash-it/bash-it,aliases/available/jitsu.aliases.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__plugins_available_chruby.plugin.bash,human,Bash-it/bash-it,plugins/available/chruby.plugin.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__aliases_available_systemd.aliases.bash,human,Bash-it/bash-it,aliases/available/systemd.aliases.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__aliases_available_node.aliases.bash,human,Bash-it/bash-it,aliases/available/node.aliases.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__lib_utilities.bash,human,Bash-it/bash-it,lib/utilities.bash,tree_at_commit_before_2020:00ef69e9
+Bash-it_bash-it__plugins_available_nginx.plugin.bash,human,Bash-it/bash-it,plugins/available/nginx.plugin.bash,tree_at_commit_before_2020:00ef69e9
+scop_bash-completion__test_docker_docker-script.sh,human,scop/bash-completion,test/docker/docker-script.sh,tree_at_commit_before_2020:3e941a64
+scop_bash-completion__test_lib_library.sh,human,scop/bash-completion,test/lib/library.sh,tree_at_commit_before_2020:3e941a64
+scop_bash-completion__setup-symlinks.sh,human,scop/bash-completion,setup-symlinks.sh,tree_at_commit_before_2020:3e941a64
+scop_bash-completion__extra_git-post-commit.sh,human,scop/bash-completion,extra/git-post-commit.sh,tree_at_commit_before_2020:3e941a64
+scop_bash-completion__extra_git-pre-push.sh,human,scop/bash-completion,extra/git-pre-push.sh,tree_at_commit_before_2020:3e941a64
+scop_bash-completion__doc_makeHtml.sh,human,scop/bash-completion,doc/makeHtml.sh,tree_at_commit_before_2020:3e941a64
+liquidprompt_liquidprompt__test.sh,human,liquidprompt/liquidprompt,test.sh,tree_at_commit_before_2020:5f4aeece
+liquidprompt_liquidprompt__contrib_dist_debian_create_deb.sh,human,liquidprompt/liquidprompt,contrib/dist/debian/create_deb.sh,tree_at_commit_before_2020:5f4aeece
+tj_n__test_tests_shared-functions.bash,human,tj/n,test/tests/shared-functions.bash,tree_at_commit_before_2020:98005fb6
+tj_n__test_tests_install-reference-versions.bash,human,tj/n,test/tests/install-reference-versions.bash,tree_at_commit_before_2020:98005fb6
+bats-core_bats-core__test_test_helper.bash,human,bats-core/bats-core,test/test_helper.bash,tree_at_commit_before_2020:87b16eb8
+bats-core_bats-core__test_fixtures_bats_unofficial_bash_strict_mode.bash,human,bats-core/bats-core,test/fixtures/bats/unofficial_bash_strict_mode.bash,tree_at_commit_before_2020:87b16eb8
+bats-core_bats-core__test_fixtures_bats_test_helper.bash,human,bats-core/bats-core,test/fixtures/bats/test_helper.bash,tree_at_commit_before_2020:87b16eb8
+bats-core_bats-core__test_fixtures_bats_cmd_using_stdin.bash,human,bats-core/bats-core,test/fixtures/bats/cmd_using_stdin.bash,tree_at_commit_before_2020:87b16eb8
+bats-core_bats-core__shellcheck.sh,human,bats-core/bats-core,shellcheck.sh,tree_at_commit_before_2020:87b16eb8
+bats-core_bats-core__install.sh,human,bats-core/bats-core,install.sh,tree_at_commit_before_2020:87b16eb8
+dokku_dokku__tests_ci_unit_test_runner.sh,human,dokku/dokku,tests/ci/unit_test_runner.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__contrib_dokku-docker-bin.sh,human,dokku/dokku,contrib/dokku-docker-bin.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__plugins_network_vendor_github.com_codegangsta_inject_update_readme.sh,human,dokku/dokku,plugins/network/vendor/github.com/codegangsta/inject/update_readme.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__tests_unit_test_helper.bash,human,dokku/dokku,tests/unit/test_helper.bash,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__contrib_dokku_client.sh,human,dokku/dokku,contrib/dokku_client.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__tests_ci_setup.sh,human,dokku/dokku,tests/ci/setup.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__bootstrap.sh,human,dokku/dokku,bootstrap.sh,tree_at_commit_before_2020:8b41bc65
+dokku_dokku__plugins_common_vendor_github.com_codegangsta_inject_update_readme.sh,human,dokku/dokku,plugins/common/vendor/github.com/codegangsta/inject/update_readme.sh,tree_at_commit_before_2020:8b41bc65
+pi-hole_pi-hole__advanced_Scripts_piholeDebug.sh,human,pi-hole/pi-hole,advanced/Scripts/piholeDebug.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__automated install_basic-install.sh,human,pi-hole/pi-hole,automated install/basic-install.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__automated install_uninstall.sh,human,pi-hole/pi-hole,automated install/uninstall.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_setupLCD.sh,human,pi-hole/pi-hole,advanced/Scripts/setupLCD.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__gravity.sh,human,pi-hole/pi-hole,gravity.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_piholeCheckout.sh,human,pi-hole/pi-hole,advanced/Scripts/piholeCheckout.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_list.sh,human,pi-hole/pi-hole,advanced/Scripts/list.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_updatecheck.sh,human,pi-hole/pi-hole,advanced/Scripts/updatecheck.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_database_migration_gravity-db.sh,human,pi-hole/pi-hole,advanced/Scripts/database_migration/gravity-db.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_query.sh,human,pi-hole/pi-hole,advanced/Scripts/query.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_webpage.sh,human,pi-hole/pi-hole,advanced/Scripts/webpage.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_wildcard_regex_converter.sh,human,pi-hole/pi-hole,advanced/Scripts/wildcard_regex_converter.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_update.sh,human,pi-hole/pi-hole,advanced/Scripts/update.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_chronometer.sh,human,pi-hole/pi-hole,advanced/Scripts/chronometer.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_piholeLogFlush.sh,human,pi-hole/pi-hole,advanced/Scripts/piholeLogFlush.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_version.sh,human,pi-hole/pi-hole,advanced/Scripts/version.sh,tree_at_commit_before_2020:8ae03b64
+pi-hole_pi-hole__advanced_Scripts_piholeARPTable.sh,human,pi-hole/pi-hole,advanced/Scripts/piholeARPTable.sh,tree_at_commit_before_2020:8ae03b64
+acmesh-official_acme.sh__notify_pushover.sh,human,acmesh-official/acme.sh,notify/pushover.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__deploy_gcore_cdn.sh,human,acmesh-official/acme.sh,deploy/gcore_cdn.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_maradns.sh,human,acmesh-official/acme.sh,dnsapi/dns_maradns.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_nw.sh,human,acmesh-official/acme.sh,dnsapi/dns_nw.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_myapi.sh,human,acmesh-official/acme.sh,dnsapi/dns_myapi.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_aws.sh,human,acmesh-official/acme.sh,dnsapi/dns_aws.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__notify_xmpp.sh,human,acmesh-official/acme.sh,notify/xmpp.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_regru.sh,human,acmesh-official/acme.sh,dnsapi/dns_regru.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__deploy_mysqld.sh,human,acmesh-official/acme.sh,deploy/mysqld.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__notify_postmark.sh,human,acmesh-official/acme.sh,notify/postmark.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__deploy_ssh.sh,human,acmesh-official/acme.sh,deploy/ssh.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_ultra.sh,human,acmesh-official/acme.sh,dnsapi/dns_ultra.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_unoeuro.sh,human,acmesh-official/acme.sh,dnsapi/dns_unoeuro.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_ali.sh,human,acmesh-official/acme.sh,dnsapi/dns_ali.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_nsupdate.sh,human,acmesh-official/acme.sh,dnsapi/dns_nsupdate.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_knot.sh,human,acmesh-official/acme.sh,dnsapi/dns_knot.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__acme.sh,human,acmesh-official/acme.sh,acme.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__notify_pop.sh,human,acmesh-official/acme.sh,notify/pop.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__deploy_myapi.sh,human,acmesh-official/acme.sh,deploy/myapi.sh,tree_at_commit_before_2020:2214507d
+acmesh-official_acme.sh__dnsapi_dns_dpi.sh,human,acmesh-official/acme.sh,dnsapi/dns_dpi.sh,tree_at_commit_before_2020:2214507d
+dehydrated-io_dehydrated__docs_examples_hook.sh,human,dehydrated-io/dehydrated,docs/examples/hook.sh,tree_at_commit_before_2020:e2eeaf7e
+discourse_discourse_docker__image_discourse_bench_run_bench.sh,human,discourse/discourse_docker,image/discourse_bench/run_bench.sh,tree_at_commit_before_2020:1b3dd3a4
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_pegasus-fe.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/pegasus-fe.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_mupen64plus.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/mupen64plus.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_retroarch.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/retroarch.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-dinothawr.sh,human,RetroPie/RetroPie-Setup,scriptmodules/libretrocores/lr-dinothawr.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-mess.sh,human,RetroPie/RetroPie-Setup,scriptmodules/libretrocores/lr-mess.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_scraper.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/scraper.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_ags.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/ags.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_mkarcadejoystick.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/mkarcadejoystick.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-bluemsx.sh,human,RetroPie/RetroPie-Setup,scriptmodules/libretrocores/lr-bluemsx.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_px68k.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/px68k.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_pcsx2.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/pcsx2.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_splashscreen.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/splashscreen.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_emulationstation_configscripts_pifba.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/emulationstation/configscripts/pifba.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__tools_sdcard_chroot.sh,human,RetroPie/RetroPie-Setup,tools/sdcard/chroot.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_advmame.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/advmame.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_ports_micropolis.sh,human,RetroPie/RetroPie-Setup,scriptmodules/ports/micropolis.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_supplementary_xarcade2jstick.sh,human,RetroPie/RetroPie-Setup,scriptmodules/supplementary/xarcade2jstick.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-beetle-supergrafx.sh,human,RetroPie/RetroPie-Setup,scriptmodules/libretrocores/lr-beetle-supergrafx.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_emulators_residualvm.sh,human,RetroPie/RetroPie-Setup,scriptmodules/emulators/residualvm.sh,tree_at_commit_before_2020:1a4fea25
+RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-virtualjaguar.sh,human,RetroPie/RetroPie-Setup,scriptmodules/libretrocores/lr-virtualjaguar.sh,tree_at_commit_before_2020:1a4fea25
+docker-library_postgres__9.5_alpine_docker-entrypoint.sh,human,docker-library/postgres,9.5/alpine/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__9.6_docker-entrypoint.sh,human,docker-library/postgres,9.6/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__docker-entrypoint.sh,human,docker-library/postgres,docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__9.5_docker-entrypoint.sh,human,docker-library/postgres,9.5/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__12_docker-entrypoint.sh,human,docker-library/postgres,12/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__11_alpine_docker-entrypoint.sh,human,docker-library/postgres,11/alpine/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__10_docker-entrypoint.sh,human,docker-library/postgres,10/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__9.4_alpine_docker-entrypoint.sh,human,docker-library/postgres,9.4/alpine/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__10_alpine_docker-entrypoint.sh,human,docker-library/postgres,10/alpine/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+docker-library_postgres__12_alpine_docker-entrypoint.sh,human,docker-library/postgres,12/alpine/docker-entrypoint.sh,tree_at_commit_before_2020:52814aba
+debiki_talkyard__wip_upgr-scala-2.13_add-collection-seq-import.sh,llm,debiki/talkyard,wip/upgr-scala-2.13/add-collection-seq-import.sh,"generated by ChatGPT"
+GlareDB_glaredb__scripts_assert_cargo_version.sh,llm,GlareDB/glaredb,scripts/assert_cargo_version.sh,"generated by chatgpt"
+herd_herdtools7__acl2_asl_bin_run-acl2asl.sh,llm,herd/herdtools7,acl2/asl/bin/run-acl2asl.sh,"generated by chatgpt"
+OsProgramadores_op-desafios__checkout-fork.sh,llm,OsProgramadores/op-desafios,checkout-fork.sh,"Generated by ChatGPT"
+EchterAlsFake_Porn_Fetch__src_scripts_install.sh,llm,EchterAlsFake/Porn_Fetch,src/scripts/install.sh,"generated by ChatGPT"
+yuchanns_dotfiles__sync-dotfiles.sh,llm,yuchanns/dotfiles,sync-dotfiles.sh,"This script was generated"
+huang-kun_geeknews__daemon_control.sh,llm,huang-kun/geeknews,daemon_control.sh,"generated by chatgpt"
+omegaui_app_fleet__assets_scripts_workspace-switcher.sh,llm,omegaui/app_fleet,assets/scripts/workspace-switcher.sh,"generated by ChatGPT"
+JimothyJohn_uptime-visuals__utils_CodeCount.sh,llm,JimothyJohn/uptime-visuals,utils/CodeCount.sh,"generated by ChatGPT"
+laodie666_Dom6-autosave__dom6_autosave.sh,llm,laodie666/Dom6-autosave,dom6_autosave.sh,"generated by chatgpt"
+tr4cks_power__build_script.sh,llm,tr4cks/power,build_script.sh,"generated by ChatGPT"
+TIBTHINK_cbt__git.sh,llm,TIBTHINK/cbt,git.sh,"This script was generated"
+michaeltu01_cs1380__non-distribution_t_ts_utils.sh,llm,michaeltu01/cs1380,non-distribution/t/ts/utils.sh,"generated by ChatGPT"
+qtplatz_qtplatz__scripts_linux-install-gcc13.sh,llm,qtplatz/qtplatz,scripts/linux-install-gcc13.sh,"This script was generated"
+keithmerrilliv_VFI_SIGGRAPH2025__scripts_update-cloudxr-kit-development.sh,llm,keithmerrilliv/VFI_SIGGRAPH2025,scripts/update-cloudxr-kit-development.sh,"generated by ChatGPT"
+tools200ms_AlphaWrap__alpha-wrap_auto-sync.sh,llm,tools200ms/AlphaWrap,alpha-wrap/auto-sync.sh,"Generated by chatGPT"
+HeuristNetwork_heurist__server_management_server_synchronisation_SSH_setup_setup_ssh_key_auth.sh,llm,HeuristNetwork/heurist,server_management/server_synchronisation/SSH_setup/setup_ssh_key_auth.sh,"Generated by ChatGPT"
+Kirby6567_scriptbughuntKirby__public_original-script.sh,llm,Kirby6567/scriptbughuntKirby,public/original-script.sh,"generated by ChatGPT"
+quuixly_SteganoAI__main.sh,llm,quuixly/SteganoAI,main.sh,"generated by ChatGPT"
+wilson-gv-project_wilson-gv__setup.sh,llm,wilson-gv-project/wilson-gv,setup.sh,"This script was generated"
+mboros1_string_manip__generate_random_strings.sh,llm,mboros1/string_manip,generate_random_strings.sh,"generated by ChatGPT"
+GoPlugin_pluginv3.0__contracts_scripts_ci_find_slither_report_diff.sh,llm,GoPlugin/pluginv3.0,contracts/scripts/ci/find_slither_report_diff.sh,"generated by ChatGPT"
+AutonomoDev_frontier-coding-slm-research__bash.ollama.run_v15_2_passed_prompt.v15-8.deepseek_v3_qwen2.5_32b.sh,llm,AutonomoDev/frontier-coding-slm-research,bash.ollama.run/v15/2/passed/prompt.v15-8.deepseek_v3_qwen2.5_32b.sh,"Auto-generated by ChatGPT"
+ugcasa_grbl__core_core.sh,llm,ugcasa/grbl,core/core.sh,"generated by chatGPT"
+FlaminG0_Xray-script__tool_xray_config_manage.sh,llm,FlaminG0/Xray-script,tool/xray_config_manage.sh,"generated by ChatGPT"
+iloveitaly_dotfiles__install_server.sh,llm,iloveitaly/dotfiles,install/server.sh,"generated by chatgpt"
+spralja_dtu02232-F2026-private_set_intersection__scripts_run_experiment.sh,llm,spralja/dtu02232-F2026-private_set_intersection,scripts/run_experiment.sh,"Generated by ChatGPT"
+zulumonkeymetallic_bob__create_missing_issues.sh,llm,zulumonkeymetallic/bob,create_missing_issues.sh,"Auto-generated by ChatGPT"
+dreamsoft07_chainlink__contracts_scripts_ci_find_slither_report_diff.sh,llm,dreamsoft07/chainlink,contracts/scripts/ci/find_slither_report_diff.sh,"generated by ChatGPT"
+DataDog_system-tests__utils_scripts_ssi_wizards_aws_onboarding_wizard.sh,llm,DataDog/system-tests,utils/scripts/ssi_wizards/aws_onboarding_wizard.sh,"This script was generated"
+mdvmeijer_system-config__scripts_wofi_wofi-key-value-store.sh,llm,mdvmeijer/system-config,scripts/wofi/wofi-key-value-store.sh,"this script was generated"
+kasmtech_openziti_python_client__03_vendor.sh,llm,kasmtech/openziti_python_client,03_vendor.sh,"generated by ChatGPT"
+soaringDistributions_ubdist_puddleJumper___prog_features.sh,llm,soaringDistributions/ubdist_puddleJumper,_prog/features.sh,"generated by ChatGPT"
+PSR94_TransitionIQ__tools_verify_no_ai_traces.sh,llm,PSR94/TransitionIQ,tools/verify_no_ai_traces.sh,"Generated by ChatGPT"
+cu-ecen-aeld_assignments-3-and-later-mu2d2__server_aesdsocket-start-stop.sh,llm,cu-ecen-aeld/assignments-3-and-later-mu2d2,server/aesdsocket-start-stop.sh,"generated by ChatGPT"
+fitteia_OneFit-Engine-APIs__Bash_ofe-named-options-chatgpt.sh,llm,fitteia/OneFit-Engine-APIs,Bash/ofe-named-options-chatgpt.sh,"generated by ChatGPT"
+dfltbox_guess-that-vtuber__scraper_noduplicates.sh,llm,dfltbox/guess-that-vtuber,scraper/noduplicates.sh,"generated by chatgpt"
+x64-elf-sh42_cgvm__bismilla.sh,llm,x64-elf-sh42/cgvm,bismilla.sh,"generated by chatgpt"
+gg582_incuspeed__utils_keygen.sh,llm,gg582/incuspeed,utils/keygen.sh,"Generated By ChatGPT"
+efficient_sortbloom__prepare_paper_plots.sh,llm,efficient/sortbloom,prepare_paper_plots.sh,"generated by ChatGPT"
+api-haus_Xray-script__tool_xray_config_manage.sh,llm,api-haus/Xray-script,tool/xray_config_manage.sh,"generated by ChatGPT"
+Khaaz_homelab__src_app-bootstrap_get_proxmox_ip.sh,llm,Khaaz/homelab,src/app-bootstrap/get_proxmox_ip.sh,"Generated by Chatgpt"
+1mr124_scripts__encryptedVoid.sh,llm,1mr124/scripts,encryptedVoid.sh,"Generated by ChatGPT"
+UW-MLGEO_mlgeo-2023-PNSN-E3WS__PNSN_metadata_AQMS_Queries_Event_Mag_AQMS_event_mag_query.sh,llm,UW-MLGEO/mlgeo-2023-PNSN-E3WS,PNSN_metadata/AQMS_Queries/Event_Mag/AQMS_event_mag_query.sh,"generated by ChatGPT"
+nortal_CMZ-chatbots__scripts_create_chat_epic_tickets_remaining.sh,llm,nortal/CMZ-chatbots,scripts/create_chat_epic_tickets_remaining.sh,"generated by ChatGPT"
+UCCS-SP25-CS4300-CS5300-1_Group-7-Spring-2025__scripts_check-coverage.sh,llm,UCCS-SP25-CS4300-CS5300-1/Group-7-Spring-2025,scripts/check-coverage.sh,"Generated by chatgpt"
+petrosmp_sec_assignments__assignment_6_src_corpus_adblock.sh,llm,petrosmp/sec_assignments,assignment_6/src_corpus/adblock.sh,"generated by ChatGPT"
+halitogunc_dotfiles__src_install_binaries.sh,llm,halitogunc/dotfiles,src/install_binaries.sh,"generated by chatgpt"
+ManfrediC_prnp-somatic__legacy_src_ubuntu_code_generate_mutation_VCF_find_mutation_original.sh,llm,ManfrediC/prnp-somatic,legacy/src/ubuntu/code/generate_mutation_VCF/find_mutation_original.sh,"generated by ChatGPT"
+EmilioLombardo_dotfiles__hyprland_.config_hypr_scripts_move_workspace_preserve_layout.sh,llm,EmilioLombardo/dotfiles,hyprland/.config/hypr/scripts/move_workspace_preserve_layout.sh,"GENERATED BY CHATGPT"
+LuxciumProject_monorepo-one__scripts_populate-directories.sh,llm,LuxciumProject/monorepo-one,scripts/populate-directories.sh,"This script was generated"
+dinesh-git17_claude-runner__tools_protocol-zero.sh,llm,dinesh-git17/claude-runner,tools/protocol-zero.sh,"generated by claude"
+DreamOneX_MyDotfiles__bash_utils_shell-colors.sh,llm,DreamOneX/MyDotfiles,bash/utils/shell-colors.sh,"Generated by ChatGPT"
+PSR94_CALLSIGNAL__tools_verify_no_ai_traces.sh,llm,PSR94/CALLSIGNAL,tools/verify_no_ai_traces.sh,"Generated by ChatGPT"
+vzcodes_Scriptorium__run.sh,llm,vzcodes/Scriptorium,run.sh,"generated by ChatGPT"
+flakpaket_SprayItForward__sprayitfwd.sh,llm,flakpaket/SprayItForward,sprayitfwd.sh,"generated by ChatGPT"
+soaringDistributions_ubDistBuild___prog_features.sh,llm,soaringDistributions/ubDistBuild,_prog/features.sh,"generated by ChatGPT"
+oboukli_misc-problem-solutions__contrib_create_stub.sh,llm,oboukli/misc-problem-solutions,contrib/create_stub.sh,"generated by ChatGPT"
+AshleyJackson_ResearchAndDevelopment__Bash_lsj.sh,llm,AshleyJackson/ResearchAndDevelopment,Bash/lsj.sh,"Generated by ChatGPT"
+rwgk_rwgk_config__bin_git_grep_match_ranges.sh,llm,rwgk/rwgk_config,bin/git_grep_match_ranges.sh,"Generated by ChatGPT"
+shanematley_dotfiles__bin_mac-convert.sh,llm,shanematley/dotfiles,bin/mac-convert.sh,"Generated by ChatGPT"
+osmannyildiz_dotfiles__vscode_install_extensions.sh,llm,osmannyildiz/dotfiles,vscode/install_extensions.sh,"Generated by ChatGPT"
+Zman350x_AdvancedComputerSystemsProjects__OctoberProject1_generate-csvs.sh,llm,Zman350x/AdvancedComputerSystemsProjects,OctoberProject1/generate-csvs.sh,"GENERATED BY CHATGPT"
+MorphZG_script_automation__backup_dotfiles.sh,llm,MorphZG/script_automation,backup_dotfiles.sh,"Generated by ChatGPT"
+JimothyJohn_ojito__utils_CodeCount.sh,llm,JimothyJohn/ojito,utils/CodeCount.sh,"generated by ChatGPT"
+faintx_public__tools_xray_config_manager.sh,llm,faintx/public,tools/xray_config_manager.sh,"generated by ChatGPT"
+xKirtle_dotfiles__.config_waybar_scripts_toggle-theme.sh,llm,xKirtle/dotfiles,.config/waybar/scripts/toggle-theme.sh,"Generated by ChatGPT"
+GamesCrafters_GamesmanOne__gamesman_install.sh,llm,GamesCrafters/GamesmanOne,gamesman_install.sh,"generated by ChatGPT"
+iago-costa_dotfiles__scripts_archive_linux_ultimate_tuner_3.sh,llm,iago-costa/dotfiles,scripts/archive/linux_ultimate_tuner_3.sh,"Generated by ChatGPT"
+bashln_scripts__old_general-post-install.UNIFIED.sh,llm,bashln/scripts,old/general-post-install.UNIFIED.sh,"generated by ChatGPT"
+dinesh-git17_claudehome__tools_protocol-zero.sh,llm,dinesh-git17/claudehome,tools/protocol-zero.sh,"generated by claude"
+0lzi_workstation-config__setup.sh,llm,0lzi/workstation-config,setup.sh,"GENERATED BY CHATGPT"
+cgyagenticloud_troyskills__add-examples.sh,llm,cgyagenticloud/troyskills,add-examples.sh,"Generated by ChatGPT"
+JohT_code-graph-analysis-pipeline__scripts_sortOutExternalJavaJarFiles.sh,llm,JohT/code-graph-analysis-pipeline,scripts/sortOutExternalJavaJarFiles.sh,"generated by ChatGPT"
+soaringDistributions_ubDistBuild___prog_core.sh,llm,soaringDistributions/ubDistBuild,_prog/core.sh,"generated by ChatGPT"
+romanlefler_SimpleWeather__scripts_unpackcrowdin.sh,llm,romanlefler/SimpleWeather,scripts/unpackcrowdin.sh,"generated by ChatGPT"
+celsian_luadns_updater__luadns_updater.sh,llm,celsian/luadns_updater,luadns_updater.sh,"generated by ChatGPT"
+yasinuslu_dotfiles__src_install_binaries.sh,llm,yasinuslu/dotfiles,src/install_binaries.sh,"generated by chatgpt"
+TIBTHINK_reliqua2.0__git.sh,llm,TIBTHINK/reliqua2.0,git.sh,"This script was generated"
+CCCeyon_Cam2Sim__shell-scripts_train_model.sh,llm,CCCeyon/Cam2Sim,shell-scripts/train_model.sh,"Generated by ChatGPT"
+HeuristNetwork_heurist__server_management_server_synchronisation_SSH_setup_setup_ssh_key_auth_comprehensive.sh,llm,HeuristNetwork/heurist,server_management/server_synchronisation/SSH_setup/setup_ssh_key_auth_comprehensive.sh,"Generated by ChatGPT"
+EchterAlsFake_Osintgram2__install.sh,llm,EchterAlsFake/Osintgram2,install.sh,"Generated by ChatGPT"
+ndsvw_SearXNG-WebExtensions__create-all-extensions.sh,llm,ndsvw/SearXNG-WebExtensions,create-all-extensions.sh,"Generated by ChatGPT"
+UW-MLGEO_mlgeo-2023-PNSN-E3WS__PNSN_metadata_AQMS_Queries_Event_Mag_Phase_AQMS_event_mag_phase_query.sh,llm,UW-MLGEO/mlgeo-2023-PNSN-E3WS,PNSN_metadata/AQMS_Queries/Event_Mag_Phase/AQMS_event_mag_phase_query.sh,"generated by ChatGPT"
+NonDairyNeutrino_advent_of_code__2024_setup.sh,llm,NonDairyNeutrino/advent_of_code,2024/setup.sh,"This script was generated"
+biggycao_BJL__scripts_part.sh,llm,biggycao/BJL,scripts/part.sh,"Generated by ChatGPT"
+auto-d_math-sft__eval_checkpoints.sh,llm,auto-d/math-sft,eval_checkpoints.sh,"Generated by ChatGPT"
+deeptir18_cornflakes-scripts__format-cdn.sh,llm,deeptir18/cornflakes-scripts,format-cdn.sh,"generated by chatgpt"
+TIBTHINK_cbt_board__git.sh,llm,TIBTHINK/cbt_board,git.sh,"This script was generated"
+josoa-ramaroson_lab-notes__aws-lab_day 31 - Configuring a Private RDS Instance for Application Development.sh,llm,josoa-ramaroson/lab-notes,aws-lab/day 31 - Configuring a Private RDS Instance for Application Development.sh,"generated by chatGPT"
+0gfoundation_0g-da-node__dev_support_download_params.sh,llm,0gfoundation/0g-da-node,dev_support/download_params.sh,"Generated by GPT"
+misaka10987_aura-vitrea__build.sh,llm,misaka10987/aura-vitrea,build.sh,"generated by GPT"
+Z3RO-O_git-contribution-automation__automation.sh,llm,Z3RO-O/git-contribution-automation,automation.sh,"generated by gpt"
+GSAPP-CDP_colloquium-1-2024__work__scripts_rename_featured.sh,llm,GSAPP-CDP/colloquium-1-2024,work/_scripts/rename_featured.sh,"Generated by gpt"
+anjireddym-git_tiny-pretrain-lab__scripts_download_data.sh,llm,anjireddym-git/tiny-pretrain-lab,scripts/download_data.sh,"generated by GPT"
+Chainichek_hackathon-template__script_centos_docker.sh,llm,Chainichek/hackathon-template,script/centos/docker.sh,"Generated by GPT"
+AiondaDotCom_gpt-httpd__gpt-httpd.sh,llm,AiondaDotCom/gpt-httpd,gpt-httpd.sh,"Generated by gpt"
+micha31r_fds__setup.sh,llm,micha31r/fds,setup.sh,"generated by GPT"
+andylee-24_utils__add_lyrics.sh,llm,andylee-24/utils,add_lyrics.sh,"generated by GPT"
+LingmoOS-Testing_LingmoNix-Starter__autoprocess_hyprland.sh,llm,LingmoOS-Testing/LingmoNix-Starter,autoprocess/hyprland.sh,"Generated by GPT"
+arjablc_dotfiles__scripts_.config_scripts_install.sh,llm,arjablc/dotfiles,scripts/.config/scripts/install.sh,"generated by gpt"
+jaircelisv_DayZero-voice-onboard__skill_dayzero-voice-onboard_entrypoints_demo.sh,llm,jaircelisv/DayZero-voice-onboard,skill/dayzero-voice-onboard/entrypoints/demo.sh,"generated by GPT"
+BerkeleyAutomation_LifelongLERFROS__run_navigation.sh,llm,BerkeleyAutomation/LifelongLERFROS,run_navigation.sh,"Generated by GPT"
+crithead_misc-tools__scripts_disk-rsync-backup.sh,llm,crithead/misc-tools,scripts/disk-rsync-backup.sh,"Generated by gpt"
+ShelbySolomonDarnell_GN-LLM-Hacking__gnqa_eval_src_run_human_datasets.sh,llm,ShelbySolomonDarnell/GN-LLM-Hacking,gnqa_eval/src/run_human_datasets.sh,"generated by gpt"
+tsanghan_kind-lab-env-on-cloud-shell__setup.sh,llm,tsanghan/kind-lab-env-on-cloud-shell,setup.sh,"AI generated"
+zeligism_PSI-LoRA__scripts_gpu_count.sh,llm,zeligism/PSI-LoRA,scripts/gpu_count.sh,"generated by GPT"
+dimensigon_HDB-HeliosDB-Proxy__demos_v0.4.0_12-ai-classifier_demo.sh,llm,dimensigon/HDB-HeliosDB-Proxy,demos/v0.4.0/12-ai-classifier/demo.sh,"generated by GPT"
+Chainichek_hackathon-template__script_centos_microk8s.sh,llm,Chainichek/hackathon-template,script/centos/microk8s.sh,"Generated by GPT"
+GSAPP-CDP_colloquium-1-2024__work__scripts_convert_png_to_jpg.sh,llm,GSAPP-CDP/colloquium-1-2024,work/_scripts/convert_png_to_jpg.sh,"Generated by gpt"
+taoky_scripts__hardware_cpuoff.sh,llm,taoky/scripts,hardware/cpuoff.sh,"Generated by GPT"
+0gfoundation_0g-da-encoder__dev_support_download_params.sh,llm,0gfoundation/0g-da-encoder,dev_support/download_params.sh,"Generated by GPT"
+JNZader_javi-forge__ci-local_hooks_commit-msg.test.sh,llm,JNZader/javi-forge,ci-local/hooks/commit-msg.test.sh,"Generated by GPT"
+leszkolukasz_latte-compiler__test_test.sh,llm,leszkolukasz/latte-compiler,test/test.sh,"Generated by GPT"
+DolomegaTrade_0g-da-node__dev_support_download_params.sh,llm,DolomegaTrade/0g-da-node,dev_support/download_params.sh,"Generated by GPT"
+kovtun-mykola_0g-da-node__dev_support_download_params.sh,llm,kovtun-mykola/0g-da-node,dev_support/download_params.sh,"Generated by GPT"
+SavvyHack3r_0g-da-node__dev_support_download_params.sh,llm,SavvyHack3r/0g-da-node,dev_support/download_params.sh,"Generated by GPT"
+borderland4_0g-da-node__dev_support_download_params.sh,llm,borderland4/0g-da-node,dev_support/download_params.sh,"Generated by GPT"
+arkimium_LingmoNix-Starter__autoprocess_hyprland.sh,llm,arkimium/LingmoNix-Starter,autoprocess/hyprland.sh,"Generated by GPT"
+arkimium_yaksha-starter__autoprocess_hyprland.sh,llm,arkimium/yaksha-starter,autoprocess/hyprland.sh,"Generated by GPT"
+ShelbySolomonDarnell_GN-LLM-Hacking__gn-ai_gnqa_paper1_eval_src_run_human_datasets.sh,llm,ShelbySolomonDarnell/GN-LLM-Hacking,gn-ai/gnqa/paper1_eval/src/run_human_datasets.sh,"generated by gpt"
+regpy_regpy__update-remote.sh,llm,regpy/regpy,update-remote.sh,"created by ChatGPT"
+lackhove_coverage-sh__example_syntax_example.sh,llm,lackhove/coverage-sh,example/syntax_example.sh,"created by ChatGPT"
+knbknb_ai-system-roles__scripts_prepare-sorted-csv.sh,llm,knbknb/ai-system-roles,scripts/prepare-sorted-csv.sh,"created by ChatGPT"
+henrikraedergaard_go-restful__init-db.sh,llm,henrikraedergaard/go-restful,init-db.sh,"created by chatgpt"
+cgloeckner_zombie-maker__make_silhouettes.sh,llm,cgloeckner/zombie-maker,make_silhouettes.sh,"created by ChatGPT"
+Noob99n_Fantasy__backup-db.sh,llm,Noob99n/Fantasy,backup-db.sh,"Created by ChatGPT"
+swiftforarduino_swift__checkout-swift-ci.sh,llm,swiftforarduino/swift,checkout-swift-ci.sh,"Created by ChatGPT"
+pavl21_pterodactyl-gui-installer__installer.sh,llm,pavl21/pterodactyl-gui-installer,installer.sh,"created by ChatGPT"
+NicholasMDH_dotfiles__bin_bin_startSSH.sh,llm,NicholasMDH/dotfiles,bin/bin/startSSH.sh,"created by chatGPT"
+clivet268_CCASatTestSuite__utility_jitter_recusiveJitterGraph.sh,llm,clivet268/CCASatTestSuite,utility/jitter/recusiveJitterGraph.sh,"created by chatgpt"
+xpert4cyber_Learn2Scripting__Linux Scripting_CCTV_CamFind.sh,llm,xpert4cyber/Learn2Scripting,Linux Scripting/CCTV/CamFind.sh,"Created by ChatGPT"
+jens-goes-mad_diy-pedalboard__samples_osx-ramdisk.sh,llm,jens-goes-mad/diy-pedalboard,samples/osx-ramdisk.sh,"created by ChatGPT"
+robertutterback_kidbox__install.sh,llm,robertutterback/kidbox,install.sh,"created by ChatGPT"
+Szkolne-projekty_JJKotkiPhp__scripts_build-and-run.sh,llm,Szkolne-projekty/JJKotkiPhp,scripts/build-and-run.sh,"Created by ChatGPT"
+thorgeir93_bin__bin_git_status_check.sh,llm,thorgeir93/bin,bin/git_status_check.sh,"created by ChatGPT"
+mewoocat_Leaf-dotfiles__.config_eww_images_changeSVGColor.sh,llm,mewoocat/Leaf-dotfiles,.config/eww/images/changeSVGColor.sh,"Created by chatGPT"
+hanse-kim_hanse-kim.github.io-legacy__scripts_rename-to-kebab-case.sh,llm,hanse-kim/hanse-kim.github.io-legacy,scripts/rename-to-kebab-case.sh,"Created by ChatGPT"
+Noob99n_Fantasy__update-owner.sh,llm,Noob99n/Fantasy,update-owner.sh,"Created by ChatGPT"
+Mitanshk01_SMAI-Implementations__Part-1_eval.sh,llm,Mitanshk01/SMAI-Implementations,Part-1/eval.sh,"created by ChatGPT"
+clivet268_CCASatTestSuite__utility_jitter_recusiveJitter.sh,llm,clivet268/CCASatTestSuite,utility/jitter/recusiveJitter.sh,"created by chatgpt"
+raeez_chiral-bar-cobar-vol2__.codex_hooks_pre_bash_guard.sh,llm,raeez/chiral-bar-cobar-vol2,.codex/hooks/pre_bash_guard.sh,"ai generated"
+Nbglut_FOSSATest__create-branches.sh,llm,Nbglut/FOSSATest,create-branches.sh,"created by CHATGPT"
+Low-ResourceDialectology_DialectTools__experiments_2024SchuMATh-deuL-SYNT-deuL-DBLI-0001.sh,llm,Low-ResourceDialectology/DialectTools,experiments/2024SchuMATh-deuL-SYNT-deuL-DBLI-0001.sh,"created by ChatGPT"
+SethMC26_Penguin-Protector-Anti-Malware__scripts_install.sh,llm,SethMC26/Penguin-Protector-Anti-Malware,scripts/install.sh,"Created by chatGPT"
+pavl21_pterodactyl-gui-installer__wings-installer.sh,llm,pavl21/pterodactyl-gui-installer,wings-installer.sh,"created by ChatGPT"
+Noob99n_Fantasy__update-app.sh,llm,Noob99n/Fantasy,update-app.sh,"Created by ChatGPT"
+Noob99n_Fantasy__setup.sh,llm,Noob99n/Fantasy,setup.sh,"Created by ChatGPT"
+Noob99n_Fantasy__deploy-base.sh,llm,Noob99n/Fantasy,deploy-base.sh,"Created by ChatGPT"
+mewoocat_Leaf-dotfiles__.config_eww_images_Untitled Folder_changeSVGColor.sh,llm,mewoocat/Leaf-dotfiles,.config/eww/images/Untitled Folder/changeSVGColor.sh,"Created by chatGPT"
+raeez_ainfinity-chiral-hochschild-cohomology-3d-qft__.codex_hooks_pre_bash_guard.sh,llm,raeez/ainfinity-chiral-hochschild-cohomology-3d-qft,.codex/hooks/pre_bash_guard.sh,"ai generated"
+WelcometoMyGarden_welcometomygarden__tools_set-cf-ip.sh,llm,WelcometoMyGarden/welcometomygarden,tools/set-cf-ip.sh,"written by ChatGPT"
+V01DBREAKER_V01DBot__start.sh,llm,V01DBREAKER/V01DBot,start.sh,"Written by CHATGPT"
+builab_subtomo_scripts__find_beads.sh,llm,builab/subtomo_scripts,find_beads.sh,"written by ChatGPT"
+henrymai_container_env__mac.env.sh,llm,henrymai/container_env,mac.env.sh,"written by ChatGPT"
+phoggy_rayvn__lib_config.sh,llm,phoggy/rayvn,lib/config.sh,"Written by Claude"
+ChocolateLoverRaj_zfs-incremental-backup__delete_all_buckets_and_sqs.sh,llm,ChocolateLoverRaj/zfs-incremental-backup,delete_all_buckets_and_sqs.sh,"Written by ChatGPT"
+Theta-Limited_ThetaTools__renameDroneImage.sh,llm,Theta-Limited/ThetaTools,renameDroneImage.sh,"written by chatgpt"
+17thSaint_fzj__cluster-codes_run-script-jsc.sh,llm,17thSaint/fzj,cluster-codes/run-script-jsc.sh,"written by ChatGPT"
+ReachableCEO_TSYSSecretsManager__bin_prod.sh,llm,ReachableCEO/TSYSSecretsManager,bin/prod.sh,"Written by Chatgpt"
+Beinmann_dotfilesV3__modules_i3_.config_i3_scripts_i3_window_change_subscriber.sh,llm,Beinmann/dotfilesV3,modules/i3/.config/i3/scripts/i3_window_change_subscriber.sh,"written by ChatGPT"
+nodsup-halnux_NockChainExperiments__scripts_logs_search.sh,llm,nodsup-halnux/NockChainExperiments,scripts/logs_search.sh,"written by chatgpt"
+Feng-Lab-MIT_AstrocyteHeterogeneity__making_supp_tables_merge_csv_to_excel_fullname.sh,llm,Feng-Lab-MIT/AstrocyteHeterogeneity,making_supp_tables/merge_csv_to_excel_fullname.sh,"Written by ChatGPT"
+fiforms_snapsearch__scripts_generate_json.sh,llm,fiforms/snapsearch,scripts/generate_json.sh,"Written by ChatGPT"
+Yifferpi_dotfiles__install_pandoc.sh,llm,Yifferpi/dotfiles,install/pandoc.sh,"written by ChatGPT"
+andyzorigin_cybench__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,andyzorigin/cybench,benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+zudsniper_bashbits__installers_get_gum.sh,llm,zudsniper/bashbits,installers/get_gum.sh,"written by ChatGPT"
+Sentience-Robotics_sentience-docs-setup__tools_delete_user.sh,llm,Sentience-Robotics/sentience-docs-setup,tools/delete_user.sh,"written by ChatGPT"
+sodoesaburningbus_ValpoMetTower__run_tower_feed.sh,llm,sodoesaburningbus/ValpoMetTower,run_tower_feed.sh,"Written by ChatGPT"
+ferntheplant_dotfiles__scripts_install.sh,llm,ferntheplant/dotfiles,scripts/install.sh,"WRITTEN BY CHATGPT"
+TheSillySmoker_marksch__blog_portfolio_update_averages.sh,llm,TheSillySmoker/marksch,blog/portfolio/update_averages.sh,"written by ChatGPT"
+Arnaud-Sibille_odoo-unix-helpers__completion.sh,llm,Arnaud-Sibille/odoo-unix-helpers,completion.sh,"written by chatgpt"
+nerffan1_FODLego__survey_setup.sh,llm,nerffan1/FODLego,survey_setup.sh,"Written by ChatGPT"
+SyphonArch_Cornell-CS6120-Advanced-Compilers__lesson3_run_all_tdce.sh,llm,SyphonArch/Cornell-CS6120-Advanced-Compilers,lesson3/run_all_tdce.sh,"written by ChatGPT"
+builab_subtomo_scripts__extract_ts_middle_image.sh,llm,builab/subtomo_scripts,extract_ts_middle_image.sh,"Written by ChatGPT"
+bjcoleman_aws_instances__install_keys.sh,llm,bjcoleman/aws_instances,install_keys.sh,"written by ChatGPT"
+FinsureConsulting_finsure__move_images.sh,llm,FinsureConsulting/finsure,move_images.sh,"Written by ChatGPT"
+fiforms_snapsearch__scripts_build_condensed_image.sh,llm,fiforms/snapsearch,scripts/build_condensed_image.sh,"written by ChatGPT"
+apoelstra_local-nix-ci__queue.sh,llm,apoelstra/local-nix-ci,queue.sh,"written by ChatGPT"
+17thSaint_fzj__cluster-codes_run-script.sh,llm,17thSaint/fzj,cluster-codes/run-script.sh,"written by ChatGPT"
+SamVarahram_Suduko_solver__average_time.sh,llm,SamVarahram/Suduko_solver,average_time.sh,"written by chatgpt"
+campusrover_rosutils__install_set_hostname.sh,llm,campusrover/rosutils,install/set_hostname.sh,"written by ChatGPT"
+Yifferpi_dotfiles__install_cups.sh,llm,Yifferpi/dotfiles,install/cups.sh,"written by ChatGPT"
+SyphonArch_Cornell-CS6120-Advanced-Compilers__lesson3_run_all_lvn_tdce.sh,llm,SyphonArch/Cornell-CS6120-Advanced-Compilers,lesson3/run_all_lvn_tdce.sh,"written by ChatGPT"
+denshinobi_saya__games_speedbase.sh,llm,denshinobi/saya,games/speedbase.sh,"written by chatgpt"
+17thSaint_fzj__cluster-codes_make-new-prf.sh,llm,17thSaint/fzj,cluster-codes/make-new-prf.sh,"written by ChatGPT"
+builab_subtomo_scripts__tomostar_edit_batch.sh,llm,builab/subtomo_scripts,tomostar_edit_batch.sh,"Written by ChatGPT"
+NevilleDNZ_ghstpipe__bin_git-check-status.sh,llm,NevilleDNZ/ghstpipe,bin/git-check-status.sh,"Written by ChatGPT"
+isworking_dots__waybar_.config_waybar_scripts_volume-control.sh,llm,isworking/dots,waybar/.config/waybar/scripts/volume-control.sh,"written by ChatGPT"
+builab_subtomo_scripts__copy_xf_tlt_files_to_warp_batch.sh,llm,builab/subtomo_scripts,copy_xf_tlt_files_to_warp_batch.sh,"Written by ChatGPT"
+gega_rebash__tsess.sh,llm,gega/rebash,tsess.sh,"written by ChatGPT"
+zudsniper_bashbits__builders_build_py3.sh,llm,zudsniper/bashbits,builders/build_py3.sh,"WRITTEN BY ChatGPT"
+TheSillySmoker_marksch__blog_portfolio_old_scripts_update_averages.sh,llm,TheSillySmoker/marksch,blog/portfolio/old_scripts/update_averages.sh,"written by ChatGPT"
+amazon-science_Cyber-Zero__benchmarks_cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,amazon-science/Cyber-Zero,benchmarks/cybench/HTB/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+enigma-agent_benchmarks__cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,enigma-agent/benchmarks,cybench/HTB/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+boyiwei_cybench-dataset__HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,boyiwei/cybench-dataset,HTB/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+PenghaoJiang_VulRL__benchmark_ctfmix_cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,PenghaoJiang/VulRL,benchmark/ctfmix/cybench/HTB/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+KalebBacztub_Cybench2.0__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,KalebBacztub/Cybench2.0,benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+autopencil-1_cybench-testbed__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,autopencil-1/cybench-testbed,benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+McGill-NLP_BRIDGE__data_cybench_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,McGill-NLP/BRIDGE,data/cybench/benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+sunblaze-ucb_cybergym-agent-examples__cybench_cybench-repo_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,sunblaze-ucb/cybergym-agent-examples,cybench/cybench-repo/benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+yuxuan18_icml25-code__cybench_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,yuxuan18/icml25-code,cybench/benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+sunblaze-ucb_cybergym-neurips-25__scripts_agents_cybench_cybench-repo_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,llm,sunblaze-ucb/cybergym-neurips-25,scripts/agents/cybench/cybench-repo/benchmark/hackthebox/cyber-apocalypse-2024/forensics/[Medium] Data Siege/metadata/requirements.sh,"WRITTEN BY CHATGPT"
+namidaco_namida__scripts_gen_downloads_table.sh,llm,namidaco/namida,scripts/gen_downloads_table.sh,"Generated by claude"
+nyldn_claude-octopus__scripts_lib_research.sh,llm,nyldn/claude-octopus,scripts/lib/research.sh,"Generated by Claude"
+eclipse-omr_omr__buildenv_jenkins_clang_format_clang-format-wrapper.sh,llm,eclipse-omr/omr,buildenv/jenkins/clang_format/clang-format-wrapper.sh,"generated by Claude"
+ROCm_amdsmi__tools_run-clang-tidy.sh,llm,ROCm/amdsmi,tools/run-clang-tidy.sh,"generated by Claude"
+AztecProtocol_aztec-packages__docs_scripts_lib_create_doc_update_pr.sh,llm,AztecProtocol/aztec-packages,docs/scripts/lib/create_doc_update_pr.sh,"generated by Claude"
+philippb_claude-homeassistant__.claude-code_hooks_yaml-formatter.sh,llm,philippb/claude-homeassistant,.claude-code/hooks/yaml-formatter.sh,"generated by Claude"
+apify_mcpc__docs_examples_company-lookup.sh,llm,apify/mcpc,docs/examples/company-lookup.sh,"generated by Claude"
+huangjia2019_claude-code-engineering__08-Headless_projects_02-scripts_review.sh,llm,huangjia2019/claude-code-engineering,08-Headless/projects/02-scripts/review.sh,"Generated by Claude"
+devfile_devworkspace-operator__.ci_oci-devworkspace-happy-path.sh,llm,devfile/devworkspace-operator,.ci/oci-devworkspace-happy-path.sh,"Generated by Claude"
+aws-samples_serverless-samples__claude-hub_examples_mdm_uninstall-macos.sh,llm,aws-samples/serverless-samples,claude-hub/examples/mdm/uninstall-macos.sh,"generated by claude"
+tpvasconcelos_ridgeplot__cicd_utils_find-unmentioned-prs.sh,llm,tpvasconcelos/ridgeplot,cicd_utils/find-unmentioned-prs.sh,"generated by Claude"
+dcb_homeassistant-claude-kit__.claude_hooks_yamllint-claude-only.sh,llm,dcb/homeassistant-claude-kit,.claude/hooks/yamllint-claude-only.sh,"Generated by Claude"
+FoundationDB_fdb-joshua__joshua_dashboard.sh,llm,FoundationDB/fdb-joshua,joshua_dashboard.sh,"generated by claude"
+ruvnet_open-claude-code__scripts_analyze-discoveries.sh,llm,ruvnet/open-claude-code,scripts/analyze-discoveries.sh,"generated by Claude"
+jmckinley_claude-code-resources__claude-code-jumpstart.sh,llm,jmckinley/claude-code-resources,claude-code-jumpstart.sh,"Generated by Claude"
+marcuspat_turbo-flow__V1_devpods_generate-claude-md.sh,llm,marcuspat/turbo-flow,V1/devpods/generate-claude-md.sh,"generated by Claude"
+hex_claude-council__scripts_format-output.sh,llm,hex/claude-council,scripts/format-output.sh,"generated by Claude"
+0xAxiom_AppFactory__app-factory_scripts_auto_plan_build.sh,llm,0xAxiom/AppFactory,app-factory/scripts/auto_plan_build.sh,"generated by Claude"
+FlorianBruniaux_cc-copilot-bridge__install.sh,llm,FlorianBruniaux/cc-copilot-bridge,install.sh,"Generated by claude"
+imbue-ai_mngr__libs_mngr_imbue_mngr_resources_mega_tutorial.sh,llm,imbue-ai/mngr,libs/mngr/imbue/mngr/resources/mega_tutorial.sh,"generated by Claude"
+mzazon_cloud-projects__aws_eks-ingress-alb-controller_code_scripts_deploy.sh,llm,mzazon/cloud-projects,aws/eks-ingress-alb-controller/code/scripts/deploy.sh,"Generated by Claude"
+mzazon_cloud-projects__aws_eks-ingress-alb-controller_code_scripts_destroy.sh,llm,mzazon/cloud-projects,aws/eks-ingress-alb-controller/code/scripts/destroy.sh,"Generated by Claude"
+Vrooli_Vrooli__resources_litellm_examples_claude-code-setup.sh,llm,Vrooli/Vrooli,resources/litellm/examples/claude-code-setup.sh,"Generated by claude"
+mzazon_cloud-projects__aws_conversational-ai-bedrock-claude_code_scripts_destroy.sh,llm,mzazon/cloud-projects,aws/conversational-ai-bedrock-claude/code/scripts/destroy.sh,"Generated by Claude"
+mzazon_cloud-projects__aws_conversational-ai-bedrock-claude_code_scripts_deploy.sh,llm,mzazon/cloud-projects,aws/conversational-ai-bedrock-claude/code/scripts/deploy.sh,"Generated by Claude"
+dnviti_arsenale__scripts_setup-github-labels.sh,llm,dnviti/arsenale,scripts/setup-github-labels.sh,"Generated by Claude"
+AaltoSciComp_triton-bin__bin_ai_agents.sh,llm,AaltoSciComp/triton-bin,bin/ai_agents.sh,"generated by Claude"
+sseshachala_Claude_Audit__apply.sh,llm,sseshachala/Claude_Audit,apply.sh,"generated by claude"
+luiseiman_dotforge__template_hooks_post-compact.sh,llm,luiseiman/dotforge,template/hooks/post-compact.sh,"generated by Claude"
+brunoasm_Oenocarpus_genome_phylo__04_extract_orthologs.sh,llm,brunoasm/Oenocarpus_genome_phylo,04_extract_orthologs.sh,"Generated by Claude"
+nategarelik_ikemen-forge__scripts_scaffold-stage.sh,llm,nategarelik/ikemen-forge,scripts/scaffold-stage.sh,"generated by Claude"
+AndreBFarias_Luna__src_tools_check_anonymity.sh,llm,AndreBFarias/Luna,src/tools/check_anonymity.sh,"generated by claude"
+sseshachala_Claude_Audit__remediation_apply.sh,llm,sseshachala/Claude_Audit,remediation/apply.sh,"generated by claude"
+brunoasm_Oenocarpus_genome_phylo__08b_iqtree_concat_tree.sh,llm,brunoasm/Oenocarpus_genome_phylo,08b_iqtree_concat_tree.sh,"Generated by Claude"
+yingwang_lm__benchmark_comparison_run.sh,llm,yingwang/lm,benchmark/comparison/run.sh,"generated by Claude"
+ho-Logos_a__linux_lock-accounts.sh,llm,ho-Logos/a,linux/lock-accounts.sh,"generated by claude"
+jleechanorg_claude-commands__backup-scripts_claude_backup_enhanced.sh,llm,jleechanorg/claude-commands,backup-scripts/claude_backup_enhanced.sh,"Generated by Claude"
+asikmydeen_claude-auto-setup__agents_cursor_adapter.sh,llm,asikmydeen/claude-auto-setup,agents/cursor/adapter.sh,"generated by claude"
+petekp_claude-code-setup__scripts_inject-handoff-on-restart.sh,llm,petekp/claude-code-setup,scripts/inject-handoff-on-restart.sh,"generated by Claude"
+bjamba_tokade__scripts_check.sh,llm,bjamba/tokade,scripts/check.sh,"generated by claude"
+Prathamesh0421_ProductionAgents__stream-c_week-2_terraform_scripts_high_cpu_fix.sh,llm,Prathamesh0421/ProductionAgents,stream-c/week-2/terraform/scripts/high_cpu_fix.sh,"generated by Claude"
+a2ngerer_claude_onboarding_agent__skills_web-development-setup_type-check-hook.template.sh,llm,a2ngerer/claude_onboarding_agent,skills/web-development-setup/type-check-hook.template.sh,"Generated by claude"
+DNYoussef_context-cascade__skills_operations_performance-analysis_resources_metrics-reporter.sh,llm,DNYoussef/context-cascade,skills/operations/performance-analysis/resources/metrics-reporter.sh,"generated by Claude"
+asikmydeen_claude-auto-setup__agents_codex-cli_adapter.sh,llm,asikmydeen/claude-auto-setup,agents/codex-cli/adapter.sh,"generated by claude"
+zhoulianglen_Aidots__aidots_scripts_backup.sh,llm,zhoulianglen/Aidots,aidots/scripts/backup.sh,"generated by claude"
+trentzz_kam__claude_loop.sh,llm,trentzz/kam,claude_loop.sh,"generated by Claude"
+didoux_claude-gitignore-skill__scripts_generate_gitignore.sh,llm,didoux/claude-gitignore-skill,scripts/generate_gitignore.sh,"Generated by Claude"
+brunoasm_Oenocarpus_genome_phylo__06_run_aliscore_alicut.sh,llm,brunoasm/Oenocarpus_genome_phylo,06_run_aliscore_alicut.sh,"Generated by Claude"
+jmanhype_reer_mlx__.claude_hooks_post_run.sh,llm,jmanhype/reer_mlx,.claude/hooks/post_run.sh,"generated by Claude"
+asikmydeen_claude-auto-setup__agents_copilot_adapter.sh,llm,asikmydeen/claude-auto-setup,agents/copilot/adapter.sh,"generated by claude"
+mrquentin_claude-sandbox__lib_network-isolation.sh,llm,mrquentin/claude-sandbox,lib/network-isolation.sh,"Generated by claude"
+nirecom_dotfiles__install_linux_session-sync-init.sh,llm,nirecom/dotfiles,install/linux/session-sync-init.sh,"generated by Claude"
+peterbamuhigire_website-skills__new-project.sh,llm,peterbamuhigire/website-skills,new-project.sh,"generated by Claude"
+CozyTalk_CozyTalk__.claude_hooks_enforce-authorship.sh,llm,CozyTalk/CozyTalk,.claude/hooks/enforce-authorship.sh,"generated by claude"
+TheClassicTechno_cs372research__create_guardrails.sh,llm,TheClassicTechno/cs372research,create_guardrails.sh,"generated by Claude"
+pi-sister_MDSC519assignment1__scripts_run_fimo.sh,llm,pi-sister/MDSC519assignment1,scripts/run_fimo.sh,"Generated by Claude"
+tianlelyd_script-hub__mac_claude_env.sh,llm,tianlelyd/script-hub,mac/claude_env.sh,"generated by claude"
+LazOof69_AIFX_v2__scripts_archive_check-services.sh,llm,LazOof69/AIFX_v2,scripts/archive/check-services.sh,"Generated by Claude"
+The-Skyy-Rose-Collection-LLC_DevSkyy__scripts_optimize-repo.sh,llm,The-Skyy-Rose-Collection-LLC/DevSkyy,scripts/optimize-repo.sh,"Generated by Claude"
+DNYoussef_context-cascade__skills_operations_performance-analysis_examples_resource-utilization-example.sh,llm,DNYoussef/context-cascade,skills/operations/performance-analysis/examples/resource-utilization-example.sh,"Generated by Claude"
+gguloadoong_idea-factory__templates_scripts_review-summary.sh,llm,gguloadoong/idea-factory,templates/scripts/review-summary.sh,"Generated by Claude"
+datablogin_causal-optimizer__claude-review.sh,llm,datablogin/causal-optimizer,claude-review.sh,"generated by Claude"
+FortiumPartners_ai-mesh__hooks_install-metrics-hooks.sh,llm,FortiumPartners/ai-mesh,hooks/install-metrics-hooks.sh,"Generated by Claude"
+clu5_configs__install_vim.sh,llm,clu5/configs,install_vim.sh,"Generated by Claude"
+seanchatmangpt_erlmcp__tools_claude-md-sync.sh,llm,seanchatmangpt/erlmcp,tools/claude-md-sync.sh,"Generated by claude"
+gguloadoong_market-dashboard-v5__scripts_review-summary.sh,llm,gguloadoong/market-dashboard-v5,scripts/review-summary.sh,"Generated by Claude"
+gguloadoong_market-dashboard-v2__scripts_create-pr.sh,llm,gguloadoong/market-dashboard-v2,scripts/create-pr.sh,"Generated by Claude"
+peers8862_Distill__distill.sh,llm,peers8862/Distill,distill.sh,"generated by Claude"
+adrianwedd_homelab-scripts__rclone-sync.sh,llm,adrianwedd/homelab-scripts,rclone-sync.sh,"Generated by Claude"
+Meeple-Meet_Meeple-Meet__scripts_check-compose-delays.sh,llm,Meeple-Meet/Meeple-Meet,scripts/check-compose-delays.sh,"Generated by Claude"
+vivek43nit_claude-code-kit__remote-install.sh,llm,vivek43nit/claude-code-kit,remote-install.sh,"generated by claude"
+Clinteastman_claudefarm__client_setup-client.sh,llm,Clinteastman/claudefarm,client/setup-client.sh,"generated by claude"
+amo-tech-ai_medellin-spark__.claude_skills_skills-fix.sh,llm,amo-tech-ai/medellin-spark,.claude/skills/skills-fix.sh,"Generated by Claude"
+s8w1e2ep_cicd-skills-demo__.claude_skills_security-scan_scripts_ensure_pr.sh,llm,s8w1e2ep/cicd-skills-demo,.claude/skills/security-scan/scripts/ensure_pr.sh,"Generated by Claude"
+heydemo_add-scripts__bin_user_git-commit-helper.sh,llm,heydemo/add-scripts,bin/user/git-commit-helper.sh,"Generated by Claude"
+martijnbokma_claude-menu__lib_claude-menu-modes.sh,llm,martijnbokma/claude-menu,lib/claude-menu-modes.sh,"Generated by claude"
+spencerbeggs_claude-plugin-template__plugin_scripts_setup-proxy.sh,llm,spencerbeggs/claude-plugin-template,plugin/scripts/setup-proxy.sh,"generated by claude"
+forkni_claude-git-workflow__scripts_git_setup_attributes.sh,llm,forkni/claude-git-workflow,scripts/git/setup_attributes.sh,"generated by claude"
+LazOof69_AIFX_v2__setup.sh,llm,LazOof69/AIFX_v2,setup.sh,"Generated by Claude"
+tokamak-network_tokamak-agent-teams__forge.sh,llm,tokamak-network/tokamak-agent-teams,forge.sh,"generated by Claude"
+Basilisk-Systems_claude-toolkit__project-init.sh,llm,Basilisk-Systems/claude-toolkit,project-init.sh,"generated by claude"
+dbx0_agents-hackaton__agents_hackernewsletter-creator-9edc4e30_run-agent.sh,llm,dbx0/agents-hackaton,agents/hackernewsletter-creator-9edc4e30/run-agent.sh,"Generated by Claude"
+adrianwedd_homelab-scripts__disk-cleanup.sh,llm,adrianwedd/homelab-scripts,disk-cleanup.sh,"Generated by Claude"
+rohit-vc26_claude-power-kit__hooks_memory_git_backup.sh,llm,rohit-vc26/claude-power-kit,hooks/memory_git_backup.sh,"generated by claude"
+usewayfind_wayfind__journal-summary.sh,llm,usewayfind/wayfind,journal-summary.sh,"generated by Claude"
+ppx123-web_claude-config__sync-claude-config.sh,llm,ppx123-web/claude-config,sync-claude-config.sh,"Generated by Claude"
+joshuachen3333_strong_number_embedding__sn_within_unv_selfgroup_segmentation_batch_parse_genesis_all_50.sh,llm,joshuachen3333/strong_number_embedding,sn_within_unv_selfgroup_segmentation/batch_parse_genesis_all_50.sh,"Generated by Claude"
+brandonlacoste9-tech_adgenxai__scripts_claude-autofix.sh,llm,brandonlacoste9-tech/adgenxai,scripts/claude-autofix.sh,"generated by Claude"
+jhousteau_solution-desk-engine__.genesis_scripts_find-hardcoded-values.sh,llm,jhousteau/solution-desk-engine,.genesis/scripts/find-hardcoded-values.sh,"Generated by Claude"
+quanhea_claude-harness__archive_scripts_worktree-create.sh,llm,quanhea/claude-harness,archive/scripts/worktree-create.sh,"generated by claude"
+vedantmehta14_key-value-cassandra__scripts_kill.sh,llm,vedantmehta14/key-value-cassandra,scripts/kill.sh,"AI generated"
+allenmjmu_projects__scripts_tar.sh,llm,allenmjmu/projects,scripts/tar.sh,"AI Generated"
+awslabs_aws-glue-schema-registry__multilang-schema-registry_scripts_trace-protobuf-reflection.sh,llm,awslabs/aws-glue-schema-registry,multilang-schema-registry/scripts/trace-protobuf-reflection.sh,"AI Generated"
+totouncle_ShotPipe-AX__build_macos.sh,llm,totouncle/ShotPipe-AX,build_macos.sh,"AI Generated"
+hobeone_dotfiles__scripts_start_socks_proxy.sh,llm,hobeone/dotfiles,scripts/start_socks_proxy.sh,"AI Generated"
+systemd_systemd__travis-ci_managers_fuzzit.sh,human,systemd/systemd,travis-ci/managers/fuzzit.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__tools_meson-apply-m4.sh,human,systemd/systemd,tools/meson-apply-m4.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__travis-ci_tools_get-coverity.sh,human,systemd/systemd,travis-ci/tools/get-coverity.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-07-ISSUE-1981_test-segfault.sh,human,systemd/systemd,test/TEST-07-ISSUE-1981/test-segfault.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-39-EXECRELOAD_testsuite.sh,human,systemd/systemd,test/TEST-39-EXECRELOAD/testsuite.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-07-ISSUE-1981_test.sh,human,systemd/systemd,test/TEST-07-ISSUE-1981/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-02-CRYPTSETUP_test.sh,human,systemd/systemd,test/TEST-02-CRYPTSETUP/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-12-ISSUE-3171_test.sh,human,systemd/systemd,test/TEST-12-ISSUE-3171/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-26-SETENV_test.sh,human,systemd/systemd,test/TEST-26-SETENV/test.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__src_basic_generate-cap-list.sh,human,systemd/systemd,src/basic/generate-cap-list.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-19-DELEGATE_testsuite.sh,human,systemd/systemd,test/TEST-19-DELEGATE/testsuite.sh,tree_at_commit_before_2020:14157349
+systemd_systemd__test_TEST-10-ISSUE-2467_test.sh,human,systemd/systemd,test/TEST-10-ISSUE-2467/test.sh,tree_at_commit_before_2020:14157349

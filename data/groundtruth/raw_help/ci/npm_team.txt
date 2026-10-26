@@ -1,0 +1,13 @@
+Manage organization teams and team memberships
+
+Usage:
+npm team create <scope:team> [--otp <otpcode>]
+npm team destroy <scope:team> [--otp <otpcode>]
+npm team add <scope:team> <user> [--otp <otpcode>]
+npm team rm <scope:team> <user> [--otp <otpcode>]
+npm team ls <scope>|<scope:team>
+
+Options:
+[--registry <registry>] [--otp <otp>] [-p|--parseable] [--json]
+
+Run "npm help team" for more info

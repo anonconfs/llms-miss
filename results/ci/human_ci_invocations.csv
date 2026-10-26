@@ -1,0 +1,263 @@
+file,program,subcommand,options,option_count
+babel_babel__.github_workflows_ci.yml,npm,ci,,0
+babel_babel__.github_workflows_ci.yml,npm,ci,,0
+babel_babel__.github_workflows_ci.yml,npm,ci,,0
+babel_babel__.github_workflows_issue-triage.yml,npm,cache,,0
+babel_babel__.github_workflows_issue-triage.yml,npm,website,,0
+babel_babel__.github_workflows_issue-triage.yml,npm,can,,0
+babel_babel__.github_workflows_issue-triage.yml,npm,is,,0
+containerd_containerd__.github_workflows_release.yml,docker,buildx,--build-arg --platform -f -o,4
+django_django__.github_workflows_benchmark.yml,pip,install,-r,1
+django_django__.github_workflows_docs.yml,pip,install,-r,1
+django_django__.github_workflows_linters.yml,pip,install,,0
+django_django__.github_workflows_linters.yml,pip,install,,0
+django_django__.github_workflows_schedule_tests.yml,pip,install,--upgrade,1
+django_django__.github_workflows_schedule_tests.yml,pip,setuptools,,0
+django_django__.github_workflows_schedule_tests.yml,pip,install,-e -r,2
+django_django__.github_workflows_schedule_tests.yml,npm,install,,0
+django_django__.github_workflows_schedule_tests.yml,npm,test,,0
+django_django__.github_workflows_tests.yml,pip,install,--upgrade,1
+django_django__.github_workflows_tests.yml,pip,setuptools,,0
+django_django__.github_workflows_tests.yml,pip,install,-e -r,2
+django_django__.github_workflows_tests.yml,npm,install,,0
+django_django__.github_workflows_tests.yml,npm,test,,0
+docker_cli__.github_workflows_e2e.yml,docker,restart,,0
+docker_cli__.github_workflows_e2e.yml,docker,version,,0
+docker_cli__.github_workflows_e2e.yml,docker,info,,0
+docker_compose__.github_workflows_ci.yml,docker,buildx,--print -cr,2
+docker_compose__.github_workflows_ci.yml,docker,version,,0
+docker_compose__.github_workflows_merge.yml,docker,ps,--all,1
+docker_compose__.github_workflows_merge.yml,docker,volume,,0
+docker_compose__.github_workflows_merge.yml,docker,network,,0
+docker_compose__.github_workflows_merge.yml,docker,image,,0
+docker_compose__.github_workflows_merge.yml,docker,kill,-q,1
+docker_compose__.github_workflows_merge.yml,docker,ps,-q,1
+docker_compose__.github_workflows_merge.yml,docker,rm,-aq -f,2
+docker_compose__.github_workflows_merge.yml,docker,ps,-aq,1
+docker_compose__.github_workflows_merge.yml,docker,volume,-f -q,2
+docker_compose__.github_workflows_merge.yml,docker,volume,-q,1
+docker_compose__.github_workflows_merge.yml,docker,ps,--all,1
+eslint_eslint__.github_workflows_ci.yml,npm,install,,0
+eslint_eslint__.github_workflows_ci.yml,npm,install,,0
+eslint_eslint__.github_workflows_ci.yml,npm,run-script,,0
+eslint_eslint__.github_workflows_ci.yml,npm,install,,0
+eslint_eslint__.github_workflows_ci.yml,npm,install,,0
+grafana_grafana__.github_workflows_backport.yml,npm,install,--prefix --production,2
+grafana_grafana__.github_workflows_bump-version.yml,npm,install,--prefix --production,2
+grafana_grafana__.github_workflows_close-milestone.yml,npm,install,--prefix --production,2
+grafana_grafana__.github_workflows_commands.yml,npm,install,--prefix --production,2
+grafana_grafana__.github_workflows_enterprise-pr-check.yml,npm,install,--prefix --production,2
+grafana_grafana__.github_workflows_github-release.yml,npm,install,--prefix --production,2
+moby_moby__.github_workflows_.dco.yml,docker,run,--rm,1
+moby_moby__.github_workflows_.windows.yml,docker,info,,0
+moby_moby__.github_workflows_.windows.yml,docker,pull,,0
+moby_moby__.github_workflows_.windows.yml,docker,tag,,0
+moby_moby__.github_workflows_.windows.yml,docker,build,--build-arg -f -t,3
+moby_moby__.github_workflows_.windows.yml,docker,run,--name -e,2
+moby_moby__.github_workflows_.windows.yml,docker,cp,,0
+moby_moby__.github_workflows_.windows.yml,docker,cp,,0
+moby_moby__.github_workflows_.windows.yml,docker,cp,,0
+moby_moby__.github_workflows_.windows.yml,docker,cp,,0
+moby_moby__.github_workflows_.windows.yml,docker,cp,,0
+moby_moby__.github_workflows_.windows.yml,docker,info,,0
+moby_moby__.github_workflows_.windows.yml,docker,pull,,0
+moby_moby__.github_workflows_.windows.yml,docker,tag,,0
+moby_moby__.github_workflows_.windows.yml,docker,build,--build-arg -f -t,3
+moby_moby__.github_workflows_.windows.yml,docker,run,--name -e,2
+moby_moby__.github_workflows_.windows.yml,docker,version,-f,1
+moby_moby__.github_workflows_buildkit.yml,docker,restart,,0
+moby_moby__.github_workflows_buildkit.yml,docker,version,,0
+moby_moby__.github_workflows_buildkit.yml,docker,info,,0
+nodejs_node__.github_workflows_auto-start-ci.yml,npm,install,-g,1
+nodejs_node__.github_workflows_commit-queue.yml,npm,install,-g,1
+nodejs_node__.github_workflows_coverage-linux.yml,pip,install,,0
+numpy_numpy__.github_workflows_build_test.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_build_test.yml,pip,install,--upgrade,1
+numpy_numpy__.github_workflows_build_test.yml,pip,setuptools,,0
+numpy_numpy__.github_workflows_build_test.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_build_test.yml,docker,run,--privileged --reset --rm -p,4
+numpy_numpy__.github_workflows_build_test.yml,docker,run,--interactive --name -c -v,4
+numpy_numpy__.github_workflows_build_test.yml,pip,install,,0
+numpy_numpy__.github_workflows_build_test.yml,docker,commit,,0
+numpy_numpy__.github_workflows_build_test.yml,docker,run,--interactive --name -c -v,4
+numpy_numpy__.github_workflows_build_test.yml,docker,commit,,0
+numpy_numpy__.github_workflows_build_test.yml,docker,run,--interactive --rm -c -v,4
+numpy_numpy__.github_workflows_build_test.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_cygwin.yml,pip,python,,0
+numpy_numpy__.github_workflows_cygwin.yml,pip,install,,0
+numpy_numpy__.github_workflows_cygwin.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_cygwin.yml,pip,install,,0
+numpy_numpy__.github_workflows_cygwin.yml,pip,show,,0
+numpy_numpy__.github_workflows_cygwin.yml,pip,show,-f,1
+numpy_numpy__.github_workflows_emscripten.yml,pip,install,,0
+numpy_numpy__.github_workflows_emscripten.yml,pip,install,,0
+numpy_numpy__.github_workflows_emscripten.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_linux_meson.yml,pip,install,-r,1
+numpy_numpy__.github_workflows_linux_meson.yml,pip,install,,0
+numpy_numpy__.github_workflows_wheels.yml,pip,install,,0
+numpy_numpy__.github_workflows_wheels.yml,pip,install,-r,1
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,docker,pull,,0
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,docker,run,--platform -v,2
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,install,--no-deps -U,2
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,wheel,,0
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,install,--no-build-isolation --no-use-pep517 -e,3
+pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pip,list,,0
+pandas-dev_pandas__.github_workflows_autoupdate-pre-commit-config.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_code-checks.yml,docker,image,-f,1
+pandas-dev_pandas__.github_workflows_code-checks.yml,docker,build,--no-cache --pull --tag,3
+pandas-dev_pandas__.github_workflows_code-checks.yml,docker,run,-c -n -w,3
+pandas-dev_pandas__.github_workflows_code-checks.yml,pip,install,-r,1
+pandas-dev_pandas__.github_workflows_package-checks.yml,pip,install,--upgrade,1
+pandas-dev_pandas__.github_workflows_package-checks.yml,pip,setuptools,,0
+pandas-dev_pandas__.github_workflows_package-checks.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_package-checks.yml,pip,install,--no-build-isolation -e,2
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,--upgrade,1
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,setuptools,,0
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,-i,1
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,list,,0
+pandas-dev_pandas__.github_workflows_python-dev.yml,pip,install,--no-build-isolation --no-index --no-use-pep517 -e,4
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,--upgrade,1
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,setuptools,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,list,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,list,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+pandas-dev_pandas__.github_workflows_sdist.yml,pip,install,,0
+prettier_prettier__.github_workflows_dev-package-test.yml,npm,install,--global,1
+pytorch_pytorch__.github_workflows__android-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-build-test.yml,docker,run,-e,1
+pytorch_pytorch__.github_workflows__android-build-test.yml,docker,exec,-e -i -u,3
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,cp,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,cp,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,cp,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,cp,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,exec,,0
+pytorch_pytorch__.github_workflows__android-full-build-test.yml,docker,cp,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,exec,-R -c -t,3
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,docker,exec,-Lr -R -c -t,4
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,pip,install,-r,1
+pytorch_pytorch__.github_workflows__bazel-build-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__binary-build-linux.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__binary-build-linux.yml,docker,exec,-c -t -w,3
+pytorch_pytorch__.github_workflows__binary-build-linux.yml,docker,exec,-c -t,2
+pytorch_pytorch__.github_workflows__binary-build-linux.yml,docker,run,--rm -R -g -u -v -w,6
+pytorch_pytorch__.github_workflows__binary-test-linux.yml,docker,runtime,,0
+pytorch_pytorch__.github_workflows__docs.yml,docker,exec,--format -it,2
+pytorch_pytorch__.github_workflows__docs.yml,docker,container,--format,1
+pytorch_pytorch__.github_workflows__docs.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__docs.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__docs.yml,docker,exec,-R -c -t,3
+pytorch_pytorch__.github_workflows__docs.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__ios-build-test.yml,pip,install,--pre -f,2
+pytorch_pytorch__.github_workflows__ios-build-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__ios-build-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__linux-build.yml,docker,exec,-c -t,2
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,exec,--format -it,2
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,container,--format,1
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,image,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,runtime,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,run,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,exec,-c -t,2
+pytorch_pytorch__.github_workflows__linux-test.yml,pip,install,,0
+pytorch_pytorch__.github_workflows__linux-test.yml,docker,exec,-c -ex,2
+pytorch_pytorch__.github_workflows__linux-test.yml,pip,install,-r,1
+pytorch_pytorch__.github_workflows__linux-test.yml,pip,install,,0
+rails_rails__.github_workflows_lint.yml,pip,install,--upgrade,1
+rails_rails__.github_workflows_lint.yml,pip,install,,0
+scikit-learn_scikit-learn__.github_workflows_check-manifest.yml,pip,install,--upgrade,1
+scikit-learn_scikit-learn__.github_workflows_check-manifest.yml,pip,install,,0
+scikit-learn_scikit-learn__.github_workflows_labeler-title-regex.yml,pip,install,-Uq,1
+scikit-learn_scikit-learn__.github_workflows_publish_pypi.yml,pip,install,-U,1
+tensorflow_tensorflow__.github_workflows_arm-cd.yml,docker,ps,-q,1
+tensorflow_tensorflow__.github_workflows_arm-cd.yml,docker,stop,,0
+tensorflow_tensorflow__.github_workflows_arm-cd.yml,docker,container,-f,1
+tensorflow_tensorflow__.github_workflows_arm-cd.yml,pip,wheel,,0
+tensorflow_tensorflow__.github_workflows_arm-cd.yml,pip,wheel,,0
+tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,docker,ps,-q,1
+tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,docker,stop,,0
+tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,docker,container,-f,1
+tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,docker,image,-af,1
+tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,pip,tests,,0
+tensorflow_tensorflow__.github_workflows_arm-ci.yml,docker,ps,-q,1
+tensorflow_tensorflow__.github_workflows_arm-ci.yml,docker,stop,,0
+tensorflow_tensorflow__.github_workflows_arm-ci.yml,docker,container,-f,1
+tensorflow_tensorflow__.github_workflows_arm-ci.yml,pip,wheel,,0
+tensorflow_tensorflow__.github_workflows_arm-ci.yml,pip,wheel,,0
+tensorflow_tensorflow__.github_workflows_pylint-presubmit.yml,pip,install,--upgrade,1
+tensorflow_tensorflow__.github_workflows_pylint-presubmit.yml,pip,install,,0
+tensorflow_tensorflow__.github_workflows_sigbuild-docker-branch.yml,docker,containers,,0
+tensorflow_tensorflow__.github_workflows_sigbuild-docker.yml,docker,containers,,0
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-f -g -s,3
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_build_test_deploy.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_pull_request_stats.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_pull_request_stats.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_test_react_experimental.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_test_react_experimental.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_test_react_next.yml,npm,i,-g,1
+vercel_next.js__.github_workflows_test_react_next.yml,npm,i,-g,1

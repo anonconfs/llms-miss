@@ -1,0 +1,11 @@
+Explain installed packages
+
+Usage:
+npm explain <package-spec>
+
+Options:
+[--json] [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+
+alias: why
+
+Run "npm help explain" for more info

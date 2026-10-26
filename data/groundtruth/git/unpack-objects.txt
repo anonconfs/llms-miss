@@ -1,0 +1,5 @@
+--max-input-size
+-n
+-q
+-r
+--strict

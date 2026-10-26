@@ -1,0 +1,9 @@
+Mark your favorite packages
+
+Usage:
+npm star [<package-spec>...]
+
+Options:
+[--registry <registry>] [--no-unicode] [--otp <otp>]
+
+Run "npm help star" for more info

@@ -1,0 +1,77 @@
+name: CI Builds
+
+on: [push]
+
+jobs:
+  validate-markdown:
+    name: Validate Markdown Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true  # Fetches all submodules
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'graalvm' # See 'Supported distributions' for available options
+          java-version: '25'
+      - name: Install JBang
+        run: |
+          curl -Ls https://sh.jbang.dev | bash -s - app setup
+          echo "$HOME/.jbang/bin" >> $GITHUB_PATH
+      - name: Validate Markdown Files
+        run: jbang .github/scripts/MarkdownValidator.java --verbose .
+
+  validate-skills:
+    name: Validate Agent Skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Validate SKILL.md files
+        run: npx skill-check@latest skills --no-security-scan --format github
+        env:
+          SKILL_CHECK_NO_BANNER: 1
+
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit (all files)
+        run: pre-commit run --all-files
+      - name: Validate HEAD commit message
+        run: |
+          git log -1 --pretty=%B > /tmp/commit-msg.txt
+          pre-commit run conventional-pre-commit --hook-stage commit-msg --commit-msg-filename /tmp/commit-msg.txt
+
+  package-agent-artifacts:
+    name: Package Agents and Skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Create agents archive
+        run: cd .cursor && zip -r ../agents.zip agents
+      - name: Create skills archive
+        run: zip -r skills.zip skills
+      - name: Upload agents.zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: agents.zip
+          path: agents.zip
+          if-no-files-found: error
+      - name: Upload skills.zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: skills.zip
+          path: skills.zip
+          if-no-files-found: error

@@ -1,0 +1,15 @@
+Find duplication in the package tree
+
+Usage:
+npm find-dupes
+
+Options:
+[--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+[--global-style] [--strict-peer-deps] [--no-package-lock]
+[--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+[--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+[--ignore-scripts] [--no-audit] [--no-bin-links] [--no-fund]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root] [--install-links]
+
+Run "npm help find-dupes" for more info

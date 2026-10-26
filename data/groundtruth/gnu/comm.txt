@@ -1,0 +1,11 @@
+-1
+-2
+-3
+--check-order
+--help
+--nocheck-order
+--output-delimiter
+--total
+--version
+-z
+--zero-terminated

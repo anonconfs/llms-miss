@@ -1,0 +1,11 @@
+--allow-same-version
+--include-workspace-root
+--json
+--no-commit-hooks
+--no-git-tag-version
+--no-workspaces-update
+--preid
+--sign-git-tag
+-w
+--workspace
+--workspaces

@@ -1,0 +1,311 @@
+name: Claude Develop
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to develop"
+        required: true
+        type: number
+      base_branch:
+        description: "Base branch to branch from (optional, for dependency chaining)"
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: claude-develop-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  develop:
+    if: |
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'issues' && github.event.label.name == 'claude-develop')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    env:
+      COMPOSE_FILE: docker-compose.yaml:docker-compose.override.yaml:docker-compose.test.yaml
+      ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+      BASE_BRANCH: ${{ github.event.inputs.base_branch || '' }}
+    outputs:
+      pr_branch: ${{ steps.get-pr-info.outputs.pr_branch }}
+      issue_number: ${{ steps.get-pr-info.outputs.issue_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create .env file
+        run: |
+          echo "ENVIRONMENT=${{ secrets.ENVIRONMENT }}" >> .env
+          echo "PROJECT_NAME=${{ secrets.PROJECT_NAME }}" >> .env
+          echo "STACK_NAME=${{ secrets.STACK_NAME }}" >> .env
+          echo "DOMAIN=${{ secrets.DOMAIN }}" >> .env
+          echo "VITE_SERVER_URL=${{ secrets.VITE_SERVER_URL }}" >> .env
+          echo "BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}" >> .env
+          echo "DOMAIN_PORT=${{ secrets.DOMAIN_PORT }}" >> .env
+          echo "FIRST_SUPERUSER=${{ secrets.FIRST_SUPERUSER }}" >> .env
+          echo "FIRST_SUPERUSER_PASSWORD=${{ secrets.FIRST_SUPERUSER_PASSWORD }}" >> .env
+          echo "USE_HASH_ROUTER=${{ secrets.USE_HASH_ROUTER }}" >> .env
+          echo "ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "ALGORITHM=${{ secrets.ALGORITHM }}" >> .env
+          echo "FERNET_SECRET=${{ secrets.FERNET_SECRET }}" >> .env
+          echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+          echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+          echo "SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}" >> .env
+          echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+          echo "EMAILS_FROM_EMAIL=${{ secrets.EMAILS_FROM_EMAIL }}" >> .env
+          echo "EMAILS_FROM_NAME=${{ secrets.EMAILS_FROM_NAME }}" >> .env
+          echo "POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}" >> .env
+          echo "POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+
+          echo "TEST_POSTGRES_SERVER=db" >> .env
+          echo "TEST_POSTGRES_PORT=5432" >> .env
+          echo "TEST_POSTGRES_DB=test" >> .env
+          echo "TEST_POSTGRES_USER=postgres" >> .env
+          echo "TEST_POSTGRES_PASSWORD=changethis" >> .env
+
+      - name: Install playwright-cli
+        run: npm install -g @playwright/cli@latest
+
+      - name: Build and start Docker services
+        run: |
+          docker compose build db backend
+          docker compose down -v --remove-orphans
+          docker compose up -d db backend
+          docker compose exec -T backend uv sync --no-install-project
+
+      - name: Run Claude Code (Develop)
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: claude-opus-4-6
+          claude_args: "--allowed-tools Bash Read Write Edit Grep Glob"
+          prompt: |
+            You are an autonomous development agent. Your task is to implement the feature or fix described in GitHub issue #${{ env.ISSUE_NUMBER }}.
+
+            ## Step 1: Read the issue
+
+            Run: gh issue view ${{ env.ISSUE_NUMBER }} --repo ${{ github.repository }}
+
+            Read the issue title, body, and labels carefully.
+
+            ## Step 2: Determine the base branch
+
+            The pipeline has pre-resolved dependencies for you.
+
+            - If BASE_BRANCH is set to "${{ env.BASE_BRANCH }}", use that as your starting point:
+              ```bash
+              git fetch origin ${{ env.BASE_BRANCH }}
+              git checkout ${{ env.BASE_BRANCH }}
+              ```
+            - If BASE_BRANCH is empty, check the issue body for dependency patterns like:
+              - "depends on #X"
+              - "after #X"
+              - "blocked by #X"
+
+              If you find a dependency on issue #X:
+              1. Check if there is a PR for issue #X: `gh pr list --search "Closes #X" --repo ${{ github.repository }} --json number,headRefName,state`
+              2. If the dep PR is **merged**: branch from `main` (default behavior)
+              3. If the dep PR is **open**: checkout its branch and branch from there. When creating your PR, set the base to the dep's branch.
+              4. If no dep PR exists yet: comment on the issue saying the dependency hasn't been started yet, then exit.
+
+            If there are no dependencies and no BASE_BRANCH, branch from `main`.
+
+            ## Step 3: Create a branch and implement
+
+            Create a branch named: `issue-${{ env.ISSUE_NUMBER }}/<short-slug-from-title>`
+
+            ```bash
+            git checkout -b issue-${{ env.ISSUE_NUMBER }}/<slug>
+            ```
+
+            Read CLAUDE.md for project conventions. Implement the feature or fix described in the issue.
+
+            Follow these rules:
+            - Read existing code before modifying it
+            - Follow existing patterns and conventions in the codebase
+            - Keep changes minimal and focused on the issue
+            - If DB model changes are needed, create an Alembic migration inside Docker:
+              `docker compose exec -T backend alembic revision --autogenerate -m "description"`
+
+            ## Step 4: Lint and test
+
+            Run lint:
+            ```bash
+            docker compose exec -T backend bash /app/scripts/format.sh
+            ```
+
+            Run tests:
+            ```bash
+            docker compose exec -T backend bash /app/scripts/test.sh
+            ```
+
+            If lint or tests fail, fix the issues and re-run until they pass. Do not skip or ignore failures.
+
+            ## Step 5: Commit and push
+
+            Stage and commit your changes with a descriptive conventional commit message.
+            Push the branch:
+            ```bash
+            git push -u origin issue-${{ env.ISSUE_NUMBER }}/<slug>
+            ```
+
+            ## Step 6: Create a PR
+
+            Determine the appropriate label from the issue labels or content. Use one of: feature, bug, refactor, docs, upgrade, internal.
+
+            Determine the base branch for the PR:
+            - If you checked out from a dependency branch (either via BASE_BRANCH or from Step 2), use `--base <that-branch-name>`
+            - Otherwise, omit --base (defaults to main)
+
+            Create the PR:
+            ```bash
+            gh pr create \
+              --title "<concise title>" \
+              --body "Closes #${{ env.ISSUE_NUMBER }}
+
+            ## Summary
+            <bullet points describing what was done>
+
+            ## Test plan
+            - [ ] All existing tests pass
+            - [ ] New tests added for new functionality (if applicable)
+
+            🤖 Generated by Claude Code automation" \
+              --label "<chosen-label>,agent-pr" \
+              --repo ${{ github.repository }}
+            ```
+
+      - name: Get PR info for chaining
+        id: get-pr-info
+        if: success()
+        run: |
+          # Find the PR that was just created for this issue
+          PR_JSON=$(gh pr list \
+            --search "Closes #${{ env.ISSUE_NUMBER }}" \
+            --repo ${{ github.repository }} \
+            --json number,headRefName,state \
+            --limit 1)
+
+          PR_BRANCH=$(echo "$PR_JSON" | jq -r '.[0].headRefName // empty')
+
+          echo "pr_branch=$PR_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "issue_number=${{ env.ISSUE_NUMBER }}" >> "$GITHUB_OUTPUT"
+          echo "✅ PR branch: $PR_BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Teardown Docker
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+  # ─── Chain: trigger any issues that depend on this one ───
+  trigger-dependents:
+    needs: develop
+    if: success() && needs.develop.outputs.pr_branch != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Find and trigger dependent issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPLETED_ISSUE: ${{ needs.develop.outputs.issue_number }}
+          PR_BRANCH: ${{ needs.develop.outputs.pr_branch }}
+        run: |
+          echo "🔍 Looking for issues that depend on #${COMPLETED_ISSUE}..."
+
+          # Search for open issues that mention this issue as a dependency
+          # We look for common dependency patterns in issue bodies
+          DEPENDENT_ISSUES=$(gh issue list \
+            --repo ${{ github.repository }} \
+            --state open \
+            --label "claude-develop" \
+            --json number,body \
+            --limit 100 | jq -r --arg num "$COMPLETED_ISSUE" '
+              .[] | select(
+                .body != null and (
+                  (.body | test("(?i)depends on #" + $num + "\\b")) or
+                  (.body | test("(?i)after #" + $num + "\\b")) or
+                  (.body | test("(?i)blocked by #" + $num + "\\b"))
+                )
+              ) | .number
+            ')
+
+          if [ -z "$DEPENDENT_ISSUES" ]; then
+            echo "✅ No dependent issues found. Pipeline complete."
+            exit 0
+          fi
+
+          echo "📋 Found dependent issues: $DEPENDENT_ISSUES"
+
+          for ISSUE_NUM in $DEPENDENT_ISSUES; do
+            echo "──────────────────────────────────"
+            echo "🔗 Checking issue #${ISSUE_NUM}..."
+
+            # Check if this issue has OTHER unresolved dependencies
+            ISSUE_BODY=$(gh issue view "$ISSUE_NUM" \
+              --repo ${{ github.repository }} \
+              --json body -q '.body')
+
+            # Extract all dependency issue numbers
+            ALL_DEPS=$(echo "$ISSUE_BODY" | grep -oiE '(depends on|after|blocked by) #[0-9]+' | grep -oE '[0-9]+' || true)
+
+            ALL_DEPS_MET=true
+            for DEP in $ALL_DEPS; do
+              if [ "$DEP" = "$COMPLETED_ISSUE" ]; then
+                continue  # This is the one we just completed
+              fi
+
+              # Check if this other dependency has a merged PR or is closed
+              DEP_STATE=$(gh issue view "$DEP" \
+                --repo ${{ github.repository }} \
+                --json state -q '.state')
+              DEP_PR=$(gh pr list \
+                --search "Closes #${DEP}" \
+                --repo ${{ github.repository }} \
+                --json state --limit 1 | jq -r '.[0].state // "NONE"')
+
+              if [ "$DEP_STATE" != "CLOSED" ] && [ "$DEP_PR" != "MERGED" ] && [ "$DEP_PR" != "OPEN" ]; then
+                echo "⏸️  Issue #${ISSUE_NUM} still blocked by unresolved #${DEP}. Skipping."
+                ALL_DEPS_MET=false
+                break
+              fi
+            done
+
+            if [ "$ALL_DEPS_MET" = true ]; then
+              echo "🚀 Triggering Claude Develop for issue #${ISSUE_NUM} (base: ${PR_BRANCH})"
+              gh workflow run "Claude Develop" \
+                --repo ${{ github.repository }} \
+                --field issue_number="$ISSUE_NUM" \
+                --field base_branch="$PR_BRANCH"
+
+              # Add a comment on the dependent issue
+              gh issue comment "$ISSUE_NUM" \
+                --repo ${{ github.repository }} \
+                --body "🔗 **Pipeline**: Dependency #${COMPLETED_ISSUE} has been developed (branch: \`${PR_BRANCH}\`). Automatically triggering development for this issue.
+
+              🤖 *Triggered by Claude Develop pipeline*"
+            fi
+          done
+
+          echo "✅ Pipeline chaining complete."

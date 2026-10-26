@@ -1,0 +1,13 @@
+--color
+--json
+--no-color
+--no-description
+--offline
+-p
+--parseable
+--prefer-offline
+--prefer-online
+--registry
+--searchexclude
+--searchlimit
+--searchopts

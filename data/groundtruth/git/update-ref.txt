@@ -1,0 +1,13 @@
+--
+-0
+--batch-updates
+--create-reflog
+-d
+--deref
+-m
+--no-batch-updates
+--no-create-reflog
+--no-deref
+--no-stdin
+--stdin
+-z

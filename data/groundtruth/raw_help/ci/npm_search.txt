@@ -1,0 +1,14 @@
+Search for packages
+
+Usage:
+npm search <search term> [<search term> ...]
+
+Options:
+[--json] [--color|--no-color|--color always] [-p|--parseable] [--no-description]
+[--searchlimit <number>] [--searchopts <searchopts>]
+[--searchexclude <searchexclude>] [--registry <registry>] [--prefer-online]
+[--prefer-offline] [--offline]
+
+aliases: find, s, se
+
+Run "npm help search" for more info

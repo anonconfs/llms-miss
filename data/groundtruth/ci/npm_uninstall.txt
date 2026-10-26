@@ -1,0 +1,15 @@
+-g
+--global
+--include-workspace-root
+--install-links
+--no-save
+-S
+--save
+--save-bundle
+--save-dev
+--save-optional
+--save-peer
+--save-prod
+-w
+--workspace
+--workspaces

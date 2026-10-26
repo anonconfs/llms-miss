@@ -1,0 +1,117 @@
+name: Build APK for Examples #1
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANDROIDSDK: "$HOME/android-sdk"
+      ANDROIDNDK: "$HOME/.buildozer/android/platform/android-ndk-r25c"
+      ANDROIDAPI: "30"
+      ANDROIDMINAPI: "24"
+      PACKAGES_PATH: "$HOME/.buildozer/android/packages"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev gradlew openjdk-8-jre-headless libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev python3-distutils
+          python -m pip install --upgrade pip
+          python -m pip install --user --upgrade Cython==0.29.33 virtualenv
+          python -m pip install --user buildozer
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+      - name: Setup Android environment
+        run: |
+          mkdir -p $HOME/android-sdk
+          echo "ANDROIDSDK=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$HOME/.buildozer/android/platform/android-ndk-r25c" >> $GITHUB_ENV
+          echo "ANDROIDAPI=30" >> $GITHUB_ENV
+          echo "ANDROIDMINAPI=24" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_ENV
+          cd $HOME/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
+          unzip commandlinetools-linux-7583922_latest.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/ || true
+          rm -rf cmdline-tools/latest/cmdline-tools
+          echo "Android command line tools setup completed"
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+          echo "Android SDK components installation completed"
+          
+      - name: Install NDK
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform/
+          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip android-ndk-r25c-linux.zip
+          mv android-ndk-r25c $HOME/.buildozer/android/platform/android-ndk-r25c
+          echo "Android NDK installation completed"
+          
+      - name: Setup build environment
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform
+          ln -s $HOME/android-sdk $HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $HOME/.buildozer/android/packages
+          echo "Build environment setup completed"
+          
+      - name: Cache Buildozer dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.buildozer
+            ~/.gradle
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('**/*.spec', '**/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+            
+      - name: Build APK
+        run: |
+          echo "Starting APK build..."
+          # Hauptbuild mit Filterung
+          gradle wrapper
+          ./gradlew assembleDebug
+          # Prüfen ob der Build erfolgreich war
+          #if [ -f "bin/"*.apk ]; then
+          #  echo "Build successful - APK created"
+          #else
+          #  echo "Build failed - No APK found"
+          #  exit 1
+          #fi
+          #echo "APK build process completed"
+          #find ~ -name "*.apk*"
+          #ls -R app | grep -v abb/build
+          cp app/build/outputs/apk/debug/app-debug.apk ~/tts-native-debug.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: tts-native-debug.apk
+          path: /home/runner/tts-native-debug.apk
+          if-no-files-found: error
+
+      - name: Debug environment
+        run: |
+          echo "ANDROIDSDK: $ANDROIDSDK"
+          echo "ANDROIDNDK: $ANDROIDNDK"
+          echo "PATH: $PATH"

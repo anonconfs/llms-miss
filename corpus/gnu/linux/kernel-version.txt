@@ -1,0 +1,5 @@
+version=7.0.9
+source=kernel.org
+url=https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.0.9.tar.xz
+script_count=1080
+fetched=2026-05-22T17:06:02+02:00

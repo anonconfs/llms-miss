@@ -1,0 +1,11 @@
+--
+--advertise-refs
+--http-backend-info-refs
+--no-advertise-refs
+--no-http-backend-info-refs
+--no-stateless-rpc
+--no-strict
+--no-timeout
+--stateless-rpc
+--strict
+--timeout

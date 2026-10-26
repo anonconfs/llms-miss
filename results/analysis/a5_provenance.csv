@@ -1,0 +1,1756 @@
+dataset,population,file,repo,model,history_evidence
+gnu,human,systemd_systemd__coccinelle_run-coccinelle.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__man_50-xdg-data-dirs.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__man_yubikey-crypttab.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_basic_generate-af-list.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_basic_generate-arphrd-list.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_basic_generate-errno-list.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_shared_generate-ip-protocol-list.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_udev_generate-keyboard-keys-gperf.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__src_udev_generate-keyboard-keys-list.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,systemd_systemd__test_hwdb-test.sh,systemd/systemd,n/a,committed_before_2020
+gnu,human,git_git__Documentation_install-doc-quick.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__Documentation_install-webdoc.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__Documentation_technical_api-index.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_install-dependencies.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_lib.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_make-test-artifacts.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_mount-fileshare.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_print-test-failures.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_run-build-and-tests.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_run-static-analysis.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_run-test-slice.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_test-documentation.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__ci_util_extract-trash-dirs.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__contrib_completion_git-completion.bash,git/git,n/a,committed_before_2020
+gnu,human,git_git__contrib_completion_git-prompt.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__contrib_credential_netrc_t-git-credential-netrc.sh,git/git,n/a,committed_before_2020
+gnu,human,git_git__contrib_diff-highlight_t_t9400-diff-highlight.sh,git/git,n/a,committed_before_2020
+gnu,human,openssl_openssl__demos_certs_apps_mkacerts.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__demos_certs_apps_mkxcerts.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__demos_certs_mkcerts.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__demos_certs_ocspquery.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__demos_certs_ocsprun.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__test_certs_mkcert.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__test_certs_setup.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__test_recipes_95-test_external_krb5_data_krb5.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__test_recipes_95-test_external_pyca_data_cryptography.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,openssl_openssl__test_smime-certs_mksmime-certs.sh,openssl/openssl,n/a,committed_before_2020
+gnu,human,curl_curl__scripts_contributors.sh,curl/curl,n/a,committed_before_2020
+gnu,human,curl_curl__scripts_contrithanks.sh,curl/curl,n/a,committed_before_2020
+gnu,human,curl_curl__scripts_coverage.sh,curl/curl,n/a,committed_before_2020
+gnu,human,curl_curl__scripts_installcheck.sh,curl/curl,n/a,committed_before_2020
+gnu,human,tmux_tmux__autogen.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_capture-pane-sgr0.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_command-order.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_conf-syntax.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_control-client-sanity.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_control-client-size.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_cursor-test1.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_cursor-test2.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_cursor-test3.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_cursor-test4.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_format-strings.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_has-session-return.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_if-shell-TERM.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_if-shell-error.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_if-shell-nested.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_kill-session-process-exit.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_new-session-base-index.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_new-session-command.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,tmux_tmux__regress_new-session-environment.sh,tmux/tmux,n/a,committed_before_2020
+gnu,human,vim_vim__pixmaps_gen-inline-pixbufs.sh,vim/vim,n/a,committed_before_2020
+gnu,human,vim_vim__runtime_macros_less.sh,vim/vim,n/a,committed_before_2020
+gnu,human,systemd_systemd__test_TEST-21-SYSUSERS_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-03-JOBS_test-jobs.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-14-MACHINE-ID_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-04-JOURNAL_test-journal.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-29-UDEV-ID_RENAMING_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-22-TMPFILES_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-22-TMPFILES_test-03.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-15-DROPIN_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__tools_find-tabs.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-27-STDOUTFILE_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-18-FAILUREACTION_testsuite.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-37-RUNTIMEDIRECTORYPRESERVE_testsuite.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-24-UNIT-TESTS_testsuite.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-37-RUNTIMEDIRECTORYPRESERVE_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-22-TMPFILES_test-02.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__travis-ci_managers_fuzzbuzz.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-33-CLEAN-UNIT_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__tools_coverity.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,git_git__t_t7201-co.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t5601-clone.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t9811-git-p4-label-import.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t5526-fetch-submodules.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t9814-git-p4-rename.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__contrib_vscode_init.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t1300-config.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t8011-blame-split-file.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t5542-push-http-shallow.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_perf_repos_inflate-repo.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__git-mergetool.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t5307-pack-missing-commit.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t4121-apply-diffs.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t4005-diff-rename-2.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_perf_p7300-clean.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_perf_p0002-read-cache.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t6003-rev-list-topo-order.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__git-merge-one-file.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,git_git__t_t4255-am-submodule.sh,git/git,n/a,tree_at_commit_before_2020:13185fd2
+gnu,human,openssl_openssl__.travis-create-release.sh,openssl/openssl,n/a,tree_at_commit_before_2020:5f95fbf3
+gnu,human,openssl_openssl__util_mktar.sh,openssl/openssl,n/a,tree_at_commit_before_2020:5f95fbf3
+gnu,human,openssl_openssl__util_opensslwrap.sh,openssl/openssl,n/a,tree_at_commit_before_2020:5f95fbf3
+gnu,human,curl_curl__lib_firefox-db2pem.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__scripts_travis_before_script.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__tests_objnames-test10.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_vms_gnv_curl_configure.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_vms_make_gnv_curl_install.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_OS400_initscript.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__tests_fuzz_download_fuzzer.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__tests_certs_scripts_genroot.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__scripts_travis_script.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__scripts_travis_iconv-env.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__tests_certs_scripts_genserv.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_OS400_make-src.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__tests_objnames-test08.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_OS400_make-lib.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_OS400_make-tests.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,curl_curl__packages_OS400_makefile.sh,curl/curl,n/a,tree_at_commit_before_2020:a8d13336
+gnu,human,vim_vim__src_pathdef.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__src_installml.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__src_which.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__runtime_tools_vimspell.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__src_osdef.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__src_installman.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,vim_vim__src_link.sh,vim/vim,n/a,tree_at_commit_before_2020:87396072
+gnu,human,ohmyzsh_ohmyzsh__oh-my-zsh.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_catimg_catimg.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_gitfast_git-completion.bash,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_upgrade.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_wd__wd.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_theme_chooser.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_install.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_uninstall.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_drush_drush.complete.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_require_tool.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_wd_wd.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_emacs_emacsclient.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_z_z.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_gitfast_git-prompt.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__plugins_frontend-search__frontend-search.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,ohmyzsh_ohmyzsh__tools_check_for_upgrade.sh,ohmyzsh/ohmyzsh,n/a,tree_at_commit_before_2020:d9e64344
+gnu,human,nvm-sh_nvm__update_test_mocks.sh,nvm-sh/nvm,n/a,tree_at_commit_before_2020:ec8906b2
+gnu,human,nvm-sh_nvm__nvm.sh,nvm-sh/nvm,n/a,tree_at_commit_before_2020:ec8906b2
+gnu,human,nvm-sh_nvm__rename_test.sh,nvm-sh/nvm,n/a,tree_at_commit_before_2020:ec8906b2
+gnu,human,nvm-sh_nvm__install.sh,nvm-sh/nvm,n/a,tree_at_commit_before_2020:ec8906b2
+gnu,human,nvm-sh_nvm__test_common.sh,nvm-sh/nvm,n/a,tree_at_commit_before_2020:ec8906b2
+gnu,human,rbenv_rbenv__completions_rbenv.bash,rbenv/rbenv,n/a,tree_at_commit_before_2020:c46a9705
+gnu,human,rbenv_rbenv__test_test_helper.bash,rbenv/rbenv,n/a,tree_at_commit_before_2020:c46a9705
+gnu,human,rbenv_rbenv__rbenv.d_exec_gem-rehash.bash,rbenv/rbenv,n/a,tree_at_commit_before_2020:c46a9705
+gnu,human,pyenv_pyenv__pyenv.d_exec_pip-rehash.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__completions_pyenv.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__pyenv.d_rehash_conda.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__plugins_python-build_test_test_helper.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__plugins_python-build_install.sh,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__pyenv.d_rehash_source.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,pyenv_pyenv__test_test_helper.bash,pyenv/pyenv,n/a,tree_at_commit_before_2020:4e0ba2f4
+gnu,human,asdf-vm_asdf__release_tag.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__test_test_helpers.bash,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__lib_utils.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__lib_asdf.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__asdf.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__lib_commands_reshim.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__lib_commands_version_commands.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__completions_asdf.bash,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,asdf-vm_asdf__lint.sh,asdf-vm/asdf,n/a,tree_at_commit_before_2020:95e0f534
+gnu,human,rupa_z__z.sh,rupa/z,n/a,tree_at_commit_before_2020:4f08e7fe
+gnu,human,junegunn_fzf__shell_completion.bash,junegunn/fzf,n/a,tree_at_commit_before_2020:577024f1
+gnu,human,junegunn_fzf__shell_key-bindings.bash,junegunn/fzf,n/a,tree_at_commit_before_2020:577024f1
+gnu,human,Bash-it_bash-it__themes_tylenol_tylenol.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__themes_powerline-naked_powerline-naked.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__plugins_available_alias-completion.plugin.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__completion_available_travis.completion.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__completion_available_todo.completion.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__themes_simple_simple.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__test_fixtures_bash_it_aliases_available_a.aliases.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__themes_doubletime_multiline_doubletime_multiline.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__themes_dos_dos.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__completion_available_gh.completion.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__themes_cupcake_cupcake.theme.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__plugins_available_z_autoenv.plugin.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__completion_available_lerna.completion.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__completion_available_virsh.completion.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__aliases_available_jitsu.aliases.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__plugins_available_chruby.plugin.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__aliases_available_systemd.aliases.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__aliases_available_node.aliases.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__lib_utilities.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,Bash-it_bash-it__plugins_available_nginx.plugin.bash,Bash-it/bash-it,n/a,tree_at_commit_before_2020:00ef69e9
+gnu,human,scop_bash-completion__test_docker_docker-script.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,scop_bash-completion__test_lib_library.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,scop_bash-completion__setup-symlinks.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,scop_bash-completion__extra_git-post-commit.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,scop_bash-completion__extra_git-pre-push.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,scop_bash-completion__doc_makeHtml.sh,scop/bash-completion,n/a,tree_at_commit_before_2020:3e941a64
+gnu,human,liquidprompt_liquidprompt__test.sh,liquidprompt/liquidprompt,n/a,tree_at_commit_before_2020:5f4aeece
+gnu,human,liquidprompt_liquidprompt__contrib_dist_debian_create_deb.sh,liquidprompt/liquidprompt,n/a,tree_at_commit_before_2020:5f4aeece
+gnu,human,tj_n__test_tests_shared-functions.bash,tj/n,n/a,tree_at_commit_before_2020:98005fb6
+gnu,human,tj_n__test_tests_install-reference-versions.bash,tj/n,n/a,tree_at_commit_before_2020:98005fb6
+gnu,human,bats-core_bats-core__test_test_helper.bash,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,bats-core_bats-core__test_fixtures_bats_unofficial_bash_strict_mode.bash,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,bats-core_bats-core__test_fixtures_bats_test_helper.bash,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,bats-core_bats-core__test_fixtures_bats_cmd_using_stdin.bash,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,bats-core_bats-core__shellcheck.sh,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,bats-core_bats-core__install.sh,bats-core/bats-core,n/a,tree_at_commit_before_2020:87b16eb8
+gnu,human,dokku_dokku__tests_ci_unit_test_runner.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__contrib_dokku-docker-bin.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__plugins_network_vendor_github.com_codegangsta_inject_update_readme.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__tests_unit_test_helper.bash,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__contrib_dokku_client.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__tests_ci_setup.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__bootstrap.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,dokku_dokku__plugins_common_vendor_github.com_codegangsta_inject_update_readme.sh,dokku/dokku,n/a,tree_at_commit_before_2020:8b41bc65
+gnu,human,pi-hole_pi-hole__advanced_Scripts_piholeDebug.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__automated install_basic-install.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__automated install_uninstall.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_setupLCD.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__gravity.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_piholeCheckout.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_list.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_updatecheck.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_database_migration_gravity-db.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_query.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_webpage.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_wildcard_regex_converter.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_update.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_chronometer.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_piholeLogFlush.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_version.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,pi-hole_pi-hole__advanced_Scripts_piholeARPTable.sh,pi-hole/pi-hole,n/a,tree_at_commit_before_2020:8ae03b64
+gnu,human,acmesh-official_acme.sh__notify_pushover.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__deploy_gcore_cdn.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_maradns.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_nw.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_myapi.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_aws.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__notify_xmpp.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_regru.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__deploy_mysqld.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__notify_postmark.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__deploy_ssh.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_ultra.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_unoeuro.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_ali.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_nsupdate.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_knot.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__acme.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__notify_pop.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__deploy_myapi.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,acmesh-official_acme.sh__dnsapi_dns_dpi.sh,acmesh-official/acme.sh,n/a,tree_at_commit_before_2020:2214507d
+gnu,human,dehydrated-io_dehydrated__docs_examples_hook.sh,dehydrated-io/dehydrated,n/a,tree_at_commit_before_2020:e2eeaf7e
+gnu,human,discourse_discourse_docker__image_discourse_bench_run_bench.sh,discourse/discourse_docker,n/a,tree_at_commit_before_2020:1b3dd3a4
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_pegasus-fe.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_mupen64plus.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_retroarch.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-dinothawr.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-mess.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_scraper.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_ags.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_mkarcadejoystick.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-bluemsx.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_px68k.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_pcsx2.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_splashscreen.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_emulationstation_configscripts_pifba.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__tools_sdcard_chroot.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_advmame.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_ports_micropolis.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_supplementary_xarcade2jstick.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-beetle-supergrafx.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_emulators_residualvm.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,RetroPie_RetroPie-Setup__scriptmodules_libretrocores_lr-virtualjaguar.sh,RetroPie/RetroPie-Setup,n/a,tree_at_commit_before_2020:1a4fea25
+gnu,human,docker-library_postgres__9.5_alpine_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__9.6_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__9.5_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__12_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__11_alpine_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__10_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__9.4_alpine_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__10_alpine_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,human,docker-library_postgres__12_alpine_docker-entrypoint.sh,docker-library/postgres,n/a,tree_at_commit_before_2020:52814aba
+gnu,llm,debiki_talkyard__wip_upgr-scala-2.13_add-collection-seq-import.sh,debiki/talkyard,ChatGPT,generated by ChatGPT
+gnu,llm,GlareDB_glaredb__scripts_assert_cargo_version.sh,GlareDB/glaredb,ChatGPT,generated by chatgpt
+gnu,llm,herd_herdtools7__acl2_asl_bin_run-acl2asl.sh,herd/herdtools7,ChatGPT,generated by chatgpt
+gnu,llm,OsProgramadores_op-desafios__checkout-fork.sh,OsProgramadores/op-desafios,ChatGPT,Generated by ChatGPT
+gnu,llm,EchterAlsFake_Porn_Fetch__src_scripts_install.sh,EchterAlsFake/Porn_Fetch,ChatGPT,generated by ChatGPT
+gnu,llm,yuchanns_dotfiles__sync-dotfiles.sh,yuchanns/dotfiles,AI-unspecified,This script was generated
+gnu,llm,huang-kun_geeknews__daemon_control.sh,huang-kun/geeknews,ChatGPT,generated by chatgpt
+gnu,llm,omegaui_app_fleet__assets_scripts_workspace-switcher.sh,omegaui/app_fleet,ChatGPT,generated by ChatGPT
+gnu,llm,JimothyJohn_uptime-visuals__utils_CodeCount.sh,JimothyJohn/uptime-visuals,ChatGPT,generated by ChatGPT
+gnu,llm,laodie666_Dom6-autosave__dom6_autosave.sh,laodie666/Dom6-autosave,ChatGPT,generated by chatgpt
+gnu,llm,tr4cks_power__build_script.sh,tr4cks/power,ChatGPT,generated by ChatGPT
+gnu,llm,TIBTHINK_cbt__git.sh,TIBTHINK/cbt,AI-unspecified,This script was generated
+gnu,llm,michaeltu01_cs1380__non-distribution_t_ts_utils.sh,michaeltu01/cs1380,ChatGPT,generated by ChatGPT
+gnu,llm,qtplatz_qtplatz__scripts_linux-install-gcc13.sh,qtplatz/qtplatz,AI-unspecified,This script was generated
+gnu,llm,keithmerrilliv_VFI_SIGGRAPH2025__scripts_update-cloudxr-kit-development.sh,keithmerrilliv/VFI_SIGGRAPH2025,ChatGPT,generated by ChatGPT
+gnu,llm,tools200ms_AlphaWrap__alpha-wrap_auto-sync.sh,tools200ms/AlphaWrap,ChatGPT,Generated by chatGPT
+gnu,llm,HeuristNetwork_heurist__server_management_server_synchronisation_SSH_setup_setup_ssh_key_auth.sh,HeuristNetwork/heurist,ChatGPT,Generated by ChatGPT
+gnu,llm,Kirby6567_scriptbughuntKirby__public_original-script.sh,Kirby6567/scriptbughuntKirby,ChatGPT,generated by ChatGPT
+gnu,llm,quuixly_SteganoAI__main.sh,quuixly/SteganoAI,ChatGPT,generated by ChatGPT
+gnu,llm,wilson-gv-project_wilson-gv__setup.sh,wilson-gv-project/wilson-gv,AI-unspecified,This script was generated
+gnu,llm,mboros1_string_manip__generate_random_strings.sh,mboros1/string_manip,ChatGPT,generated by ChatGPT
+gnu,llm,GoPlugin_pluginv3.0__contracts_scripts_ci_find_slither_report_diff.sh,GoPlugin/pluginv3.0,ChatGPT,generated by ChatGPT
+gnu,llm,AutonomoDev_frontier-coding-slm-research__bash.ollama.run_v15_2_passed_prompt.v15-8.deepseek_v3_qwen2.5_32b.sh,AutonomoDev/frontier-coding-slm-research,ChatGPT,Auto-generated by ChatGPT
+gnu,llm,ugcasa_grbl__core_core.sh,ugcasa/grbl,ChatGPT,generated by chatGPT
+gnu,llm,FlaminG0_Xray-script__tool_xray_config_manage.sh,FlaminG0/Xray-script,ChatGPT,generated by ChatGPT
+gnu,llm,iloveitaly_dotfiles__install_server.sh,iloveitaly/dotfiles,ChatGPT,generated by chatgpt
+gnu,llm,spralja_dtu02232-F2026-private_set_intersection__scripts_run_experiment.sh,spralja/dtu02232-F2026-private_set_intersection,ChatGPT,Generated by ChatGPT
+gnu,llm,zulumonkeymetallic_bob__create_missing_issues.sh,zulumonkeymetallic/bob,ChatGPT,Auto-generated by ChatGPT
+gnu,llm,dreamsoft07_chainlink__contracts_scripts_ci_find_slither_report_diff.sh,dreamsoft07/chainlink,ChatGPT,generated by ChatGPT
+gnu,llm,DataDog_system-tests__utils_scripts_ssi_wizards_aws_onboarding_wizard.sh,DataDog/system-tests,AI-unspecified,This script was generated
+gnu,llm,mdvmeijer_system-config__scripts_wofi_wofi-key-value-store.sh,mdvmeijer/system-config,AI-unspecified,this script was generated
+gnu,llm,kasmtech_openziti_python_client__03_vendor.sh,kasmtech/openziti_python_client,ChatGPT,generated by ChatGPT
+gnu,llm,soaringDistributions_ubdist_puddleJumper___prog_features.sh,soaringDistributions/ubdist_puddleJumper,ChatGPT,generated by ChatGPT
+gnu,llm,PSR94_TransitionIQ__tools_verify_no_ai_traces.sh,PSR94/TransitionIQ,ChatGPT,Generated by ChatGPT
+gnu,llm,cu-ecen-aeld_assignments-3-and-later-mu2d2__server_aesdsocket-start-stop.sh,cu-ecen-aeld/assignments-3-and-later-mu2d2,ChatGPT,generated by ChatGPT
+gnu,llm,fitteia_OneFit-Engine-APIs__Bash_ofe-named-options-chatgpt.sh,fitteia/OneFit-Engine-APIs,ChatGPT,generated by ChatGPT
+gnu,llm,dfltbox_guess-that-vtuber__scraper_noduplicates.sh,dfltbox/guess-that-vtuber,ChatGPT,generated by chatgpt
+gnu,llm,x64-elf-sh42_cgvm__bismilla.sh,x64-elf-sh42/cgvm,ChatGPT,generated by chatgpt
+gnu,llm,gg582_incuspeed__utils_keygen.sh,gg582/incuspeed,ChatGPT,Generated By ChatGPT
+gnu,llm,efficient_sortbloom__prepare_paper_plots.sh,efficient/sortbloom,ChatGPT,generated by ChatGPT
+gnu,llm,api-haus_Xray-script__tool_xray_config_manage.sh,api-haus/Xray-script,ChatGPT,generated by ChatGPT
+gnu,llm,Khaaz_homelab__src_app-bootstrap_get_proxmox_ip.sh,Khaaz/homelab,ChatGPT,Generated by Chatgpt
+gnu,llm,1mr124_scripts__encryptedVoid.sh,1mr124/scripts,ChatGPT,Generated by ChatGPT
+gnu,llm,UW-MLGEO_mlgeo-2023-PNSN-E3WS__PNSN_metadata_AQMS_Queries_Event_Mag_AQMS_event_mag_query.sh,UW-MLGEO/mlgeo-2023-PNSN-E3WS,ChatGPT,generated by ChatGPT
+gnu,llm,nortal_CMZ-chatbots__scripts_create_chat_epic_tickets_remaining.sh,nortal/CMZ-chatbots,ChatGPT,generated by ChatGPT
+gnu,llm,UCCS-SP25-CS4300-CS5300-1_Group-7-Spring-2025__scripts_check-coverage.sh,UCCS-SP25-CS4300-CS5300-1/Group-7-Spring-2025,ChatGPT,Generated by chatgpt
+gnu,llm,petrosmp_sec_assignments__assignment_6_src_corpus_adblock.sh,petrosmp/sec_assignments,ChatGPT,generated by ChatGPT
+gnu,llm,halitogunc_dotfiles__src_install_binaries.sh,halitogunc/dotfiles,ChatGPT,generated by chatgpt
+gnu,llm,ManfrediC_prnp-somatic__legacy_src_ubuntu_code_generate_mutation_VCF_find_mutation_original.sh,ManfrediC/prnp-somatic,ChatGPT,generated by ChatGPT
+gnu,llm,EmilioLombardo_dotfiles__hyprland_.config_hypr_scripts_move_workspace_preserve_layout.sh,EmilioLombardo/dotfiles,ChatGPT,GENERATED BY CHATGPT
+gnu,llm,LuxciumProject_monorepo-one__scripts_populate-directories.sh,LuxciumProject/monorepo-one,AI-unspecified,This script was generated
+gnu,llm,dinesh-git17_claude-runner__tools_protocol-zero.sh,dinesh-git17/claude-runner,Claude,generated by claude
+gnu,llm,DreamOneX_MyDotfiles__bash_utils_shell-colors.sh,DreamOneX/MyDotfiles,ChatGPT,Generated by ChatGPT
+gnu,llm,PSR94_CALLSIGNAL__tools_verify_no_ai_traces.sh,PSR94/CALLSIGNAL,ChatGPT,Generated by ChatGPT
+gnu,llm,vzcodes_Scriptorium__run.sh,vzcodes/Scriptorium,ChatGPT,generated by ChatGPT
+gnu,llm,flakpaket_SprayItForward__sprayitfwd.sh,flakpaket/SprayItForward,ChatGPT,generated by ChatGPT
+gnu,llm,soaringDistributions_ubDistBuild___prog_features.sh,soaringDistributions/ubDistBuild,ChatGPT,generated by ChatGPT
+gnu,llm,oboukli_misc-problem-solutions__contrib_create_stub.sh,oboukli/misc-problem-solutions,ChatGPT,generated by ChatGPT
+gnu,llm,AshleyJackson_ResearchAndDevelopment__Bash_lsj.sh,AshleyJackson/ResearchAndDevelopment,ChatGPT,Generated by ChatGPT
+gnu,llm,rwgk_rwgk_config__bin_git_grep_match_ranges.sh,rwgk/rwgk_config,ChatGPT,Generated by ChatGPT
+gnu,llm,shanematley_dotfiles__bin_mac-convert.sh,shanematley/dotfiles,ChatGPT,Generated by ChatGPT
+gnu,llm,osmannyildiz_dotfiles__vscode_install_extensions.sh,osmannyildiz/dotfiles,ChatGPT,Generated by ChatGPT
+gnu,llm,Zman350x_AdvancedComputerSystemsProjects__OctoberProject1_generate-csvs.sh,Zman350x/AdvancedComputerSystemsProjects,ChatGPT,GENERATED BY CHATGPT
+gnu,llm,MorphZG_script_automation__backup_dotfiles.sh,MorphZG/script_automation,ChatGPT,Generated by ChatGPT
+gnu,llm,JimothyJohn_ojito__utils_CodeCount.sh,JimothyJohn/ojito,ChatGPT,generated by ChatGPT
+gnu,llm,faintx_public__tools_xray_config_manager.sh,faintx/public,ChatGPT,generated by ChatGPT
+gnu,llm,xKirtle_dotfiles__.config_waybar_scripts_toggle-theme.sh,xKirtle/dotfiles,ChatGPT,Generated by ChatGPT
+gnu,llm,GamesCrafters_GamesmanOne__gamesman_install.sh,GamesCrafters/GamesmanOne,ChatGPT,generated by ChatGPT
+gnu,llm,iago-costa_dotfiles__scripts_archive_linux_ultimate_tuner_3.sh,iago-costa/dotfiles,ChatGPT,Generated by ChatGPT
+gnu,llm,bashln_scripts__old_general-post-install.UNIFIED.sh,bashln/scripts,ChatGPT,generated by ChatGPT
+gnu,llm,dinesh-git17_claudehome__tools_protocol-zero.sh,dinesh-git17/claudehome,Claude,generated by claude
+gnu,llm,0lzi_workstation-config__setup.sh,0lzi/workstation-config,ChatGPT,GENERATED BY CHATGPT
+gnu,llm,cgyagenticloud_troyskills__add-examples.sh,cgyagenticloud/troyskills,ChatGPT,Generated by ChatGPT
+gnu,llm,JohT_code-graph-analysis-pipeline__scripts_sortOutExternalJavaJarFiles.sh,JohT/code-graph-analysis-pipeline,ChatGPT,generated by ChatGPT
+gnu,llm,soaringDistributions_ubDistBuild___prog_core.sh,soaringDistributions/ubDistBuild,ChatGPT,generated by ChatGPT
+gnu,llm,romanlefler_SimpleWeather__scripts_unpackcrowdin.sh,romanlefler/SimpleWeather,ChatGPT,generated by ChatGPT
+gnu,llm,celsian_luadns_updater__luadns_updater.sh,celsian/luadns_updater,ChatGPT,generated by ChatGPT
+gnu,llm,yasinuslu_dotfiles__src_install_binaries.sh,yasinuslu/dotfiles,ChatGPT,generated by chatgpt
+gnu,llm,TIBTHINK_reliqua2.0__git.sh,TIBTHINK/reliqua2.0,AI-unspecified,This script was generated
+gnu,llm,CCCeyon_Cam2Sim__shell-scripts_train_model.sh,CCCeyon/Cam2Sim,ChatGPT,Generated by ChatGPT
+gnu,llm,HeuristNetwork_heurist__server_management_server_synchronisation_SSH_setup_setup_ssh_key_auth_comprehensive.sh,HeuristNetwork/heurist,ChatGPT,Generated by ChatGPT
+gnu,llm,EchterAlsFake_Osintgram2__install.sh,EchterAlsFake/Osintgram2,ChatGPT,Generated by ChatGPT
+gnu,llm,ndsvw_SearXNG-WebExtensions__create-all-extensions.sh,ndsvw/SearXNG-WebExtensions,ChatGPT,Generated by ChatGPT
+gnu,llm,UW-MLGEO_mlgeo-2023-PNSN-E3WS__PNSN_metadata_AQMS_Queries_Event_Mag_Phase_AQMS_event_mag_phase_query.sh,UW-MLGEO/mlgeo-2023-PNSN-E3WS,ChatGPT,generated by ChatGPT
+gnu,llm,NonDairyNeutrino_advent_of_code__2024_setup.sh,NonDairyNeutrino/advent_of_code,AI-unspecified,This script was generated
+gnu,llm,biggycao_BJL__scripts_part.sh,biggycao/BJL,ChatGPT,Generated by ChatGPT
+gnu,llm,auto-d_math-sft__eval_checkpoints.sh,auto-d/math-sft,ChatGPT,Generated by ChatGPT
+gnu,llm,deeptir18_cornflakes-scripts__format-cdn.sh,deeptir18/cornflakes-scripts,ChatGPT,generated by chatgpt
+gnu,llm,TIBTHINK_cbt_board__git.sh,TIBTHINK/cbt_board,AI-unspecified,This script was generated
+gnu,llm,josoa-ramaroson_lab-notes__aws-lab_day 31 - Configuring a Private RDS Instance for Application Development.sh,josoa-ramaroson/lab-notes,ChatGPT,generated by chatGPT
+gnu,llm,0gfoundation_0g-da-node__dev_support_download_params.sh,0gfoundation/0g-da-node,GPT,Generated by GPT
+gnu,llm,misaka10987_aura-vitrea__build.sh,misaka10987/aura-vitrea,GPT,generated by GPT
+gnu,llm,Z3RO-O_git-contribution-automation__automation.sh,Z3RO-O/git-contribution-automation,GPT,generated by gpt
+gnu,llm,GSAPP-CDP_colloquium-1-2024__work__scripts_rename_featured.sh,GSAPP-CDP/colloquium-1-2024,GPT,Generated by gpt
+gnu,llm,anjireddym-git_tiny-pretrain-lab__scripts_download_data.sh,anjireddym-git/tiny-pretrain-lab,GPT,generated by GPT
+gnu,llm,Chainichek_hackathon-template__script_centos_docker.sh,Chainichek/hackathon-template,GPT,Generated by GPT
+gnu,llm,AiondaDotCom_gpt-httpd__gpt-httpd.sh,AiondaDotCom/gpt-httpd,GPT,Generated by gpt
+gnu,llm,micha31r_fds__setup.sh,micha31r/fds,GPT,generated by GPT
+gnu,llm,andylee-24_utils__add_lyrics.sh,andylee-24/utils,GPT,generated by GPT
+gnu,llm,LingmoOS-Testing_LingmoNix-Starter__autoprocess_hyprland.sh,LingmoOS-Testing/LingmoNix-Starter,GPT,Generated by GPT
+gnu,llm,arjablc_dotfiles__scripts_.config_scripts_install.sh,arjablc/dotfiles,GPT,generated by gpt
+gnu,llm,jaircelisv_DayZero-voice-onboard__skill_dayzero-voice-onboard_entrypoints_demo.sh,jaircelisv/DayZero-voice-onboard,GPT,generated by GPT
+gnu,llm,BerkeleyAutomation_LifelongLERFROS__run_navigation.sh,BerkeleyAutomation/LifelongLERFROS,GPT,Generated by GPT
+gnu,llm,crithead_misc-tools__scripts_disk-rsync-backup.sh,crithead/misc-tools,GPT,Generated by gpt
+gnu,llm,ShelbySolomonDarnell_GN-LLM-Hacking__gnqa_eval_src_run_human_datasets.sh,ShelbySolomonDarnell/GN-LLM-Hacking,GPT,generated by gpt
+gnu,llm,tsanghan_kind-lab-env-on-cloud-shell__setup.sh,tsanghan/kind-lab-env-on-cloud-shell,AI-unspecified,AI generated
+gnu,llm,zeligism_PSI-LoRA__scripts_gpu_count.sh,zeligism/PSI-LoRA,GPT,generated by GPT
+gnu,llm,dimensigon_HDB-HeliosDB-Proxy__demos_v0.4.0_12-ai-classifier_demo.sh,dimensigon/HDB-HeliosDB-Proxy,GPT,generated by GPT
+gnu,llm,Chainichek_hackathon-template__script_centos_microk8s.sh,Chainichek/hackathon-template,GPT,Generated by GPT
+gnu,llm,GSAPP-CDP_colloquium-1-2024__work__scripts_convert_png_to_jpg.sh,GSAPP-CDP/colloquium-1-2024,GPT,Generated by gpt
+gnu,llm,taoky_scripts__hardware_cpuoff.sh,taoky/scripts,GPT,Generated by GPT
+gnu,llm,0gfoundation_0g-da-encoder__dev_support_download_params.sh,0gfoundation/0g-da-encoder,GPT,Generated by GPT
+gnu,llm,JNZader_javi-forge__ci-local_hooks_commit-msg.test.sh,JNZader/javi-forge,GPT,Generated by GPT
+gnu,llm,leszkolukasz_latte-compiler__test_test.sh,leszkolukasz/latte-compiler,GPT,Generated by GPT
+gnu,llm,DolomegaTrade_0g-da-node__dev_support_download_params.sh,DolomegaTrade/0g-da-node,GPT,Generated by GPT
+gnu,llm,kovtun-mykola_0g-da-node__dev_support_download_params.sh,kovtun-mykola/0g-da-node,GPT,Generated by GPT
+gnu,llm,SavvyHack3r_0g-da-node__dev_support_download_params.sh,SavvyHack3r/0g-da-node,GPT,Generated by GPT
+gnu,llm,borderland4_0g-da-node__dev_support_download_params.sh,borderland4/0g-da-node,GPT,Generated by GPT
+gnu,llm,arkimium_LingmoNix-Starter__autoprocess_hyprland.sh,arkimium/LingmoNix-Starter,GPT,Generated by GPT
+gnu,llm,arkimium_yaksha-starter__autoprocess_hyprland.sh,arkimium/yaksha-starter,GPT,Generated by GPT
+gnu,llm,ShelbySolomonDarnell_GN-LLM-Hacking__gn-ai_gnqa_paper1_eval_src_run_human_datasets.sh,ShelbySolomonDarnell/GN-LLM-Hacking,GPT,generated by gpt
+gnu,llm,regpy_regpy__update-remote.sh,regpy/regpy,ChatGPT,created by ChatGPT
+gnu,llm,lackhove_coverage-sh__example_syntax_example.sh,lackhove/coverage-sh,ChatGPT,created by ChatGPT
+gnu,llm,knbknb_ai-system-roles__scripts_prepare-sorted-csv.sh,knbknb/ai-system-roles,ChatGPT,created by ChatGPT
+gnu,llm,henrikraedergaard_go-restful__init-db.sh,henrikraedergaard/go-restful,ChatGPT,created by chatgpt
+gnu,llm,cgloeckner_zombie-maker__make_silhouettes.sh,cgloeckner/zombie-maker,ChatGPT,created by ChatGPT
+gnu,llm,Noob99n_Fantasy__backup-db.sh,Noob99n/Fantasy,ChatGPT,Created by ChatGPT
+gnu,llm,swiftforarduino_swift__checkout-swift-ci.sh,swiftforarduino/swift,ChatGPT,Created by ChatGPT
+gnu,llm,pavl21_pterodactyl-gui-installer__installer.sh,pavl21/pterodactyl-gui-installer,ChatGPT,created by ChatGPT
+gnu,llm,NicholasMDH_dotfiles__bin_bin_startSSH.sh,NicholasMDH/dotfiles,ChatGPT,created by chatGPT
+gnu,llm,clivet268_CCASatTestSuite__utility_jitter_recusiveJitterGraph.sh,clivet268/CCASatTestSuite,ChatGPT,created by chatgpt
+gnu,llm,xpert4cyber_Learn2Scripting__Linux Scripting_CCTV_CamFind.sh,xpert4cyber/Learn2Scripting,ChatGPT,Created by ChatGPT
+gnu,llm,jens-goes-mad_diy-pedalboard__samples_osx-ramdisk.sh,jens-goes-mad/diy-pedalboard,ChatGPT,created by ChatGPT
+gnu,llm,robertutterback_kidbox__install.sh,robertutterback/kidbox,ChatGPT,created by ChatGPT
+gnu,llm,Szkolne-projekty_JJKotkiPhp__scripts_build-and-run.sh,Szkolne-projekty/JJKotkiPhp,ChatGPT,Created by ChatGPT
+gnu,llm,thorgeir93_bin__bin_git_status_check.sh,thorgeir93/bin,ChatGPT,created by ChatGPT
+gnu,llm,mewoocat_Leaf-dotfiles__.config_eww_images_changeSVGColor.sh,mewoocat/Leaf-dotfiles,ChatGPT,Created by chatGPT
+gnu,llm,hanse-kim_hanse-kim.github.io-legacy__scripts_rename-to-kebab-case.sh,hanse-kim/hanse-kim.github.io-legacy,ChatGPT,Created by ChatGPT
+gnu,llm,Noob99n_Fantasy__update-owner.sh,Noob99n/Fantasy,ChatGPT,Created by ChatGPT
+gnu,llm,Mitanshk01_SMAI-Implementations__Part-1_eval.sh,Mitanshk01/SMAI-Implementations,ChatGPT,created by ChatGPT
+gnu,llm,clivet268_CCASatTestSuite__utility_jitter_recusiveJitter.sh,clivet268/CCASatTestSuite,ChatGPT,created by chatgpt
+gnu,llm,raeez_chiral-bar-cobar-vol2__.codex_hooks_pre_bash_guard.sh,raeez/chiral-bar-cobar-vol2,AI-unspecified,ai generated
+gnu,llm,Nbglut_FOSSATest__create-branches.sh,Nbglut/FOSSATest,ChatGPT,created by CHATGPT
+gnu,llm,Low-ResourceDialectology_DialectTools__experiments_2024SchuMATh-deuL-SYNT-deuL-DBLI-0001.sh,Low-ResourceDialectology/DialectTools,ChatGPT,created by ChatGPT
+gnu,llm,SethMC26_Penguin-Protector-Anti-Malware__scripts_install.sh,SethMC26/Penguin-Protector-Anti-Malware,ChatGPT,Created by chatGPT
+gnu,llm,pavl21_pterodactyl-gui-installer__wings-installer.sh,pavl21/pterodactyl-gui-installer,ChatGPT,created by ChatGPT
+gnu,llm,Noob99n_Fantasy__update-app.sh,Noob99n/Fantasy,ChatGPT,Created by ChatGPT
+gnu,llm,Noob99n_Fantasy__setup.sh,Noob99n/Fantasy,ChatGPT,Created by ChatGPT
+gnu,llm,Noob99n_Fantasy__deploy-base.sh,Noob99n/Fantasy,ChatGPT,Created by ChatGPT
+gnu,llm,mewoocat_Leaf-dotfiles__.config_eww_images_Untitled Folder_changeSVGColor.sh,mewoocat/Leaf-dotfiles,ChatGPT,Created by chatGPT
+gnu,llm,raeez_ainfinity-chiral-hochschild-cohomology-3d-qft__.codex_hooks_pre_bash_guard.sh,raeez/ainfinity-chiral-hochschild-cohomology-3d-qft,AI-unspecified,ai generated
+gnu,llm,WelcometoMyGarden_welcometomygarden__tools_set-cf-ip.sh,WelcometoMyGarden/welcometomygarden,ChatGPT,written by ChatGPT
+gnu,llm,V01DBREAKER_V01DBot__start.sh,V01DBREAKER/V01DBot,ChatGPT,Written by CHATGPT
+gnu,llm,builab_subtomo_scripts__find_beads.sh,builab/subtomo_scripts,ChatGPT,written by ChatGPT
+gnu,llm,henrymai_container_env__mac.env.sh,henrymai/container_env,ChatGPT,written by ChatGPT
+gnu,llm,phoggy_rayvn__lib_config.sh,phoggy/rayvn,Claude,Written by Claude
+gnu,llm,ChocolateLoverRaj_zfs-incremental-backup__delete_all_buckets_and_sqs.sh,ChocolateLoverRaj/zfs-incremental-backup,ChatGPT,Written by ChatGPT
+gnu,llm,Theta-Limited_ThetaTools__renameDroneImage.sh,Theta-Limited/ThetaTools,ChatGPT,written by chatgpt
+gnu,llm,17thSaint_fzj__cluster-codes_run-script-jsc.sh,17thSaint/fzj,ChatGPT,written by ChatGPT
+gnu,llm,ReachableCEO_TSYSSecretsManager__bin_prod.sh,ReachableCEO/TSYSSecretsManager,ChatGPT,Written by Chatgpt
+gnu,llm,Beinmann_dotfilesV3__modules_i3_.config_i3_scripts_i3_window_change_subscriber.sh,Beinmann/dotfilesV3,ChatGPT,written by ChatGPT
+gnu,llm,nodsup-halnux_NockChainExperiments__scripts_logs_search.sh,nodsup-halnux/NockChainExperiments,ChatGPT,written by chatgpt
+gnu,llm,Feng-Lab-MIT_AstrocyteHeterogeneity__making_supp_tables_merge_csv_to_excel_fullname.sh,Feng-Lab-MIT/AstrocyteHeterogeneity,ChatGPT,Written by ChatGPT
+gnu,llm,fiforms_snapsearch__scripts_generate_json.sh,fiforms/snapsearch,ChatGPT,Written by ChatGPT
+gnu,llm,Yifferpi_dotfiles__install_pandoc.sh,Yifferpi/dotfiles,ChatGPT,written by ChatGPT
+gnu,llm,andyzorigin_cybench__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,andyzorigin/cybench,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,zudsniper_bashbits__installers_get_gum.sh,zudsniper/bashbits,ChatGPT,written by ChatGPT
+gnu,llm,Sentience-Robotics_sentience-docs-setup__tools_delete_user.sh,Sentience-Robotics/sentience-docs-setup,ChatGPT,written by ChatGPT
+gnu,llm,sodoesaburningbus_ValpoMetTower__run_tower_feed.sh,sodoesaburningbus/ValpoMetTower,ChatGPT,Written by ChatGPT
+gnu,llm,ferntheplant_dotfiles__scripts_install.sh,ferntheplant/dotfiles,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,TheSillySmoker_marksch__blog_portfolio_update_averages.sh,TheSillySmoker/marksch,ChatGPT,written by ChatGPT
+gnu,llm,Arnaud-Sibille_odoo-unix-helpers__completion.sh,Arnaud-Sibille/odoo-unix-helpers,ChatGPT,written by chatgpt
+gnu,llm,nerffan1_FODLego__survey_setup.sh,nerffan1/FODLego,ChatGPT,Written by ChatGPT
+gnu,llm,SyphonArch_Cornell-CS6120-Advanced-Compilers__lesson3_run_all_tdce.sh,SyphonArch/Cornell-CS6120-Advanced-Compilers,ChatGPT,written by ChatGPT
+gnu,llm,builab_subtomo_scripts__extract_ts_middle_image.sh,builab/subtomo_scripts,ChatGPT,Written by ChatGPT
+gnu,llm,bjcoleman_aws_instances__install_keys.sh,bjcoleman/aws_instances,ChatGPT,written by ChatGPT
+gnu,llm,FinsureConsulting_finsure__move_images.sh,FinsureConsulting/finsure,ChatGPT,Written by ChatGPT
+gnu,llm,fiforms_snapsearch__scripts_build_condensed_image.sh,fiforms/snapsearch,ChatGPT,written by ChatGPT
+gnu,llm,apoelstra_local-nix-ci__queue.sh,apoelstra/local-nix-ci,ChatGPT,written by ChatGPT
+gnu,llm,17thSaint_fzj__cluster-codes_run-script.sh,17thSaint/fzj,ChatGPT,written by ChatGPT
+gnu,llm,SamVarahram_Suduko_solver__average_time.sh,SamVarahram/Suduko_solver,ChatGPT,written by chatgpt
+gnu,llm,campusrover_rosutils__install_set_hostname.sh,campusrover/rosutils,ChatGPT,written by ChatGPT
+gnu,llm,Yifferpi_dotfiles__install_cups.sh,Yifferpi/dotfiles,ChatGPT,written by ChatGPT
+gnu,llm,SyphonArch_Cornell-CS6120-Advanced-Compilers__lesson3_run_all_lvn_tdce.sh,SyphonArch/Cornell-CS6120-Advanced-Compilers,ChatGPT,written by ChatGPT
+gnu,llm,denshinobi_saya__games_speedbase.sh,denshinobi/saya,ChatGPT,written by chatgpt
+gnu,llm,17thSaint_fzj__cluster-codes_make-new-prf.sh,17thSaint/fzj,ChatGPT,written by ChatGPT
+gnu,llm,builab_subtomo_scripts__tomostar_edit_batch.sh,builab/subtomo_scripts,ChatGPT,Written by ChatGPT
+gnu,llm,NevilleDNZ_ghstpipe__bin_git-check-status.sh,NevilleDNZ/ghstpipe,ChatGPT,Written by ChatGPT
+gnu,llm,isworking_dots__waybar_.config_waybar_scripts_volume-control.sh,isworking/dots,ChatGPT,written by ChatGPT
+gnu,llm,builab_subtomo_scripts__copy_xf_tlt_files_to_warp_batch.sh,builab/subtomo_scripts,ChatGPT,Written by ChatGPT
+gnu,llm,gega_rebash__tsess.sh,gega/rebash,ChatGPT,written by ChatGPT
+gnu,llm,zudsniper_bashbits__builders_build_py3.sh,zudsniper/bashbits,ChatGPT,WRITTEN BY ChatGPT
+gnu,llm,TheSillySmoker_marksch__blog_portfolio_old_scripts_update_averages.sh,TheSillySmoker/marksch,ChatGPT,written by ChatGPT
+gnu,llm,amazon-science_Cyber-Zero__benchmarks_cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,amazon-science/Cyber-Zero,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,enigma-agent_benchmarks__cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,enigma-agent/benchmarks,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,boyiwei_cybench-dataset__HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,boyiwei/cybench-dataset,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,PenghaoJiang_VulRL__benchmark_ctfmix_cybench_HTB_forensics_[Medium] Data Siege_metadata_requirements.sh,PenghaoJiang/VulRL,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,KalebBacztub_Cybench2.0__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,KalebBacztub/Cybench2.0,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,autopencil-1_cybench-testbed__benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,autopencil-1/cybench-testbed,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,McGill-NLP_BRIDGE__data_cybench_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,McGill-NLP/BRIDGE,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,sunblaze-ucb_cybergym-agent-examples__cybench_cybench-repo_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,sunblaze-ucb/cybergym-agent-examples,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,yuxuan18_icml25-code__cybench_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,yuxuan18/icml25-code,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,sunblaze-ucb_cybergym-neurips-25__scripts_agents_cybench_cybench-repo_benchmark_hackthebox_cyber-apocalypse-2024_forensics_[Medium] Data Siege_metadata_requirements.sh,sunblaze-ucb/cybergym-neurips-25,ChatGPT,WRITTEN BY CHATGPT
+gnu,llm,namidaco_namida__scripts_gen_downloads_table.sh,namidaco/namida,Claude,Generated by claude
+gnu,llm,nyldn_claude-octopus__scripts_lib_research.sh,nyldn/claude-octopus,Claude,Generated by Claude
+gnu,llm,eclipse-omr_omr__buildenv_jenkins_clang_format_clang-format-wrapper.sh,eclipse-omr/omr,Claude,generated by Claude
+gnu,llm,ROCm_amdsmi__tools_run-clang-tidy.sh,ROCm/amdsmi,Claude,generated by Claude
+gnu,llm,AztecProtocol_aztec-packages__docs_scripts_lib_create_doc_update_pr.sh,AztecProtocol/aztec-packages,Claude,generated by Claude
+gnu,llm,philippb_claude-homeassistant__.claude-code_hooks_yaml-formatter.sh,philippb/claude-homeassistant,Claude,generated by Claude
+gnu,llm,apify_mcpc__docs_examples_company-lookup.sh,apify/mcpc,Claude,generated by Claude
+gnu,llm,huangjia2019_claude-code-engineering__08-Headless_projects_02-scripts_review.sh,huangjia2019/claude-code-engineering,Claude,Generated by Claude
+gnu,llm,devfile_devworkspace-operator__.ci_oci-devworkspace-happy-path.sh,devfile/devworkspace-operator,Claude,Generated by Claude
+gnu,llm,aws-samples_serverless-samples__claude-hub_examples_mdm_uninstall-macos.sh,aws-samples/serverless-samples,Claude,generated by claude
+gnu,llm,tpvasconcelos_ridgeplot__cicd_utils_find-unmentioned-prs.sh,tpvasconcelos/ridgeplot,Claude,generated by Claude
+gnu,llm,dcb_homeassistant-claude-kit__.claude_hooks_yamllint-claude-only.sh,dcb/homeassistant-claude-kit,Claude,Generated by Claude
+gnu,llm,FoundationDB_fdb-joshua__joshua_dashboard.sh,FoundationDB/fdb-joshua,Claude,generated by claude
+gnu,llm,ruvnet_open-claude-code__scripts_analyze-discoveries.sh,ruvnet/open-claude-code,Claude,generated by Claude
+gnu,llm,jmckinley_claude-code-resources__claude-code-jumpstart.sh,jmckinley/claude-code-resources,Claude,Generated by Claude
+gnu,llm,marcuspat_turbo-flow__V1_devpods_generate-claude-md.sh,marcuspat/turbo-flow,Claude,generated by Claude
+gnu,llm,hex_claude-council__scripts_format-output.sh,hex/claude-council,Claude,generated by Claude
+gnu,llm,0xAxiom_AppFactory__app-factory_scripts_auto_plan_build.sh,0xAxiom/AppFactory,Claude,generated by Claude
+gnu,llm,FlorianBruniaux_cc-copilot-bridge__install.sh,FlorianBruniaux/cc-copilot-bridge,Claude,Generated by claude
+gnu,llm,imbue-ai_mngr__libs_mngr_imbue_mngr_resources_mega_tutorial.sh,imbue-ai/mngr,Claude,generated by Claude
+gnu,llm,mzazon_cloud-projects__aws_eks-ingress-alb-controller_code_scripts_deploy.sh,mzazon/cloud-projects,Claude,Generated by Claude
+gnu,llm,mzazon_cloud-projects__aws_eks-ingress-alb-controller_code_scripts_destroy.sh,mzazon/cloud-projects,Claude,Generated by Claude
+gnu,llm,Vrooli_Vrooli__resources_litellm_examples_claude-code-setup.sh,Vrooli/Vrooli,Claude,Generated by claude
+gnu,llm,mzazon_cloud-projects__aws_conversational-ai-bedrock-claude_code_scripts_destroy.sh,mzazon/cloud-projects,Claude,Generated by Claude
+gnu,llm,mzazon_cloud-projects__aws_conversational-ai-bedrock-claude_code_scripts_deploy.sh,mzazon/cloud-projects,Claude,Generated by Claude
+gnu,llm,dnviti_arsenale__scripts_setup-github-labels.sh,dnviti/arsenale,Claude,Generated by Claude
+gnu,llm,AaltoSciComp_triton-bin__bin_ai_agents.sh,AaltoSciComp/triton-bin,Claude,generated by Claude
+gnu,llm,sseshachala_Claude_Audit__apply.sh,sseshachala/Claude_Audit,Claude,generated by claude
+gnu,llm,luiseiman_dotforge__template_hooks_post-compact.sh,luiseiman/dotforge,Claude,generated by Claude
+gnu,llm,brunoasm_Oenocarpus_genome_phylo__04_extract_orthologs.sh,brunoasm/Oenocarpus_genome_phylo,Claude,Generated by Claude
+gnu,llm,nategarelik_ikemen-forge__scripts_scaffold-stage.sh,nategarelik/ikemen-forge,Claude,generated by Claude
+gnu,llm,AndreBFarias_Luna__src_tools_check_anonymity.sh,AndreBFarias/Luna,Claude,generated by claude
+gnu,llm,sseshachala_Claude_Audit__remediation_apply.sh,sseshachala/Claude_Audit,Claude,generated by claude
+gnu,llm,brunoasm_Oenocarpus_genome_phylo__08b_iqtree_concat_tree.sh,brunoasm/Oenocarpus_genome_phylo,Claude,Generated by Claude
+gnu,llm,yingwang_lm__benchmark_comparison_run.sh,yingwang/lm,Claude,generated by Claude
+gnu,llm,ho-Logos_a__linux_lock-accounts.sh,ho-Logos/a,Claude,generated by claude
+gnu,llm,jleechanorg_claude-commands__backup-scripts_claude_backup_enhanced.sh,jleechanorg/claude-commands,Claude,Generated by Claude
+gnu,llm,asikmydeen_claude-auto-setup__agents_cursor_adapter.sh,asikmydeen/claude-auto-setup,Claude,generated by claude
+gnu,llm,petekp_claude-code-setup__scripts_inject-handoff-on-restart.sh,petekp/claude-code-setup,Claude,generated by Claude
+gnu,llm,bjamba_tokade__scripts_check.sh,bjamba/tokade,Claude,generated by claude
+gnu,llm,Prathamesh0421_ProductionAgents__stream-c_week-2_terraform_scripts_high_cpu_fix.sh,Prathamesh0421/ProductionAgents,Claude,generated by Claude
+gnu,llm,a2ngerer_claude_onboarding_agent__skills_web-development-setup_type-check-hook.template.sh,a2ngerer/claude_onboarding_agent,Claude,Generated by claude
+gnu,llm,DNYoussef_context-cascade__skills_operations_performance-analysis_resources_metrics-reporter.sh,DNYoussef/context-cascade,Claude,generated by Claude
+gnu,llm,asikmydeen_claude-auto-setup__agents_codex-cli_adapter.sh,asikmydeen/claude-auto-setup,Claude,generated by claude
+gnu,llm,zhoulianglen_Aidots__aidots_scripts_backup.sh,zhoulianglen/Aidots,Claude,generated by claude
+gnu,llm,trentzz_kam__claude_loop.sh,trentzz/kam,Claude,generated by Claude
+gnu,llm,didoux_claude-gitignore-skill__scripts_generate_gitignore.sh,didoux/claude-gitignore-skill,Claude,Generated by Claude
+gnu,llm,brunoasm_Oenocarpus_genome_phylo__06_run_aliscore_alicut.sh,brunoasm/Oenocarpus_genome_phylo,Claude,Generated by Claude
+gnu,llm,jmanhype_reer_mlx__.claude_hooks_post_run.sh,jmanhype/reer_mlx,Claude,generated by Claude
+gnu,llm,asikmydeen_claude-auto-setup__agents_copilot_adapter.sh,asikmydeen/claude-auto-setup,Claude,generated by claude
+gnu,llm,mrquentin_claude-sandbox__lib_network-isolation.sh,mrquentin/claude-sandbox,Claude,Generated by claude
+gnu,llm,nirecom_dotfiles__install_linux_session-sync-init.sh,nirecom/dotfiles,Claude,generated by Claude
+gnu,llm,peterbamuhigire_website-skills__new-project.sh,peterbamuhigire/website-skills,Claude,generated by Claude
+gnu,llm,CozyTalk_CozyTalk__.claude_hooks_enforce-authorship.sh,CozyTalk/CozyTalk,Claude,generated by claude
+gnu,llm,TheClassicTechno_cs372research__create_guardrails.sh,TheClassicTechno/cs372research,Claude,generated by Claude
+gnu,llm,pi-sister_MDSC519assignment1__scripts_run_fimo.sh,pi-sister/MDSC519assignment1,Claude,Generated by Claude
+gnu,llm,tianlelyd_script-hub__mac_claude_env.sh,tianlelyd/script-hub,Claude,generated by claude
+gnu,llm,LazOof69_AIFX_v2__scripts_archive_check-services.sh,LazOof69/AIFX_v2,Claude,Generated by Claude
+gnu,llm,The-Skyy-Rose-Collection-LLC_DevSkyy__scripts_optimize-repo.sh,The-Skyy-Rose-Collection-LLC/DevSkyy,Claude,Generated by Claude
+gnu,llm,DNYoussef_context-cascade__skills_operations_performance-analysis_examples_resource-utilization-example.sh,DNYoussef/context-cascade,Claude,Generated by Claude
+gnu,llm,gguloadoong_idea-factory__templates_scripts_review-summary.sh,gguloadoong/idea-factory,Claude,Generated by Claude
+gnu,llm,datablogin_causal-optimizer__claude-review.sh,datablogin/causal-optimizer,Claude,generated by Claude
+gnu,llm,FortiumPartners_ai-mesh__hooks_install-metrics-hooks.sh,FortiumPartners/ai-mesh,Claude,Generated by Claude
+gnu,llm,clu5_configs__install_vim.sh,clu5/configs,Claude,Generated by Claude
+gnu,llm,seanchatmangpt_erlmcp__tools_claude-md-sync.sh,seanchatmangpt/erlmcp,Claude,Generated by claude
+gnu,llm,gguloadoong_market-dashboard-v5__scripts_review-summary.sh,gguloadoong/market-dashboard-v5,Claude,Generated by Claude
+gnu,llm,gguloadoong_market-dashboard-v2__scripts_create-pr.sh,gguloadoong/market-dashboard-v2,Claude,Generated by Claude
+gnu,llm,peers8862_Distill__distill.sh,peers8862/Distill,Claude,generated by Claude
+gnu,llm,adrianwedd_homelab-scripts__rclone-sync.sh,adrianwedd/homelab-scripts,Claude,Generated by Claude
+gnu,llm,Meeple-Meet_Meeple-Meet__scripts_check-compose-delays.sh,Meeple-Meet/Meeple-Meet,Claude,Generated by Claude
+gnu,llm,vivek43nit_claude-code-kit__remote-install.sh,vivek43nit/claude-code-kit,Claude,generated by claude
+gnu,llm,Clinteastman_claudefarm__client_setup-client.sh,Clinteastman/claudefarm,Claude,generated by claude
+gnu,llm,amo-tech-ai_medellin-spark__.claude_skills_skills-fix.sh,amo-tech-ai/medellin-spark,Claude,Generated by Claude
+gnu,llm,s8w1e2ep_cicd-skills-demo__.claude_skills_security-scan_scripts_ensure_pr.sh,s8w1e2ep/cicd-skills-demo,Claude,Generated by Claude
+gnu,llm,heydemo_add-scripts__bin_user_git-commit-helper.sh,heydemo/add-scripts,Claude,Generated by Claude
+gnu,llm,martijnbokma_claude-menu__lib_claude-menu-modes.sh,martijnbokma/claude-menu,Claude,Generated by claude
+gnu,llm,spencerbeggs_claude-plugin-template__plugin_scripts_setup-proxy.sh,spencerbeggs/claude-plugin-template,Claude,generated by claude
+gnu,llm,forkni_claude-git-workflow__scripts_git_setup_attributes.sh,forkni/claude-git-workflow,Claude,generated by claude
+gnu,llm,LazOof69_AIFX_v2__setup.sh,LazOof69/AIFX_v2,Claude,Generated by Claude
+gnu,llm,tokamak-network_tokamak-agent-teams__forge.sh,tokamak-network/tokamak-agent-teams,Claude,generated by Claude
+gnu,llm,Basilisk-Systems_claude-toolkit__project-init.sh,Basilisk-Systems/claude-toolkit,Claude,generated by claude
+gnu,llm,dbx0_agents-hackaton__agents_hackernewsletter-creator-9edc4e30_run-agent.sh,dbx0/agents-hackaton,Claude,Generated by Claude
+gnu,llm,adrianwedd_homelab-scripts__disk-cleanup.sh,adrianwedd/homelab-scripts,Claude,Generated by Claude
+gnu,llm,rohit-vc26_claude-power-kit__hooks_memory_git_backup.sh,rohit-vc26/claude-power-kit,Claude,generated by claude
+gnu,llm,usewayfind_wayfind__journal-summary.sh,usewayfind/wayfind,Claude,generated by Claude
+gnu,llm,ppx123-web_claude-config__sync-claude-config.sh,ppx123-web/claude-config,Claude,Generated by Claude
+gnu,llm,joshuachen3333_strong_number_embedding__sn_within_unv_selfgroup_segmentation_batch_parse_genesis_all_50.sh,joshuachen3333/strong_number_embedding,Claude,Generated by Claude
+gnu,llm,brandonlacoste9-tech_adgenxai__scripts_claude-autofix.sh,brandonlacoste9-tech/adgenxai,Claude,generated by Claude
+gnu,llm,jhousteau_solution-desk-engine__.genesis_scripts_find-hardcoded-values.sh,jhousteau/solution-desk-engine,Claude,Generated by Claude
+gnu,llm,quanhea_claude-harness__archive_scripts_worktree-create.sh,quanhea/claude-harness,Claude,generated by claude
+gnu,llm,vedantmehta14_key-value-cassandra__scripts_kill.sh,vedantmehta14/key-value-cassandra,AI-unspecified,AI generated
+gnu,llm,allenmjmu_projects__scripts_tar.sh,allenmjmu/projects,AI-unspecified,AI Generated
+gnu,llm,awslabs_aws-glue-schema-registry__multilang-schema-registry_scripts_trace-protobuf-reflection.sh,awslabs/aws-glue-schema-registry,AI-unspecified,AI Generated
+gnu,llm,totouncle_ShotPipe-AX__build_macos.sh,totouncle/ShotPipe-AX,AI-unspecified,AI Generated
+gnu,llm,hobeone_dotfiles__scripts_start_socks_proxy.sh,hobeone/dotfiles,AI-unspecified,AI Generated
+gnu,human,systemd_systemd__travis-ci_managers_fuzzit.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__tools_meson-apply-m4.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__travis-ci_tools_get-coverity.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-07-ISSUE-1981_test-segfault.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-39-EXECRELOAD_testsuite.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-07-ISSUE-1981_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-02-CRYPTSETUP_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-12-ISSUE-3171_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-26-SETENV_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__src_basic_generate-cap-list.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-19-DELEGATE_testsuite.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+gnu,human,systemd_systemd__test_TEST-10-ISSUE-2467_test.sh,systemd/systemd,n/a,tree_at_commit_before_2020:14157349
+ci,human,angular_angular__.github_workflows_assistant-to-the-branch-manager.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_dev-infra.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_feature-requests.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_google-internal-tests.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_lock-closed.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_scorecard.yml,angular_angular,n/a,mined_real_repo
+ci,human,angular_angular__.github_workflows_update-events.yml,angular_angular,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_ci.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_e2e-tests-breaking-esm.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_e2e-tests-breaking.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_e2e-tests-esm.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_e2e-tests.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_issue-triage.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_lock.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_release.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_update-compat-data.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_update-parser-tests.yml,babel_babel,n/a,mined_real_repo
+ci,human,babel_babel__.github_workflows_update-windows-fixtures.yml,babel_babel,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_build-test-images.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_ci.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_codeql.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_fuzz.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_images.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_nightly.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_release.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_scorecards.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_windows-hyperv-periodic-trigger.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_windows-hyperv-periodic.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_windows-periodic-trigger.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,containerd_containerd__.github_workflows_windows-periodic.yml,containerd_containerd,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_benchmark.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_docs.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_linters.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_new_contributor_pr.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_schedules.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_schedule_tests.yml,django_django,n/a,mined_real_repo
+ci,human,django_django__.github_workflows_tests.yml,django_django,n/a,mined_real_repo
+ci,human,docker_cli__.github_workflows_build.yml,docker_cli,n/a,mined_real_repo
+ci,human,docker_cli__.github_workflows_codeql-analysis.yml,docker_cli,n/a,mined_real_repo
+ci,human,docker_cli__.github_workflows_e2e.yml,docker_cli,n/a,mined_real_repo
+ci,human,docker_cli__.github_workflows_test.yml,docker_cli,n/a,mined_real_repo
+ci,human,docker_cli__.github_workflows_validate.yml,docker_cli,n/a,mined_real_repo
+ci,human,docker_compose__.github_workflows_ci.yml,docker_compose,n/a,mined_real_repo
+ci,human,docker_compose__.github_workflows_docs.yml,docker_compose,n/a,mined_real_repo
+ci,human,docker_compose__.github_workflows_merge.yml,docker_compose,n/a,mined_real_repo
+ci,human,elastic_elasticsearch__.github_workflows_docs-preview-links.yml,elastic_elasticsearch,n/a,mined_real_repo
+ci,human,elastic_elasticsearch__.github_workflows_gradle-wrapper-validation.yml,elastic_elasticsearch,n/a,mined_real_repo
+ci,human,eslint_eslint__.github_workflows_ci.yml,eslint_eslint,n/a,mined_real_repo
+ci,human,eslint_eslint__.github_workflows_codeql-analysis.yml,eslint_eslint,n/a,mined_real_repo
+ci,human,eslint_eslint__.github_workflows_stale.yml,eslint_eslint,n/a,mined_real_repo
+ci,human,gatsbyjs_gatsby__.github_workflows_schedule-stale.yml,gatsbyjs_gatsby,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_backport.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_bump-version.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_close-milestone.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_cloud-data-sources-code-coverage.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_codeql-analysis.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_commands.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_detect-breaking-changes-build-skip.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_detect-breaking-changes-build.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_detect-breaking-changes-report.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_doc-validator.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_enterprise-pr-check.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,grafana_grafana__.github_workflows_github-release.yml,grafana_grafana,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_build.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_checks.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_equivalence-test.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_issue-comment-created.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_lock.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_main.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_terraform__.github_workflows_merged-pr.yml,hashicorp_terraform,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_backport.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_build-vault-oss.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_build.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_changelog-checker.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_codeql-analysis.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_enos-fmt.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_enos-run-k8s.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_enos-run.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_enos-verify-stable.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_goversion-checker.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_oss.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,hashicorp_vault__.github_workflows_remove-labels.yml,hashicorp_vault,n/a,mined_real_repo
+ci,human,helm_helm__.github_workflows_build-pr.yml,helm_helm,n/a,mined_real_repo
+ci,human,helm_helm__.github_workflows_codeql-analysis.yml,helm_helm,n/a,mined_real_repo
+ci,human,helm_helm__.github_workflows_stale-issue-bot.yaml,helm_helm,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_buildkit.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_ci.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_.dco.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_test.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_windows-2019.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_windows-2022.yml,moby_moby,n/a,mined_real_repo
+ci,human,moby_moby__.github_workflows_.windows.yml,moby_moby,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_authors.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_auto-start-ci.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_build-tarball.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_build-windows.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_close-stale-feature-requests.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_close-stalled.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_comment-labeled.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_commit-lint.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_commit-queue.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_coverage-linux.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_coverage-windows.yml,nodejs_node,n/a,mined_real_repo
+ci,human,nodejs_node__.github_workflows_daily.yml,nodejs_node,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_audit.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_benchmark.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmaccess.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmdiff.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmexec.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmfund.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmhook.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmorg.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmpack.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmpublish.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmsearch.yml,npm_cli,n/a,mined_real_repo
+ci,human,npm_cli__.github_workflows_ci-libnpmteam.yml,npm_cli,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_build_test.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_circleci.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_cygwin.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_docker.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_emscripten.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_gitpod.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_labeler.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_linux_meson.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_scorecards.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,numpy_numpy__.github_workflows_wheels.yml,numpy_numpy,n/a,mined_real_repo
+ci,human,pallets_flask__.github_workflows_lock.yaml,pallets_flask,n/a,mined_real_repo
+ci,human,pallets_flask__.github_workflows_tests.yaml,pallets_flask,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_32-bit-linux.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_assign.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_asv-bot.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_autoupdate-pre-commit-config.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_code-checks.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_codeql.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_docbuild-and-upload.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_macos-windows.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_package-checks.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_python-dev.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_scorecards.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,pandas-dev_pandas__.github_workflows_sdist.yml,pandas-dev_pandas,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows__build.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_bundler-friendly.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_check-sizes.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_codeql.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_dev-package-test.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_dev-test.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_eslint-rules.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_lint.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_lock.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_mark-issue-duplicate.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_prevent-file-change.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prettier_prettier__.github_workflows_prod-test.yml,prettier_prettier,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_buf-lint.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_buf.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_ci.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_codeql-analysis.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_funcbench.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_fuzzing.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_lock.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_prombench.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,prometheus_prometheus__.github_workflows_repo_sync.yml,prometheus_prometheus,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__android-build-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__android-full-build-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__bazel-build-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__binary-build-linux.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__binary-test-linux.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__binary-upload.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__buck-build-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__docs.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__ios-build-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__linux-build.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__linux-test.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,pytorch_pytorch__.github_workflows__mac-build.yml,pytorch_pytorch,n/a,mined_real_repo
+ci,human,rails_rails__.github_workflows_lint.yml,rails_rails,n/a,mined_real_repo
+ci,human,rails_rails__.github_workflows_rubocop.yml,rails_rails,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_artifact-redirector.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_assign.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_build-docs.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_check-changelog.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_check-manifest.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_label-blank-issue.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_labeler-module.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_labeler-title-regex.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_publish_pypi.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_trigger-hosting.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_twitter.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,scikit-learn_scikit-learn__.github_workflows_unassign.yml,scikit-learn_scikit-learn,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_arm-cd.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_arm-ci-extended.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_arm-ci.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_cffconvert.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_issue-on-pr-rollback.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_pylint-presubmit.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_release-branch-cherrypick.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_scorecards-analysis.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_sigbuild-docker-branch.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_sigbuild-docker-presubmit.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_sigbuild-docker.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,tensorflow_tensorflow__.github_workflows_trusted-partners.yml,tensorflow_tensorflow,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_build_test_deploy.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_cancel.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_lock.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_pull_request_stats.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_stale.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_test_react_experimental.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_test_react_next.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vercel_next.js__.github_workflows_validate_issue.yml,vercel_next.js,n/a,mined_real_repo
+ci,human,vuejs_vue__.github_workflows_ci.yml,vuejs_vue,n/a,mined_real_repo
+ci,human,vuejs_vue__.github_workflows_release-tag.yml,vuejs_vue,n/a,mined_real_repo
+ci,human,webpack_webpack__.github_workflows_test.yml,webpack_webpack,n/a,mined_real_repo
+ci,llm,2234839_OceanPress_siyuan_plugin__.github_workflows_CLAUDE.md,2234839_OceanPress_siyuan_plugin,AI-unspecified,explicit_ai_marker
+ci,llm,33-Degrees_vibesdk__.github_workflows_claude-docs-sync.yml,33-Degrees_vibesdk,AI-unspecified,explicit_ai_marker
+ci,llm,3453-315h_superset__.github_workflows_generate-changelog.yml,3453-315h_superset,AI-unspecified,explicit_ai_marker
+ci,llm,3453-315h_superset__.github_workflows_update-docs.yml,3453-315h_superset,AI-unspecified,explicit_ai_marker
+ci,llm,Abonmarche_CAD-Cost-Estimator-App__.github_workflows_autofix.yml,Abonmarche_CAD-Cost-Estimator-App,AI-unspecified,explicit_ai_marker
+ci,llm,ACT-House-Engineering_act-junior-action__.github_workflows_act-junior-claude.yaml,ACT-House-Engineering_act-junior-action,AI-unspecified,explicit_ai_marker
+ci,llm,afluence-holding_marketing-funnel__.github_workflows_update-docs.yml,afluence-holding_marketing-funnel,AI-unspecified,explicit_ai_marker
+ci,llm,agisota_rox__.github_workflows_generate-changelog.yml,agisota_rox,AI-unspecified,explicit_ai_marker
+ci,llm,ai4curation_eval-ont-agent-go__.github_workflows_fix-issue.yml,ai4curation_eval-ont-agent-go,AI-unspecified,explicit_ai_marker
+ci,llm,albertorestifo_trenino__.github_workflows_dependabot-analyzer.yml,albertorestifo_trenino,AI-unspecified,explicit_ai_marker
+ci,llm,Anchal-T_DecenChat__.github_workflows_sync-documentation.yml,Anchal-T_DecenChat,AI-unspecified,explicit_ai_marker
+ci,llm,andre-brandao_gpui-shell__.github_workflows_claude-docs.yml,andre-brandao_gpui-shell,AI-unspecified,explicit_ai_marker
+ci,llm,AndyZhengyan_oh-my-getnote__.github_workflows_auto-review.yml,AndyZhengyan_oh-my-getnote,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_cairo-invoice-frontend__.github_workflows_claude-audit.yml,anisharma07_cairo-invoice-frontend,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_cairo-invoice-frontend__.github_workflows_claude-generate.yml,anisharma07_cairo-invoice-frontend,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_cairo-invoice-frontend__.github_workflows_claude-test.yml,anisharma07_cairo-invoice-frontend,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_cairo-medinvoice__.github_workflows_claude-audit.yml,anisharma07_cairo-medinvoice,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_Team-Website__.github_workflows_claude-audit.yml,anisharma07_Team-Website,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_Workflows-Upload-Automated__.github_workflows_claude-audit.yml,anisharma07_Workflows-Upload-Automated,AI-unspecified,explicit_ai_marker
+ci,llm,anisharma07_Workflows-Upload-Automated__.github_workflows_claude-generate.yml,anisharma07_Workflows-Upload-Automated,AI-unspecified,explicit_ai_marker
+ci,llm,arunnadarasa_keeperhubarc__.github_workflows_docs-sync.yml,arunnadarasa_keeperhubarc,AI-unspecified,explicit_ai_marker
+ci,llm,ashajkofci_metabase__.github_workflows_claude-code-bug-fix.yml,ashajkofci_metabase,AI-unspecified,explicit_ai_marker
+ci,llm,ashunar0_orbit__.github_workflows_CLAUDE.md,ashunar0_orbit,AI-unspecified,explicit_ai_marker
+ci,llm,base44_cli__.github_workflows_pr-description.yml,base44_cli,AI-unspecified,explicit_ai_marker
+ci,llm,BilLogic_plus-uno__.github_workflows_figma-implement-design.yml,BilLogic_plus-uno,AI-unspecified,explicit_ai_marker
+ci,llm,BioSensorsLab-Illinois_bsl_universal__.github_workflows_auto-fix.yml,BioSensorsLab-Illinois_bsl_universal,AI-unspecified,explicit_ai_marker
+ci,llm,bluerobotics_cockpit__.github_workflows_claude-pr-review-continue.yml,bluerobotics_cockpit,AI-unspecified,explicit_ai_marker
+ci,llm,bluerobotics_cockpit__.github_workflows_claude-pr-review.yml,bluerobotics_cockpit,AI-unspecified,explicit_ai_marker
+ci,llm,broadinstitute_viral-ngs__.github_workflows_container-scan.yml,broadinstitute_viral-ngs,AI-unspecified,explicit_ai_marker
+ci,llm,BSteffaniak_web2local__.github_workflows_examples-checker.yml,BSteffaniak_web2local,AI-unspecified,explicit_ai_marker
+ci,llm,BSteffaniak_worktree-setup__.github_workflows_examples-checker.yml,BSteffaniak_worktree-setup,AI-unspecified,explicit_ai_marker
+ci,llm,Buleje_Mercado__.github_workflows_claude-autonomous.yml,Buleje_Mercado,AI-unspecified,explicit_ai_marker
+ci,llm,burgebj_claudeoctopus__.github_workflows_claude-octopus.yml,burgebj_claudeoctopus,AI-unspecified,explicit_ai_marker
+ci,llm,CapSens_claude-workflows__.github_workflows_implement-from-plan.yml,CapSens_claude-workflows,AI-unspecified,explicit_ai_marker
+ci,llm,carmandale_SPY-tracker__.github_workflows_update-claude-md.yml,carmandale_SPY-tracker,AI-unspecified,explicit_ai_marker
+ci,llm,cderinbogaz_zeitpal__.github_workflows_translations.yml,cderinbogaz_zeitpal,AI-unspecified,explicit_ai_marker
+ci,llm,charoy_collabatlas__.github_workflows_daily-suggest.yml,charoy_collabatlas,AI-unspecified,explicit_ai_marker
+ci,llm,CheapNud_CheapNights__.github_workflows_pr-review.yml,CheapNud_CheapNights,AI-unspecified,explicit_ai_marker
+ci,llm,ChipFlow_chipflow-docs__.github_workflows_docs-review.yml,ChipFlow_chipflow-docs,AI-unspecified,explicit_ai_marker
+ci,llm,chriskinch_location-analyser__.github_workflows_no-claude-attribution.yml,chriskinch_location-analyser,AI-unspecified,explicit_ai_marker
+ci,llm,cloudflare_vibesdk__.github_workflows_claude-docs-sync.yml,cloudflare_vibesdk,AI-unspecified,explicit_ai_marker
+ci,llm,cockroachdb_cockroach__.github_workflows_issue-autosolve.yml,cockroachdb_cockroach,AI-unspecified,explicit_ai_marker
+ci,llm,Coffee-Code-Philly-Accelerator_CCP-Digital-Marketing__.github_workflows_autonomous-code-scanner.yml,Coffee-Code-Philly-Accelerator_CCP-Digital-Marketing,AI-unspecified,explicit_ai_marker
+ci,llm,Coffee-Code-Philly-Accelerator_CCP-Digital-Marketing__.github_workflows_nightly-docs-update.yml,Coffee-Code-Philly-Accelerator_CCP-Digital-Marketing,AI-unspecified,explicit_ai_marker
+ci,llm,ComposioHQ_composio__.github_workflows_docs.sdk-change-sync.yml,ComposioHQ_composio,AI-unspecified,explicit_ai_marker
+ci,llm,ComposioHQ_composio__.github_workflows_docs.sync-connect-clients.yml,ComposioHQ_composio,AI-unspecified,explicit_ai_marker
+ci,llm,cue-3_re-cue__.github_workflows_auto-translate.yml,cue-3_re-cue,AI-unspecified,explicit_ai_marker
+ci,llm,dan-kiss-dev-this_aiMusicPlayer__.github_workflows_ci.yml,dan-kiss-dev-this_aiMusicPlayer,AI-unspecified,explicit_ai_marker
+ci,llm,dendencat_romantic-companion-ai__.github_workflows_claude-documentation-review.yml,dendencat_romantic-companion-ai,AI-unspecified,explicit_ai_marker
+ci,llm,dentroio_agentic-factory__.github_workflows_ai-review.yml,dentroio_agentic-factory,AI-unspecified,explicit_ai_marker
+ci,llm,DevMysticCode_metabase_linux_dp__.github_workflows_claude-code-bug-fix.yml,DevMysticCode_metabase_linux_dp,AI-unspecified,explicit_ai_marker
+ci,llm,dfadler_task-master__.github_workflows_claude-docs-updater.yml,dfadler_task-master,AI-unspecified,explicit_ai_marker
+ci,llm,ding113_claude-code-hub__.github_workflows_claude-ci-autofix.yml,ding113_claude-code-hub,AI-unspecified,explicit_ai_marker
+ci,llm,dnviti_codeclaw__.github_workflows_security.yml,dnviti_codeclaw,AI-unspecified,explicit_ai_marker
+ci,llm,Draggon01_exercise-counter__.github_workflows_claude-issue-worker.yml,Draggon01_exercise-counter,AI-unspecified,explicit_ai_marker
+ci,llm,Dragon-Git_uvm_bridge__.github_workflows_claude.yml,Dragon-Git_uvm_bridge,AI-unspecified,explicit_ai_marker
+ci,llm,drewster99_appstore-mcp-server__.github_workflows_claude-code.yml,drewster99_appstore-mcp-server,AI-unspecified,explicit_ai_marker
+ci,llm,drewster99_xcode-mcp-server__.github_workflows_claude-code.yml,drewster99_xcode-mcp-server,AI-unspecified,explicit_ai_marker
+ci,llm,drewster99_Zeko-Games__.github_workflows_claude-code.yml,drewster99_Zeko-Games,AI-unspecified,explicit_ai_marker
+ci,llm,Drullkus_gltf-machine__.github_workflows_discord.yml,Drullkus_gltf-machine,AI-unspecified,explicit_ai_marker
+ci,llm,drussell23_JARVIS__.github_workflows_claude-auto-fix.yml,drussell23_JARVIS,AI-unspecified,explicit_ai_marker
+ci,llm,drussell23_JARVIS__.github_workflows_claude-docs-generator.yml,drussell23_JARVIS,AI-unspecified,explicit_ai_marker
+ci,llm,drussell23_JARVIS__.github_workflows_claude-security-analyzer.yml,drussell23_JARVIS,AI-unspecified,explicit_ai_marker
+ci,llm,Dutch-Laravel-Foundation_best-practices__.github_workflows_ai-feedback.yml,Dutch-Laravel-Foundation_best-practices,AI-unspecified,explicit_ai_marker
+ci,llm,emansharkscale_rv_bnb2__.github_workflows_claude-issue-resolution.yml,emansharkscale_rv_bnb2,AI-unspecified,explicit_ai_marker
+ci,llm,emrantusho_vibesdk-project__.github_workflows_claude-docs-sync.yml,emrantusho_vibesdk-project,AI-unspecified,explicit_ai_marker
+ci,llm,expanso-io_examples.expanso.io__.github_workflows_ai-check.yml,expanso-io_examples.expanso.io,AI-unspecified,explicit_ai_marker
+ci,llm,expanso-io_skills.expanso.io__.github_workflows_ai-check.yml,expanso-io_skills.expanso.io,AI-unspecified,explicit_ai_marker
+ci,llm,exploreomni_omni-agent-skills__.github_workflows_skill-review.yml,exploreomni_omni-agent-skills,AI-unspecified,explicit_ai_marker
+ci,llm,eyaltoledano_claude-task-master__.github_workflows_claude-docs-updater.yml,eyaltoledano_claude-task-master,AI-unspecified,explicit_ai_marker
+ci,llm,ezeslucky_velix__.github_workflows_generate-changelog.yml,ezeslucky_velix,AI-unspecified,explicit_ai_marker
+ci,llm,ezeslucky_velix__.github_workflows_update-docs.yml,ezeslucky_velix,AI-unspecified,explicit_ai_marker
+ci,llm,fattits30-dev_liftoff__.github_workflows_claude-pr-review.yml,fattits30-dev_liftoff,AI-unspecified,explicit_ai_marker
+ci,llm,flekschas_mcp-web__.github_workflows_review-docs-api-references.yml,flekschas_mcp-web,AI-unspecified,explicit_ai_marker
+ci,llm,GabFrank_franco-system-backend-filial__.github_workflows_jira-receiver.yml,GabFrank_franco-system-backend-filial,AI-unspecified,explicit_ai_marker
+ci,llm,GabFrank_franco-system-backend-servidor__.github_workflows_jira-receiver.yml,GabFrank_franco-system-backend-servidor,AI-unspecified,explicit_ai_marker
+ci,llm,GabFrank_frc-sistemas-integrados-angular__.github_workflows_jira-receiver.yml,GabFrank_frc-sistemas-integrados-angular,AI-unspecified,explicit_ai_marker
+ci,llm,gensecaihq_MCP-Developer-SubAgent__.github_workflows_claude-code-mcp.yml,gensecaihq_MCP-Developer-SubAgent,AI-unspecified,explicit_ai_marker
+ci,llm,glitchwerks_github-actions__.github_workflows_runtime-build.yml,glitchwerks_github-actions,AI-unspecified,explicit_ai_marker
+ci,llm,glitchwerks_github-actions__.github_workflows_runtime-check-private-freshness.yml,glitchwerks_github-actions,AI-unspecified,explicit_ai_marker
+ci,llm,Gloomsfield_cmpm170_sprint-2__.github_workflows_discord.yml,Gloomsfield_cmpm170_sprint-2,AI-unspecified,explicit_ai_marker
+ci,llm,HazelLessiter_ProjectMarworyn__.github_workflows_README.md,HazelLessiter_ProjectMarworyn,AI-unspecified,explicit_ai_marker
+ci,llm,imazen_cargo-copter__.github_workflows_copter-dependents-test.yml,imazen_cargo-copter,AI-unspecified,explicit_ai_marker
+ci,llm,InstaWP_instawp-connect__.github_workflows_release-notify.yml,InstaWP_instawp-connect,AI-unspecified,explicit_ai_marker
+ci,llm,intrafind_ihub-apps__.github_workflows_CLAUDE.md,intrafind_ihub-apps,AI-unspecified,explicit_ai_marker
+ci,llm,isapp_.github__.github_workflows_auto-fill-pr.yml,isapp_.github,AI-unspecified,explicit_ai_marker
+ci,llm,iterate_iterate__.github_workflows_claude-assistant.yml,iterate_iterate,AI-unspecified,explicit_ai_marker
+ci,llm,jackwatters45_laxdb__.github_workflows_claude-pr.yml,jackwatters45_laxdb,AI-unspecified,explicit_ai_marker
+ci,llm,johncarlocos_claude-mem__.github_workflows_CLAUDE.md,johncarlocos_claude-mem,AI-unspecified,explicit_ai_marker
+ci,llm,Jruing_ssh_tunnel_manager__.github_workflows_build-release.yml,Jruing_ssh_tunnel_manager,AI-unspecified,explicit_ai_marker
+ci,llm,JuanLuisLozadaGx_claude-men__.github_workflows_CLAUDE.md,JuanLuisLozadaGx_claude-men,AI-unspecified,explicit_ai_marker
+ci,llm,keeganmccallum_mobile-dev-studio__.github_workflows_auto-fix-ci.yml,keeganmccallum_mobile-dev-studio,AI-unspecified,explicit_ai_marker
+ci,llm,KevinAmato_echosynch-website__.github_workflows_publish-blog.yml,KevinAmato_echosynch-website,AI-unspecified,explicit_ai_marker
+ci,llm,kfsky_kfsky__.github_workflows_daily-news.yml,kfsky_kfsky,AI-unspecified,explicit_ai_marker
+ci,llm,kokoichi206-sandbox_web-app-template__.github_workflows_weekly-audit.yml,kokoichi206-sandbox_web-app-template,AI-unspecified,explicit_ai_marker
+ci,llm,krister078_markautist2__.github_workflows_scripts_ai_review.py,krister078_markautist2,AI-unspecified,explicit_ai_marker
+ci,llm,kumeS_DataAnalysis__.github_workflows_metabolomics-parallel.yml.disabled,kumeS_DataAnalysis,AI-unspecified,explicit_ai_marker
+ci,llm,kurok_pyimgtag__.github_workflows_sanitize-pr-description.yml,kurok_pyimgtag,AI-unspecified,explicit_ai_marker
+ci,llm,kwangilkimkenny_open-hangul-ai__.github_workflows_README.md,kwangilkimkenny_open-hangul-ai,AI-unspecified,explicit_ai_marker
+ci,llm,Light-Heart-Labs_DreamServer__.github_workflows_claude-review.yml,Light-Heart-Labs_DreamServer,AI-unspecified,explicit_ai_marker
+ci,llm,Light-Heart-Labs_DreamServer__.github_workflows_nightly-code-review.yml,Light-Heart-Labs_DreamServer,AI-unspecified,explicit_ai_marker
+ci,llm,limJhyeok_Essay-Feedback-Writer__.github_workflows_claude-develop.yml,limJhyeok_Essay-Feedback-Writer,AI-unspecified,explicit_ai_marker
+ci,llm,litaoran_rss-reader__.github_workflows_auto-fix.yml,litaoran_rss-reader,AI-unspecified,explicit_ai_marker
+ci,llm,loft-sh_vcluster-docs__.github_workflows_check-annotation-drift.yml,loft-sh_vcluster-docs,AI-unspecified,explicit_ai_marker
+ci,llm,Makoto041_line-kakeibo__.github_workflows_claude-code-workflow.yml,Makoto041_line-kakeibo,AI-unspecified,explicit_ai_marker
+ci,llm,Manzela_predictstream__.github_workflows_claude-review-advanced.yml,Manzela_predictstream,AI-unspecified,explicit_ai_marker
+ci,llm,maro114510_dotfiles__.github_workflows_shellcheck.yml,maro114510_dotfiles,AI-unspecified,explicit_ai_marker
+ci,llm,MatheusConstantino_poc-geoserver-sqlserver__.github_workflows_ai-pr-review.yml,MatheusConstantino_poc-geoserver-sqlserver,AI-unspecified,explicit_ai_marker
+ci,llm,mcclowes_mcclowes.com__.github_workflows_claude-pr-summary.yml,mcclowes_mcclowes.com,AI-unspecified,explicit_ai_marker
+ci,llm,MCPVOT_MCPVOTS__.github_workflows_ai-auto-update.yml,MCPVOT_MCPVOTS,AI-unspecified,explicit_ai_marker
+ci,llm,mhdxbilal_Ai__.github_workflows_claude-octopus.yml,mhdxbilal_Ai,AI-unspecified,explicit_ai_marker
+ci,llm,mister-mime_test-okx-plugin-store__.github_workflows_plugin-ai-review.yml,mister-mime_test-okx-plugin-store,AI-unspecified,explicit_ai_marker
+ci,llm,mkm29_cve-report-aggregator__.github_workflows_CLAUDE.md,mkm29_cve-report-aggregator,AI-unspecified,explicit_ai_marker
+ci,llm,mokemoke0821_interrogation-game__.github_workflows_max-plan-claude.yml,mokemoke0821_interrogation-game,AI-unspecified,explicit_ai_marker
+ci,llm,NVIDIA_Megatron-LM__.github_workflows_claude-copy-to-main.yml,NVIDIA_Megatron-LM,AI-unspecified,explicit_ai_marker
+ci,llm,nyldn_claude-octopus__.github_workflows_claude-octopus.yml,nyldn_claude-octopus,AI-unspecified,explicit_ai_marker
+ci,llm,o9nn_vibetorchsdk__.github_workflows_claude-docs-sync.yml,o9nn_vibetorchsdk,AI-unspecified,explicit_ai_marker
+ci,llm,obidua_MumbleChatV3.1__.github_workflows_sync-documentation.yml,obidua_MumbleChatV3.1,AI-unspecified,explicit_ai_marker
+ci,llm,omarorn_bogga.eyjar.app__.github_workflows_auto-fix-issues.yml,omarorn_bogga.eyjar.app,AI-unspecified,explicit_ai_marker
+ci,llm,omarorn_mybirthday.myx.is__.github_workflows_auto-fix-issues.yml,omarorn_mybirthday.myx.is,AI-unspecified,explicit_ai_marker
+ci,llm,opendatalab_labelU__.github_workflows_claude-fix-issue.yml,opendatalab_labelU,AI-unspecified,explicit_ai_marker
+ci,llm,open-runtime_openai_and_azure_openai_dart_client__.github_workflows_enhance-release-pr.yml,open-runtime_openai_and_azure_openai_dart_client,AI-unspecified,explicit_ai_marker
+ci,llm,opsmill_infrahub-vscode__.github_workflows_issue-plan.yml,opsmill_infrahub-vscode,AI-unspecified,explicit_ai_marker
+ci,llm,palimondo_BookMinder__.github_workflows_archive-claude-logs.yml,palimondo_BookMinder,AI-unspecified,explicit_ai_marker
+ci,llm,pardnchiu_go-jwt__.github_workflows_test.yml,pardnchiu_go-jwt,AI-unspecified,explicit_ai_marker
+ci,llm,ParkerRex_Open-Source-Snapshot__.github_workflows_update-submodules.yml,ParkerRex_Open-Source-Snapshot,AI-unspecified,explicit_ai_marker
+ci,llm,pinto-org_interface__.github_workflows_ai-implement.yml,pinto-org_interface,AI-unspecified,explicit_ai_marker
+ci,llm,pinto-org_protocol__.github_workflows_claude-facet-analyzer.yml,pinto-org_protocol,AI-unspecified,explicit_ai_marker
+ci,llm,pmrv_fleche__.github_workflows_claude_ci_details.yaml,pmrv_fleche,AI-unspecified,explicit_ai_marker
+ci,llm,prakash66958-netizen_Spendrixa__.github_workflows_firebase-hosting-pull-request.yml,prakash66958-netizen_Spendrixa,AI-unspecified,explicit_ai_marker
+ci,llm,PrefectHQ_prefect__.github_workflows_agents-md-update.yml,PrefectHQ_prefect,AI-unspecified,explicit_ai_marker
+ci,llm,PrefectHQ_prefect__.github_workflows_docs-update.yml,PrefectHQ_prefect,AI-unspecified,explicit_ai_marker
+ci,llm,projectpenta_prefect__.github_workflows_agents-md-update.yml,projectpenta_prefect,AI-unspecified,explicit_ai_marker
+ci,llm,rawwerks_fizzy-cli__.github_workflows_dogfood.yml,rawwerks_fizzy-cli,AI-unspecified,explicit_ai_marker
+ci,llm,rcourtman_Pulse__.github_workflows_create-release.yml,rcourtman_Pulse,AI-unspecified,explicit_ai_marker
+ci,llm,reactor-team_js-sdk__.github_workflows_claude-docs-pr.yml,reactor-team_js-sdk,AI-unspecified,explicit_ai_marker
+ci,llm,re-cinq_shift-log__.github_workflows_compat-test.yml,re-cinq_shift-log,AI-unspecified,explicit_ai_marker
+ci,llm,Right5963_claude-max-github-actions__.github_workflows_claude-mcp-research.yml,Right5963_claude-max-github-actions,AI-unspecified,explicit_ai_marker
+ci,llm,roboco-io_awesome-vibecoding__.github_workflows_weekly-update.yml,roboco-io_awesome-vibecoding,AI-unspecified,explicit_ai_marker
+ci,llm,ronjohnsonjr_agentic-engineering-pipeline__.github_workflows_pr-describe.yml,ronjohnsonjr_agentic-engineering-pipeline,AI-unspecified,explicit_ai_marker
+ci,llm,S7R1D3R_claude-starter__.github_workflows_claude-docs-update.yml,S7R1D3R_claude-starter,AI-unspecified,explicit_ai_marker
+ci,llm,sabiut_qr-checkin-system__.github_workflows_claude-pr-review.yml,sabiut_qr-checkin-system,AI-unspecified,explicit_ai_marker
+ci,llm,sarvarjafarov_ads-data__.github_workflows_pr-summary.yml,sarvarjafarov_ads-data,AI-unspecified,explicit_ai_marker
+ci,llm,sebastienvg_mem-claude__.github_workflows_CLAUDE.md,sebastienvg_mem-claude,AI-unspecified,explicit_ai_marker
+ci,llm,seetadev_Eth-Maintenance__.github_workflows_claude-code-generation.yml,seetadev_Eth-Maintenance,AI-unspecified,explicit_ai_marker
+ci,llm,seqeralabs_docs__.github_workflows_claude-pr-review.yml,seqeralabs_docs,AI-unspecified,explicit_ai_marker
+ci,llm,sheepworrier_BilliardsScorer__.github_workflows_claude-agent.yml,sheepworrier_BilliardsScorer,AI-unspecified,explicit_ai_marker
+ci,llm,Skobyn_g.c.l.a.w__.github_workflows_auto-fix.yml,Skobyn_g.c.l.a.w,AI-unspecified,explicit_ai_marker
+ci,llm,SmarterPrey_social-active-app__.github_workflows_security-scan.yml,SmarterPrey_social-active-app,AI-unspecified,explicit_ai_marker
+ci,llm,solisoft_soli_lang__.github_workflows_CLAUDE.md,solisoft_soli_lang,AI-unspecified,explicit_ai_marker
+ci,llm,solisoft_soli-proxy__.github_workflows_CLAUDE.md,solisoft_soli-proxy,AI-unspecified,explicit_ai_marker
+ci,llm,starpipi_claude-code-notify__.github_workflows_CLAUDE.md,starpipi_claude-code-notify,AI-unspecified,explicit_ai_marker
+ci,llm,sternelee_openclaw-webhook-bridge__.github_workflows_CLAUDE.md,sternelee_openclaw-webhook-bridge,AI-unspecified,explicit_ai_marker
+ci,llm,StevieClear_claude-mem-privacy-fork__.github_workflows_CLAUDE.md,StevieClear_claude-mem-privacy-fork,AI-unspecified,explicit_ai_marker
+ci,llm,stich86_ha-combivox-web__.github_workflows_CLAUDE.md,stich86_ha-combivox-web,AI-unspecified,explicit_ai_marker
+ci,llm,sumsun-dev_awesome-web3-claude__.github_workflows_update-readme.yml,sumsun-dev_awesome-web3-claude,AI-unspecified,explicit_ai_marker
+ci,llm,superset-sh_superset__.github_workflows_generate-changelog.yml,superset-sh_superset,AI-unspecified,explicit_ai_marker
+ci,llm,superset-sh_superset__.github_workflows_update-docs.yml,superset-sh_superset,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_katalyst__.github_workflows_ai-issue-decomposer.yml,swcstudiospace_katalyst,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_katalyst__.github_workflows_ai-pr-creator.yml,swcstudiospace_katalyst,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_katalyst__.github_workflows_ai-pr-reviewer.yml,swcstudiospace_katalyst,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_katalyst__.github_workflows_changelog-automation.yml,swcstudiospace_katalyst,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_katalyst__.github_workflows_changelog-on-demand.yml,swcstudiospace_katalyst,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supacomputa__.github_workflows_ai-issue-decomposer.yml,swcstudiospace_supacomputa,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supacomputa__.github_workflows_ai-pr-creator.yml,swcstudiospace_supacomputa,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supacomputa__.github_workflows_ai-pr-reviewer.yml,swcstudiospace_supacomputa,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supacomputa__.github_workflows_changelog-automation.yml,swcstudiospace_supacomputa,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supacomputa__.github_workflows_changelog-on-demand.yml,swcstudiospace_supacomputa,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_ai-documentation-generator.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_ai-issue-decomposer.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_ai-pr-creator.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_ai-pr-reviewer.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_changelog-automation.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,swcstudiospace_supercompute__.github_workflows_changelog-on-demand.yml,swcstudiospace_supercompute,AI-unspecified,explicit_ai_marker
+ci,llm,Swervegod1_vibesdkv__.github_workflows_claude-docs-sync.yml,Swervegod1_vibesdkv,AI-unspecified,explicit_ai_marker
+ci,llm,synaptent_aragora__.github_workflows_CLAUDE.md,synaptent_aragora,AI-unspecified,explicit_ai_marker
+ci,llm,synthable_copilot-instructions-cli__.github_workflows_security.yml,synthable_copilot-instructions-cli,AI-unspecified,explicit_ai_marker
+ci,llm,synthable_copilot-instructions-cli__.github_workflows_update-dependencies.yml,synthable_copilot-instructions-cli,AI-unspecified,explicit_ai_marker
+ci,llm,takezou621_n8n-tweet__.github_workflows_claude-code-automation.yml,takezou621_n8n-tweet,AI-unspecified,explicit_ai_marker
+ci,llm,Tamoura_Claude-Code-creates-the-SW-company__.github_workflows_claude-auto-fix.yml,Tamoura_Claude-Code-creates-the-SW-company,AI-unspecified,explicit_ai_marker
+ci,llm,tanmoy1139_claude-mem__.github_workflows_CLAUDE.md,tanmoy1139_claude-mem,AI-unspecified,explicit_ai_marker
+ci,llm,tasker-systems_tasker-contrib__.github_workflows_CLAUDE.md,tasker-systems_tasker-contrib,AI-unspecified,explicit_ai_marker
+ci,llm,tasker-systems_temper__.github_workflows_CLAUDE.md,tasker-systems_temper,AI-unspecified,explicit_ai_marker
+ci,llm,TheBushidoCollective_han__.github_workflows_claude.yml,TheBushidoCollective_han,AI-unspecified,explicit_ai_marker
+ci,llm,TheerasakPing_bms-monitor__.github_workflows_CLAUDE.md,TheerasakPing_bms-monitor,AI-unspecified,explicit_ai_marker
+ci,llm,thirdlf03_go-cli-template__.github_workflows_CLAUDE.md,thirdlf03_go-cli-template,AI-unspecified,explicit_ai_marker
+ci,llm,thirdlf03_hone__.github_workflows_CLAUDE.md,thirdlf03_hone,AI-unspecified,explicit_ai_marker
+ci,llm,thirdlf03_spec-tdd__.github_workflows_CLAUDE.md,thirdlf03_spec-tdd,AI-unspecified,explicit_ai_marker
+ci,llm,thomasdavis_lordajax.com__.github_workflows_claude-auto-pr.yml,thomasdavis_lordajax.com,AI-unspecified,explicit_ai_marker
+ci,llm,tomgidden_space-honker__.github_workflows_SIGNING.md,tomgidden_space-honker,AI-unspecified,explicit_ai_marker
+ci,llm,Tony363_SuperClaude__.github_workflows_autonomous-code-scanner.yml,Tony363_SuperClaude,AI-unspecified,explicit_ai_marker
+ci,llm,Tony363_SuperClaude__.github_workflows_ci.yml,Tony363_SuperClaude,AI-unspecified,explicit_ai_marker
+ci,llm,Tony363_SuperClaude__.github_workflows_nightly-docs-update.yml,Tony363_SuperClaude,AI-unspecified,explicit_ai_marker
+ci,llm,trlxo9_share-registry__.github_workflows_pr-review.yml,trlxo9_share-registry,AI-unspecified,explicit_ai_marker
+ci,llm,tyranasaurus_tabbit__.github_workflows_discord-feature.yml,tyranasaurus_tabbit,AI-unspecified,explicit_ai_marker
+ci,llm,velvetmonkey_flywheel-memory__.github_workflows_CLAUDE.md,velvetmonkey_flywheel-memory,AI-unspecified,explicit_ai_marker
+ci,llm,vlapp0r_high-protein-meals__.github_workflows_generate-post.yml,vlapp0r_high-protein-meals,AI-unspecified,explicit_ai_marker
+ci,llm,waldzellai_adk-typescript__.github_workflows_claude-auto-implement.yml,waldzellai_adk-typescript,AI-unspecified,explicit_ai_marker
+ci,llm,warezio_obsidian-split-translator__.github_workflows_CLAUDE.md,warezio_obsidian-split-translator,AI-unspecified,explicit_ai_marker
+ci,llm,wespreadjam_jam-nodes__.github_workflows_CLAUDE.md,wespreadjam_jam-nodes,AI-unspecified,explicit_ai_marker
+ci,llm,Wick-Lim_browser__.github_workflows_claude-pr.yml,Wick-Lim_browser,AI-unspecified,explicit_ai_marker
+ci,llm,WncFht_claude-code-hub__.github_workflows_claude-ci-autofix.yml,WncFht_claude-code-hub,AI-unspecified,explicit_ai_marker
+ci,llm,x2oreo_FitAI__.github_workflows_blank.yml,x2oreo_FitAI,AI-unspecified,explicit_ai_marker
+ci,llm,xmtp_xmtp-js__.github_workflows_sync-documentation.yml,xmtp_xmtp-js,AI-unspecified,explicit_ai_marker
+ci,llm,xmtp_xmtp-react-native__.github_workflows_update-docs.yml,xmtp_xmtp-react-native,AI-unspecified,explicit_ai_marker
+ci,llm,yashodipmore_Govt_Billing_Solution_MVP__.github_workflows_claude-code-generation.yml,yashodipmore_Govt_Billing_Solution_MVP,AI-unspecified,explicit_ai_marker
+ci,llm,YoItSoul_soa_additions__.github_workflows_issue-to-draft-pr.yml,YoItSoul_soa_additions,AI-unspecified,explicit_ai_marker
+ci,llm,Yong-yuan-X_Analysis-Framework__.github_workflows_mimo-claude.yml,Yong-yuan-X_Analysis-Framework,AI-unspecified,explicit_ai_marker
+ci,llm,yoshidashingo_claude-code-news-and-deepdive__.github_workflows_check-news.yml,yoshidashingo_claude-code-news-and-deepdive,AI-unspecified,explicit_ai_marker
+ci,llm,ZamSofts_Exposaas__.github_workflows_claude-auto-fix.yml,ZamSofts_Exposaas,AI-unspecified,explicit_ai_marker
+git,human,human_apache__airflow__backport-cli.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__basic-tests.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__ci-image-checks.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__helm-tests.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__publish-docs-to-s3.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__registry-backfill.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__update-constraints-on-push-stable.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__update-constraints-on-push.yml,apache/airflow,n/a,mined_repo
+git,human,human_apache__airflow__upgrade-check.yml,apache/airflow,n/a,mined_repo
+git,human,human_argoproj__argo-cd__bump-major-version.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__cherry-pick-single.yml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__ci-build.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__codeql.yml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__image-reuse.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__image.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__init-release.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__release.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_argoproj__argo-cd__update-snyk.yaml,argoproj/argo-cd,n/a,mined_repo
+git,human,human_babel__babel__ci.yml,babel/babel,n/a,mined_repo
+git,human,human_babel__babel__release.yml,babel/babel,n/a,mined_repo
+git,human,human_babel__babel__update-compat-data.yml,babel/babel,n/a,mined_repo
+git,human,human_babel__babel__update-parser-tests.yml,babel/babel,n/a,mined_repo
+git,human,human_babel__babel__update-windows-fixtures.yml,babel/babel,n/a,mined_repo
+git,human,human_celery__celery__codeql-analysis.yml,celery/celery,n/a,mined_repo
+git,human,human_containerd__containerd__api-release.yml,containerd/containerd,n/a,mined_repo
+git,human,human_containerd__containerd__ci.yml,containerd/containerd,n/a,mined_repo
+git,human,human_containerd__containerd__release.yml,containerd/containerd,n/a,mined_repo
+git,human,human_containerd__containerd__windows-hyperv-periodic.yml,containerd/containerd,n/a,mined_repo
+git,human,human_containerd__containerd__windows-periodic.yml,containerd/containerd,n/a,mined_repo
+git,human,human_cypress-io__cypress__snyk_sca_scan.yaml,cypress-io/cypress,n/a,mined_repo
+git,human,human_cypress-io__cypress__snyk_static_analysis_scan.yaml,cypress-io/cypress,n/a,mined_repo
+git,human,human_cypress-io__cypress__update-browser-versions.yml,cypress-io/cypress,n/a,mined_repo
+git,human,human_cypress-io__cypress__update_v8_snapshot_cache.yml,cypress-io/cypress,n/a,mined_repo
+git,human,human_cypress-io__cypress__upload_release_asset.yml,cypress-io/cypress,n/a,mined_repo
+git,human,human_django__django__check_commit_messages.yml,django/django,n/a,mined_repo
+git,human,human_eslint__eslint__update-readme.yml,eslint/eslint,n/a,mined_repo
+git,human,human_facebook__react__devtools_regression_tests.yml,facebook/react,n/a,mined_repo
+git,human,human_facebook__react__runtime_build_and_test.yml,facebook/react,n/a,mined_repo
+git,human,human_facebook__react__runtime_commit_artifacts.yml,facebook/react,n/a,mined_repo
+git,human,human_fastapi__fastapi__contributors.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__people.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__pre-commit.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__sponsors.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__test.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__topic-repos.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_fastapi__fastapi__translate.yml,fastapi/fastapi,n/a,mined_repo
+git,human,human_git_git_bin-wrappers_wrap-for-bin.sh,git/git,n/a,mined_repo
+git,human,human_git_git_ci_check-directional-formatting.bash,git/git,n/a,mined_repo
+git,human,human_git_git_ci_check-whitespace.sh,git/git,n/a,mined_repo
+git,human,human_git_git_ci_install-dependencies.sh,git/git,n/a,mined_repo
+git,human,human_git_git_ci_lib.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_cmd-list.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_fix-texi.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_generate-mergetool-list.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_install-doc-quick.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_install-webdoc.sh,git/git,n/a,mined_repo
+git,human,human_git_git_Documentation_lint-manpages.sh,git/git,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_.gitlab_caproni_setup.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_.lefthook_gitleaks.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_lib_gitlab_background_migration_remote_development_workspace_operations_create_bm_internal_poststart_command_clone_project.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_lib_gitlab_background_migration_remote_development_workspace_operations_create_bm_internal_poststart_command_clone_unshallow.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_lib_gitlab_background_migration_remote_development_workspace_operations_create_bm_workspace_variables_git_credential_store.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_gitlabhq_gitlabhq_lib_support_deploy_deploy.sh,gitlabhq/gitlabhq,n/a,mined_repo
+git,human,human_grafana__grafana__alerting-update-module.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__backend-code-checks.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__backport-workflow.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__bump-version.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__changelog.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__check-frontend-test-coverage.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__frontend-lint.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__policybot.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__pr-dependabot-update-go-workspace.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__pr-go-workspace-check.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__pr-k8s-codegen-check.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__release-build.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__release-comms.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__release-npm.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__release-pr.yml,grafana/grafana,n/a,mined_repo
+git,human,human_grafana__grafana__swagger-gen.yml,grafana/grafana,n/a,mined_repo
+git,human,human_hashicorp__terraform__build-terraform-cli.yml,hashicorp/terraform,n/a,mined_repo
+git,human,human_hashicorp__terraform__checks.yml,hashicorp/terraform,n/a,mined_repo
+git,human,human_home-assistant__core__builder.yml,home-assistant/core,n/a,mined_repo
+git,human,human_home-assistant__core__check-requirements.lock.yml,home-assistant/core,n/a,mined_repo
+git,human,human_junegunn_fzf_shell_completion.bash,junegunn/fzf,n/a,mined_repo
+git,human,human_linux-kernel_drivers_gpu_drm_ci_build-igt.sh,linux-kernel/drivers,n/a,mined_repo
+git,human,human_linux-kernel_drivers_gpu_drm_ci_build.sh,linux-kernel/drivers,n/a,mined_repo
+git,human,human_linux-kernel_scripts_check-uapi.sh,linux-kernel/scripts,n/a,mined_repo
+git,human,human_linux-kernel_scripts_dtc_update-dtc-source.sh,linux-kernel/scripts,n/a,mined_repo
+git,human,human_linux-kernel_scripts_git-resolve.sh,linux-kernel/scripts,n/a,mined_repo
+git,human,human_linux-kernel_scripts_kconfig_merge_config.sh,linux-kernel/scripts,n/a,mined_repo
+git,human,human_linux-kernel_tools_memory-model_scripts_checkghlitmus.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_memory-model_scripts_initlitmushist.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_net_ynl_ynl-regen.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_perf_arch_x86_tests_gen-insn-x86-dat.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_perf_perf-completion.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_power_cpupower_bench_cpufreq-bench_script.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_power_cpupower_cpupower-completion.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_power_cpupower_utils_version-gen.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_power_pm-graph_install_latest_from_github.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_testing_selftests_amd-pstate_gitsource.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_testing_selftests_kmod_kmod.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_testing_selftests_mm_run_vmtests.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_testing_selftests_rcutorture_bin_kvm-series.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_linux-kernel_tools_testing_selftests_rcutorture_bin_mktestid.sh,linux-kernel/tools,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_git-prompt-help.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_gitprompt.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_gitstatus_pre-1.7.10.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_gitstatus.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_tests_benchmark.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_tests_test-non-git-ps1.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_magicmonty_bash-git-prompt_tests_test-rebase-prompt.sh,magicmonty/bash-git-prompt,n/a,mined_repo
+git,human,human_matplotlib__matplotlib__clean_pr.yml,matplotlib/matplotlib,n/a,mined_repo
+git,human,human_matplotlib__matplotlib__cygwin.yml,matplotlib/matplotlib,n/a,mined_repo
+git,human,human_matplotlib__matplotlib__tests.yml,matplotlib/matplotlib,n/a,mined_repo
+git,human,human_moby__moby__.dco.yml,moby/moby,n/a,mined_repo
+git,human,human_moby__moby__.vm.yml,moby/moby,n/a,mined_repo
+git,human,human_nodejs__node__build-tarball.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__commit-lint.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__create-release-proposal.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__linters.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__lint-release-proposal.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__test-linux.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__test-shared.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__update-v8.yml,nodejs/node,n/a,mined_repo
+git,human,human_nodejs__node__update-wpt.yml,nodejs/node,n/a,mined_repo
+git,human,human_npm__cli__audit.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__backport.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmaccess.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmdiff.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmexec.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmfund.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmorg.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmpack.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmpublish.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmsearch.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmteam.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-libnpmversion.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-arborist.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-config.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-docs.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-mock-globals.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-mock-registry.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-npmcli-smoke-tests.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci-release.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__ci.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__codeql-analysis.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__create-node-pr.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__node-integration.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__pull-request.yml,npm/cli,n/a,mined_repo
+git,human,human_npm__cli__release.yml,npm/cli,n/a,mined_repo
+git,human,human_nuxt__nuxt__changelog.yml,nuxt/nuxt,n/a,mined_repo
+git,human,human_nvie_gitflow_contrib_gitflow-installer.sh,nvie/gitflow,n/a,mined_repo
+git,human,human_nvm-sh_nvm_install.sh,nvm-sh/nvm,n/a,mined_repo
+git,human,human_nvm-sh_nvm_rename_test.sh,nvm-sh/nvm,n/a,mined_repo
+git,human,human_nvm-sh_nvm_update_test_mocks.sh,nvm-sh/nvm,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_oh-my-zsh.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_plugins_alias-finder_tests_test_run.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_plugins_gitfast_git-prompt.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_plugins_zsh-navigation-tools_doc_install.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_tools_changelog.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_tools_check_for_upgrade.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_tools_install.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_ohmyzsh_ohmyzsh_tools_upgrade.sh,ohmyzsh/ohmyzsh,n/a,mined_repo
+git,human,human_pallets__flask__publish.yaml,pallets/flask,n/a,mined_repo
+git,human,human_pandas-dev__pandas__unit-tests.yml,pandas-dev/pandas,n/a,mined_repo
+git,human,human_prometheus__prometheus__buf-lint.yml,prometheus/prometheus,n/a,mined_repo
+git,human,human_prometheus__prometheus__buf.yml,prometheus/prometheus,n/a,mined_repo
+git,human,human_prometheus__prometheus__ci.yml,prometheus/prometheus,n/a,mined_repo
+git,human,human_prometheus__prometheus__container_description.yml,prometheus/prometheus,n/a,mined_repo
+git,human,human_psf__black__diff_shades.yml,psf/black,n/a,mined_repo
+git,human,human_psf__black__docker.yml,psf/black,n/a,mined_repo
+git,human,human_psf__black__lint.yml,psf/black,n/a,mined_repo
+git,human,human_psf__black__post_release.yml,psf/black,n/a,mined_repo
+git,human,human_psf__black__release_tests.yml,psf/black,n/a,mined_repo
+git,human,human_psf__requests__codeql-analysis.yml,psf/requests,n/a,mined_repo
+git,human,human_psf__requests__publish.yml,psf/requests,n/a,mined_repo
+git,human,human_pytest-dev__pytest__deploy.yml,pytest-dev/pytest,n/a,mined_repo
+git,human,human_python__mypy__mypy_primer.yml,python/mypy,n/a,mined_repo
+git,human,human_python__mypy__sync_typeshed.yml,python/mypy,n/a,mined_repo
+git,human,human_python__mypy__test.yml,python/mypy,n/a,mined_repo
+git,human,human_python-poetry__poetry__release.yaml,python-poetry/poetry,n/a,mined_repo
+git,human,human_python-poetry__poetry__.tests-matrix.yaml,python-poetry/poetry,n/a,mined_repo
+git,human,human_python-poetry__poetry__tests.yaml,python-poetry/poetry,n/a,mined_repo
+git,human,human_pytorch__pytorch__apply-lint.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___binary-build-flash-attention-wheel-windows.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___binary-build-linux.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___binary-test-linux.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___binary-test-rocm-linux.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___binary-test-xpu-linux.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__build-manywheel-images-s390x.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__build-triton-wheel.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__check_mergeability_ghstack.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__cherry-pick.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__claude-autorevert-advisor.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__create_release.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___docs.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-linux-aarch64-binary-manywheel-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-linux-binary-manywheel-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-macos-arm64-binary-wheel-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-windows-arm64-binary-libtorch-debug-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-windows-arm64-binary-wheel-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-windows-binary-libtorch-debug-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__generated-windows-binary-wheel-nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___lint.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__lint.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__llm_td_retrieval.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__nightly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__revert.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___runner-determinator.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__trunk-tagging.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__trymerge.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__tryrebase.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__update-viablestrict.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___vllm-benchmark.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___vllm-build.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__weekly.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch__win-arm64-build-test.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___win-build.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_pytorch__pytorch___win-test.yml,pytorch/pytorch,n/a,mined_repo
+git,human,human_remix-run__remix__check-main.yaml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__check-pr.yaml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__codex-pr-review.yaml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__format.yml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__generate-remix.yaml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__preview.yml,remix-run/remix,n/a,mined_repo
+git,human,human_remix-run__remix__publish.yaml,remix-run/remix,n/a,mined_repo
+git,human,human_saltstack__salt__build-docs.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__build-packages.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__ci.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__depcheck.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__dependabot-sync.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__lint-action.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__nightly.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__pre-commit-action.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__release.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__scheduled.yml,saltstack/salt,n/a,mined_repo
+git,human,human_saltstack__salt__staging.yml,saltstack/salt,n/a,mined_repo
+git,human,human_scikit-learn__scikit-learn__check-changelog.yml,scikit-learn/scikit-learn,n/a,mined_repo
+git,human,human_scikit-learn__scikit-learn__emscripten.yml,scikit-learn/scikit-learn,n/a,mined_repo
+git,human,human_scikit-learn__scikit-learn__unit-tests.yml,scikit-learn/scikit-learn,n/a,mined_repo
+git,human,human_storybookjs__storybook__code-simplifier.lock.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__duplicate-code-detector.lock.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__generate-sandboxes.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__handle-release-branches.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__prepare-non-patch-release.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__prepare-patch-release.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_storybookjs__storybook__publish.yml,storybookjs/storybook,n/a,mined_repo
+git,human,human_sveltejs__svelte__autofix.yml,sveltejs/svelte,n/a,mined_repo
+git,human,human_sveltejs__svelte__ci.yml,sveltejs/svelte,n/a,mined_repo
+git,human,human_sveltejs__svelte__release.yml,sveltejs/svelte,n/a,mined_repo
+git,human,human_sympy__sympy__release.yml,sympy/sympy,n/a,mined_repo
+git,human,human_sympy__sympy__runtests.yml,sympy/sympy,n/a,mined_repo
+git,human,human_tj_git-extras_check_integrity.sh,tj/git-extras,n/a,mined_repo
+git,human,human_tj_git-extras_etc_bash_completion.sh,tj/git-extras,n/a,mined_repo
+git,human,human_tj_git-extras_install.sh,tj/git-extras,n/a,mined_repo
+git,human,human_tj_git-extras_tests_test_util.sh,tj/git-extras,n/a,mined_repo
+git,human,human_traefik__traefik__documentation.yaml,traefik/traefik,n/a,mined_repo
+git,human,human_traefik__traefik__test-gateway-api-conformance.yaml,traefik/traefik,n/a,mined_repo
+git,human,human_traefik__traefik__validate.yaml,traefik/traefik,n/a,mined_repo
+git,human,human_vercel__next.js__build_and_deploy.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__build_and_test.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__build_reusable.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__code_freeze.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__create_release_branch.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__release-next-rspack.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__test-turbopack-rust-bench-test.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vercel__next.js__trigger_release.yml,vercel/next.js,n/a,mined_repo
+git,human,human_vitejs__vite__ci.yml,vitejs/vite,n/a,mined_repo
+git,human,human_yarnpkg__berry__e2e-husky-workflow.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__e2e-nm-angular-workflow.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__e2e-nm-babel-workflow.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__integration-workflow.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__pr-smart-merge.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__release-branch.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__release-candidate.yml,yarnpkg/berry,n/a,mined_repo
+git,human,human_yarnpkg__berry__release-rerun.yml,yarnpkg/berry,n/a,mined_repo
+git,llm,llm_0lzi_workstation-config_setup.sh,0lzi/workstation-config,AI-unspecified,mined_repo
+git,llm,llm_0xAX__linux-insides__release-e-books.yaml,0xAX/linux-insides,AI-unspecified,mined_repo
+git,llm,llm_23blocks-OS_ai-maestro_install.sh,23blocks-OS/ai-maestro,AI-unspecified,mined_repo
+git,llm,llm_4ian__GDevelop__build-storybook.yml,4ian/GDevelop,AI-unspecified,mined_repo
+git,llm,llm_4ian__GDevelop__update-extension-translations.yml,4ian/GDevelop,AI-unspecified,mined_repo
+git,llm,llm_567-labs__instructor__scheduled-release.yml,567-labs/instructor,AI-unspecified,mined_repo
+git,llm,llm_5n00py_SmartCommit_help-message.sh,5n00py/SmartCommit,AI-unspecified,mined_repo
+git,llm,llm_aaddrick__claude-desktop-debian__ci.yml,aaddrick/claude-desktop-debian,AI-unspecified,mined_repo
+git,llm,llm_aaif-goose__goose__docs-update-recipe-ref.yml,aaif-goose/goose,AI-unspecified,mined_repo
+git,llm,llm_aaif-goose__goose__goose-pr-reviewer.yml,aaif-goose/goose,AI-unspecified,mined_repo
+git,llm,llm_aaif-goose__goose__goose-release-notes.yml,aaif-goose/goose,AI-unspecified,mined_repo
+git,llm,llm_AbdoAhmedElbanaa_Script_rising.sh,AbdoAhmedElbanaa/Script,AI-unspecified,mined_repo
+git,llm,llm_abpframework__abp__update-studio-docs.yml,abpframework/abp,AI-unspecified,mined_repo
+git,llm,llm_AbstergoSweden_HQE-Workbench_hqe_mock.sh,AbstergoSweden/HQE-Workbench,AI-unspecified,mined_repo
+git,llm,llm_Additivemenu__nextjs-react-lib-all-in-one__chatgpt-code-review.yml,Additivemenu/nextjs-react-lib-all-in-one,AI-unspecified,mined_repo
+git,llm,llm_addyosmani__agent-skills__test-plugin-install.yml,addyosmani/agent-skills,AI-unspecified,mined_repo
+git,llm,llm_AduAdrian_react-notificari_download-app.sh,AduAdrian/react-notificari,AI-unspecified,mined_repo
+git,llm,llm_Agent-Field__agentfield__ai-label.yml,Agent-Field/agentfield,AI-unspecified,mined_repo
+git,llm,llm_AgentsMesh__AgentsMesh__deploy.yml,AgentsMesh/AgentsMesh,AI-unspecified,mined_repo
+git,llm,llm_AgentsMesh__AgentsMesh__nightly.yml,AgentsMesh/AgentsMesh,AI-unspecified,mined_repo
+git,llm,llm_AgentsMesh__AgentsMesh__release.yml,AgentsMesh/AgentsMesh,AI-unspecified,mined_repo
+git,llm,llm_ai4curation__odk-ai__ai-runner.yml,ai4curation/odk-ai,AI-unspecified,mined_repo
+git,llm,llm_AIFlowML_cursor_rules_cursor.sh,AIFlowML/cursor,AI-unspecified,mined_repo
+git,llm,llm_aiKrice_homebrew-badgetizr_publish.sh,aiKrice/homebrew-badgetizr,AI-unspecified,mined_repo
+git,llm,llm_alire-alavi_LaChat_install.sh,alire-alavi/LaChat,AI-unspecified,mined_repo
+git,llm,llm_All-The-Vibes__ATV-StarterKit__release.yml,All-The-Vibes/ATV-StarterKit,AI-unspecified,mined_repo
+git,llm,llm_alpibrusl_caloron-noether_record.sh,alpibrusl/caloron-noether,AI-unspecified,mined_repo
+git,llm,llm_als-apg_osprey_premerge_check.sh,als-apg/osprey,AI-unspecified,mined_repo
+git,llm,llm_amanaiproduct_personal-os_setup.sh,amanaiproduct/personal-os,AI-unspecified,mined_repo
+git,llm,llm_amarcu5_PiPer_make.sh,amarcu5/PiPer,AI-unspecified,mined_repo
+git,llm,llm_AnatoliiShara_mlops_dvc_and_git_synthetic.sh,AnatoliiShara/mlops,AI-unspecified,mined_repo
+git,llm,llm_Anras573_AIchemist_skill-suggester.sh,Anras573/AIchemist,AI-unspecified,mined_repo
+git,llm,llm_apachecn-archive__pytorch__generated-windows-binary-libtorch-release-nightly.yml,apachecn-archive/pytorch,AI-unspecified,mined_repo
+git,llm,llm_apolloconfig__apollo__issue-triage.lock.yml,apolloconfig/apollo,AI-unspecified,mined_repo
+git,llm,llm_appsmithorg__appsmith-docs__integration-doc-generator.yml,appsmithorg/appsmith-docs,AI-unspecified,mined_repo
+git,llm,llm_appsmithorg__appsmith-docs__widget-doc-generator.yml,appsmithorg/appsmith-docs,AI-unspecified,mined_repo
+git,llm,llm_Arize-ai__phoenix__cost-sync.yml,Arize-ai/phoenix,AI-unspecified,mined_repo
+git,llm,llm_arjablc_dotfiles_install.sh,arjablc/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_arkimium_LingmoNix-Starter_hyprland.sh,arkimium/LingmoNix-Starter,AI-unspecified,mined_repo
+git,llm,llm_arkimium_yaksha-starter_hyprland.sh,arkimium/yaksha-starter,AI-unspecified,mined_repo
+git,llm,llm_asreview__asreview-artwork__readme_workflow.yml,asreview/asreview-artwork,AI-unspecified,mined_repo
+git,llm,llm_avi8or_iced-rust_pre_commit_quality.sh,avi8or/iced-rust,AI-unspecified,mined_repo
+git,llm,llm_awslabs__aidlc-workflows__codebuild.yml,awslabs/aidlc-workflows,AI-unspecified,mined_repo
+git,llm,llm_awslabs__aidlc-workflows__release-pr.yml,awslabs/aidlc-workflows,AI-unspecified,mined_repo
+git,llm,llm_awslabs__aidlc-workflows__security-scanners.yml,awslabs/aidlc-workflows,AI-unspecified,mined_repo
+git,llm,llm_awslabs__aidlc-workflows__tag-on-merge.yml,awslabs/aidlc-workflows,AI-unspecified,mined_repo
+git,llm,llm_aws-samples__anthropic-on-aws__build-claude-tools-chatbot.yml,aws-samples/anthropic-on-aws,AI-unspecified,mined_repo
+git,llm,llm_AztecProtocol_aztec-packages_create_doc_update_pr.sh,AztecProtocol/aztec-packages,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-quickstart-templates__ValidateSampleDeployments.yml,Azure/azure-quickstart-templates,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-rest-api-specs__typespec-validation-all.yaml,Azure/azure-rest-api-specs,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-sdk-for-js__dash.lock.yml,Azure/azure-sdk-for-js,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-sdk-for-js__scribe.lock.yml,Azure/azure-sdk-for-js,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-sdk-for-js__sentinel.lock.yml,Azure/azure-sdk-for-js,AI-unspecified,mined_repo
+git,llm,llm_Azure__azure-sdk-for-net__update-samples-and-docs.lock.yml,Azure/azure-sdk-for-net,AI-unspecified,mined_repo
+git,llm,llm_baphled_KaRiya_review-commit.sh,baphled/KaRiya,AI-unspecified,mined_repo
+git,llm,llm_beenuar__AiSOC__ci.yml,beenuar/AiSOC,AI-unspecified,mined_repo
+git,llm,llm_beyondeye_aitasks_aitask_setup.sh,beyondeye/aitasks,AI-unspecified,mined_repo
+git,llm,llm_Bikaze__shared-workflows__copilot-review.yml,Bikaze/shared-workflows,AI-unspecified,mined_repo
+git,llm,llm_BinaryVortex__BMAD-Full-Code-MCP-Server__bundle-latest.yaml,BinaryVortex/BMAD-Full-Code-MCP-Server,AI-unspecified,mined_repo
+git,llm,llm_bitcoin__bitcoin__ci.yml,bitcoin/bitcoin,AI-unspecified,mined_repo
+git,llm,llm_Blankeos_iconmate_tag_and_release.sh,Blankeos/iconmate,AI-unspecified,mined_repo
+git,llm,llm_blessonism_openclaw-memory-architecture_auto-backup.sh,blessonism/openclaw-memory-architecture,AI-unspecified,mined_repo
+git,llm,llm_BMayhew__awesome-sites-to-test-on__ai-link-fixer.yml,BMayhew/awesome-sites-to-test-on,AI-unspecified,mined_repo
+git,llm,llm_BMayhew__awesome-sites-to-test-on__pr-review.yml,BMayhew/awesome-sites-to-test-on,AI-unspecified,mined_repo
+git,llm,llm_bobmatnyc_ai-code-review_candidate-evaluation-pipeline.sh,bobmatnyc/ai-code-review,AI-unspecified,mined_repo
+git,llm,llm_bobwhitelock_dotfiles_env.sh,bobwhitelock/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_breferrari__obsidian-mind__release.yml,breferrari/obsidian-mind,AI-unspecified,mined_repo
+git,llm,llm_brettohland_fuckingformatstyle_markup.sh,brettohland/fuckingformatstyle,AI-unspecified,mined_repo
+git,llm,llm_bthos_agentic-kit_teardown.sh,bthos/agentic-kit,AI-unspecified,mined_repo
+git,llm,llm_Bullish-Design_nix-conf_notes-update.sh,Bullish-Design/nix-conf,AI-unspecified,mined_repo
+git,llm,llm_CambrianTech_sentinel-ai_forge.sh,CambrianTech/sentinel-ai,AI-unspecified,mined_repo
+git,llm,llm_campfirein__byterover-cli__pack-and-release.yml,campfirein/byterover-cli,AI-unspecified,mined_repo
+git,llm,llm_cetnkurt__new__playground.yml,cetnkurt/new,AI-unspecified,mined_repo
+git,llm,llm_cfregly_ai-performance-engineering_system_wipe.sh,cfregly/ai-performance-engineering,AI-unspecified,mined_repo
+git,llm,llm_chaterm__Chaterm__release.yml,chaterm/Chaterm,AI-unspecified,mined_repo
+git,llm,llm_chaterm__Chaterm__test.yml,chaterm/Chaterm,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__auto-i18n.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__prepare-release.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__release.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__snapshot.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__sync-to-gitcode.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__update-app-upgrade-config.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_CherryHQ__cherry-studio__v2-daily-preview-build.yml,CherryHQ/cherry-studio,AI-unspecified,mined_repo
+git,llm,llm_Chia-Network__chia-blockchain__dependency-cursor-review.yml,Chia-Network/chia-blockchain,AI-unspecified,mined_repo
+git,llm,llm_Chochanguk__eb_proj__deploy.yml,Chochanguk/eb_proj,AI-unspecified,mined_repo
+git,llm,llm_clockworklabs__SpacetimeDB__ci.yml,clockworklabs/SpacetimeDB,AI-unspecified,mined_repo
+git,llm,llm_cloudflare__vibesdk__claude-docs-sync.yml,cloudflare/vibesdk,AI-unspecified,mined_repo
+git,llm,llm_cockroachdb__cockroach__investigate.yml,cockroachdb/cockroach,AI-unspecified,mined_repo
+git,llm,llm_cockroachdb__cockroach__issue-autosolve.yml,cockroachdb/cockroach,AI-unspecified,mined_repo
+git,llm,llm_cockroachdb__cockroach__pr-autosolve-ci.yml,cockroachdb/cockroach,AI-unspecified,mined_repo
+git,llm,llm_codeaholicguy__ai-devkit__rebuild-skill-index.yml,codeaholicguy/ai-devkit,AI-unspecified,mined_repo
+git,llm,llm_coder__coder__deploy-docs.yaml,coder/coder,AI-unspecified,mined_repo
+git,llm,llm_connorodea_sullyai_replica_documentation-setup.sh,connorodea/sullyai,AI-unspecified,mined_repo
+git,llm,llm_constructor-robotics_constructor-robotics.github.io_reinitializeAllSubmodulesGit.sh,constructor-robotics/constructor-robotics.github.io,AI-unspecified,mined_repo
+git,llm,llm_convergedtarkus_dotfiles_go.bash,convergedtarkus/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_core-coin__cip__train-ai.yml,core-coin/cip,AI-unspecified,mined_repo
+git,llm,llm_coze-dev_coze-loop_download-thrift.sh,coze-dev/coze-loop,AI-unspecified,mined_repo
+git,llm,llm_craigsc_cmux_cmux.sh,craigsc/cmux,AI-unspecified,mined_repo
+git,llm,llm_d12frosted_environment_eru.sh,d12frosted/environment,AI-unspecified,mined_repo
+git,llm,llm_daffy0208_ai-dev-standards_analyze-project.sh,daffy0208/ai-dev-standards,AI-unspecified,mined_repo
+git,llm,llm_davila7__claude-code-templates__update-json-data.yml,davila7/claude-code-templates,AI-unspecified,mined_repo
+git,llm,llm_denisnadey_swifty_proteins_check_text_quality.sh,denisnadey/swifty,AI-unspecified,mined_repo
+git,llm,llm_department-of-veterans-affairs__va.gov-team__generate-research-short-story.yml,department-of-veterans-affairs/va.gov-team,AI-unspecified,mined_repo
+git,llm,llm_department-of-veterans-affairs__vets-api__code_checks.yml,department-of-veterans-affairs/vets-api,AI-unspecified,mined_repo
+git,llm,llm_department-of-veterans-affairs__vets-api__mobile_openapi_docs.yml,department-of-veterans-affairs/vets-api,AI-unspecified,mined_repo
+git,llm,llm_deriv-com__deriv-app__push_and_pull_crowdin_translations.yml,deriv-com/deriv-app,AI-unspecified,mined_repo
+git,llm,llm_devfile_devworkspace-operator_oci-devworkspace-happy-path.sh,devfile/devworkspace-operator,AI-unspecified,mined_repo
+git,llm,llm_didgugoluke_liminal-transit_copilot-hello-world-e2e-test.sh,didgugoluke/liminal-transit,AI-unspecified,mined_repo
+git,llm,llm_Diegojs5__go-vulnerability-scan__go-vulnerability-scan.yml,Diegojs5/go-vulnerability-scan,AI-unspecified,mined_repo
+git,llm,llm_DigneZzZ_remnawave-scripts_selfsteal.sh,DigneZzZ/remnawave-scripts,AI-unspecified,mined_repo
+git,llm,llm_diillson__chatcli__2-prepare-release-pr.yml,diillson/chatcli,AI-unspecified,mined_repo
+git,llm,llm_dinesh-git17_claudehome_protocol-zero.sh,dinesh-git17/claudehome,AI-unspecified,mined_repo
+git,llm,llm_dinesh-git17_claude-runner_protocol-zero.sh,dinesh-git17/claude-runner,AI-unspecified,mined_repo
+git,llm,llm_dj707chen_FunctionGemmaLab_completionGetNews.sh,dj707chen/FunctionGemmaLab,AI-unspecified,mined_repo
+git,llm,llm_dnviti__SmartWifiFanController__ai_code_analysis.yml,dnviti/SmartWifiFanController,AI-unspecified,mined_repo
+git,llm,llm_dokku-MCP__dokku-mcp__llm-release.yml,dokku-MCP/dokku-mcp,AI-unspecified,mined_repo
+git,llm,llm_dotnet__runtime__copilot-echo.lock.yml,dotnet/runtime,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__close-stale-prs.agent.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__devops-health-check.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__devops-health-groom.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__devops-health-investigate.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__evaluation.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__gh-aw-upgrade.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__issue-investigate.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__issue-triage.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__markdown-linter.lock.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__markdownlint.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__skill-coverage.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_dotnet__skills__skill-validator.yml,dotnet/skills,AI-unspecified,mined_repo
+git,llm,llm_DoubleNode_homebrew-aiteamforge_install-shell.sh,DoubleNode/homebrew-aiteamforge,AI-unspecified,mined_repo
+git,llm,llm_DoubleNode_homebrew-aiteamforge_install-team.sh,DoubleNode/homebrew-aiteamforge,AI-unspecified,mined_repo
+git,llm,llm_dragonflydb__dragonfly__fuzz-pr.yml,dragonflydb/dragonfly,AI-unspecified,mined_repo
+git,llm,llm_drehelis__gcp-emulator-ui__check-emulator-updates.lock.yml,drehelis/gcp-emulator-ui,AI-unspecified,mined_repo
+git,llm,llm_dyoshikawa__rulesync__ci.yml,dyoshikawa/rulesync,AI-unspecified,mined_repo
+git,llm,llm_dyoshikawa__rulesync__draft-release.yml,dyoshikawa/rulesync,AI-unspecified,mined_repo
+git,llm,llm_dyoshikawa__rulesync__publish-assets.yml,dyoshikawa/rulesync,AI-unspecified,mined_repo
+git,llm,llm_EchterAlsFake_Porn_Fetch_install.sh,EchterAlsFake/Porn,AI-unspecified,mined_repo
+git,llm,llm_edcet_warp-session-suite_warp_recovery.sh,edcet/warp-session-suite,AI-unspecified,mined_repo
+git,llm,llm_elastic__kibana__backlog-groom.lock.yml,elastic/kibana,AI-unspecified,mined_repo
+git,llm,llm_elastic__kibana__reviewer-claude.lock.yml,elastic/kibana,AI-unspecified,mined_repo
+git,llm,llm_elastic__kibana__reviewer-codex.lock.yml,elastic/kibana,AI-unspecified,mined_repo
+git,llm,llm_eli64s_readme-ai_run_batch.sh,eli64s/readme-ai,AI-unspecified,mined_repo
+git,llm,llm_eli-herman_hermos-public_system-audit.sh,eli-herman/hermos-public,AI-unspecified,mined_repo
+git,llm,llm_elirantutia__vibeyard__release.yml,elirantutia/vibeyard,AI-unspecified,mined_repo
+git,llm,llm_elizaOS__eliza__docs-ci.yml,elizaOS/eliza,AI-unspecified,mined_repo
+git,llm,llm_e-m-b-a_emba_F50_base_aggregator.sh,e-m-b-a/emba,AI-unspecified,mined_repo
+git,llm,llm_emqx_emqx_generate-changelog.sh,emqx/emqx,AI-unspecified,mined_repo
+git,llm,llm_erigontech__erigon__daily-repo-status.lock.yml,erigontech/erigon,AI-unspecified,mined_repo
+git,llm,llm_esengine__DeepSeek-Reasonix__release.yml,esengine/DeepSeek-Reasonix,AI-unspecified,mined_repo
+git,llm,llm_estacioneto_dotfiles_sessionizer.sh,estacioneto/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_ev-flow_quark-engine_run_all.sh,ev-flow/quark-engine,AI-unspecified,mined_repo
+git,llm,llm_expanso-io__examples.expanso.io__ai-check.yml,expanso-io/examples.expanso.io,AI-unspecified,mined_repo
+git,llm,llm_eyaltoledano__claude-task-master__claude-docs-trigger.yml,eyaltoledano/claude-task-master,AI-unspecified,mined_repo
+git,llm,llm_eyaltoledano__claude-task-master__forward-port.yml,eyaltoledano/claude-task-master,AI-unspecified,mined_repo
+git,llm,llm_eyaltoledano__claude-task-master__release.yml,eyaltoledano/claude-task-master,AI-unspecified,mined_repo
+git,llm,llm_eyaltoledano__claude-task-master__update-models-md.yml,eyaltoledano/claude-task-master,AI-unspecified,mined_repo
+git,llm,llm_FacePrintPay_C25-mono_9583e5_build_chatgpt-auto-talk.sh,FacePrintPay/C25-mono,AI-unspecified,mined_repo
+git,llm,llm_FacePrintPay_C25-mono_c593dd_build_chatgpt-widescreen.sh,FacePrintPay/C25-mono,AI-unspecified,mined_repo
+git,llm,llm_fim-ai__fim-one__i18n-sync.yml,fim-ai/fim-one,AI-unspecified,mined_repo
+git,llm,llm_findalexli_agentsmd-rl_solve.sh,findalexli/agentsmd-rl,AI-unspecified,mined_repo
+git,llm,llm_FinsureConsulting_finsure_move_images.sh,FinsureConsulting/finsure,AI-unspecified,mined_repo
+git,llm,llm_foofork_claude-code-privacy-tools_setup_commit_hook.sh,foofork/claude-code-privacy-tools,AI-unspecified,mined_repo
+git,llm,llm_f__prompts.chat__spam-check.lock.yml,f/prompts.chat,AI-unspecified,mined_repo
+git,llm,llm_frankbria_ralph-claude-code_setup.sh,frankbria/ralph-claude-code,AI-unspecified,mined_repo
+git,llm,llm_FreeCAD__FreeCAD-addons__update_constraints.yaml,FreeCAD/FreeCAD-addons,AI-unspecified,mined_repo
+git,llm,llm_frijal__mentarigroup__baris-langsunghapus.yml,frijal/mentarigroup,AI-unspecified,mined_repo
+git,llm,llm_fumishiki_prompt-sync_prepare_demo_env.sh,fumishiki/prompt-sync,AI-unspecified,mined_repo
+git,llm,llm_FutureTranz-Inc_ai-ethics_ci-check-attribution.sh,FutureTranz-Inc/ai-ethics,AI-unspecified,mined_repo
+git,llm,llm_FutureTranz-Inc_vscode-sqlite-viewer_ci-check-attribution.sh,FutureTranz-Inc/vscode-sqlite-viewer,AI-unspecified,mined_repo
+git,llm,llm_GamesCrafters_GamesmanOne_gamesman_install.sh,GamesCrafters/GamesmanOne,AI-unspecified,mined_repo
+git,llm,llm_GamilaCoding__curtains-website__master.yml,GamilaCoding/curtains-website,AI-unspecified,mined_repo
+git,llm,llm_GenWaveLLC__svgmaker-mcp__publish.yml,GenWaveLLC/svgmaker-mcp,AI-unspecified,mined_repo
+git,llm,llm_getagentseal__codeburn__block-claude-coauthor.yml,getagentseal/codeburn,AI-unspecified,mined_repo
+git,llm,llm_getagentseal__codeburn__release-menubar.yml,getagentseal/codeburn,AI-unspecified,mined_repo
+git,llm,llm_getlantern__lantern__mirror.yml,getlantern/lantern,AI-unspecified,mined_repo
+git,llm,llm_git-ai-project__git-ai__update-changelog.yml,git-ai-project/git-ai,AI-unspecified,mined_repo
+git,llm,llm_git-ai-project_git-ai_verify-attribution.sh,git-ai-project/git-ai,AI-unspecified,mined_repo
+git,llm,llm_github__awesome-copilot__skill-quality-report.yml,github/awesome-copilot,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__codegen-check.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__cross-repo-issue-analysis.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__go-sdk-tests.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__handle-bug.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__handle-documentation.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__handle-enhancement.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__handle-question.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__issue-classification.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__issue-triage.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__publish.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__release-changelog.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__scenario-builds.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__sdk-consistency-review.lock.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__update-copilot-dependency.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__copilot-sdk__verify-compiled.yml,github/copilot-sdk,AI-unspecified,mined_repo
+git,llm,llm_github__docs__changelog-agent.yml,github/docs,AI-unspecified,mined_repo
+git,llm,llm_github__gh-aw__changeset.lock.yml,github/gh-aw,AI-unspecified,mined_repo
+git,llm,llm_github__gh-aw__daily-observability-report.lock.yml,github/gh-aw,AI-unspecified,mined_repo
+git,llm,llm_GLips__Figma-Context-MCP__release.yml,GLips/Figma-Context-MCP,AI-unspecified,mined_repo
+git,llm,llm_GlycemicGPT__website__ci.yml,GlycemicGPT/website,AI-unspecified,mined_repo
+git,llm,llm_GrantSuter__DevinAIRepo__dogfood.yml,GrantSuter/DevinAIRepo,AI-unspecified,mined_repo
+git,llm,llm_gremlin-labs_gremlinmodes_install.sh,gremlin-labs/gremlinmodes,AI-unspecified,mined_repo
+git,llm,llm_guilhermehbueno_ollama-git-pitch-gen_main.sh,guilhermehbueno/ollama-git-pitch-gen,AI-unspecified,mined_repo
+git,llm,llm_haianh6311__Custom-unleash__ai-flag-cleanup-pr.yml,haianh6311/Custom-unleash,AI-unspecified,mined_repo
+git,llm,llm_Hamza-Mos_praxlab_clean.sh,Hamza-Mos/praxlab,AI-unspecified,mined_repo
+git,llm,llm_hancengiz_copilot-cli-codereviewer_review-local.sh,hancengiz/copilot-cli-codereviewer,AI-unspecified,mined_repo
+git,llm,llm_hanesegi__build-applications-w-copilot-agent-mode__0-start-exercise.yml,hanesegi/build-applications-w-copilot-agent-mode,AI-unspecified,mined_repo
+git,llm,llm_hanesegi__build-applications-w-copilot-agent-mode__6-copilot-on-github.yml,hanesegi/build-applications-w-copilot-agent-mode,AI-unspecified,mined_repo
+git,llm,llm_harbor-framework__harbor__adapter-review.yml,harbor-framework/harbor,AI-unspecified,mined_repo
+git,llm,llm_harvard-edge__cs249r_book__book-publish-live.yml,harvard-edge/cs249r_book,AI-unspecified,mined_repo
+git,llm,llm_hellocoop_docker-client_release.sh,hellocoop/docker-client,AI-unspecified,mined_repo
+git,llm,llm_hicommonwealth_commonwealth_run.sh,hicommonwealth/commonwealth,AI-unspecified,mined_repo
+git,llm,llm_Hidden-History_ai-memory_install.sh,Hidden-History/ai-memory,AI-unspecified,mined_repo
+git,llm,llm_hkjarral_AVA-AI-Voice-Agent-for-Asterisk_install.sh,hkjarral/AVA-AI-Voice-Agent-for-Asterisk,AI-unspecified,mined_repo
+git,llm,llm_HolmesGPT__holmesgpt__eval-regression.yaml,HolmesGPT/holmesgpt,AI-unspecified,mined_repo
+git,llm,llm_hovanhoa__cursor-free-vip__build.yml,hovanhoa/cursor-free-vip,AI-unspecified,mined_repo
+git,llm,llm_hugogu_oh-my-skills_refresh.sh,hugogu/oh-my-skills,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__claude.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__linear-create-plan.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__linear-implement-plan.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__linear-research-tickets.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__main.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_humanlayer__humanlayer__release-macos.yml,humanlayer/humanlayer,AI-unspecified,mined_repo
+git,llm,llm_hyp3ri0n-ng__DriverFuckBuddy__auto-gpt5-implementation.yml,hyp3ri0n-ng/DriverFuckBuddy,AI-unspecified,mined_repo
+git,llm,llm_hyperdxio__hyperdx__deep-review.yml,hyperdxio/hyperdx,AI-unspecified,mined_repo
+git,llm,llm_iloveitaly_dotfiles_server.sh,iloveitaly/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_ils15__pantheon__auto-release.yml,ils15/pantheon,AI-unspecified,mined_repo
+git,llm,llm_ils15__pantheon__docs.yml,ils15/pantheon,AI-unspecified,mined_repo
+git,llm,llm_imbue-ai_mngr_mega_tutorial.sh,imbue-ai/mngr,AI-unspecified,mined_repo
+git,llm,llm_inboxapi__cli__ci.yml,inboxapi/cli,AI-unspecified,mined_repo
+git,llm,llm_infiniflow__infinity__release.yml,infiniflow/infinity,AI-unspecified,mined_repo
+git,llm,llm_inl-sigma_ai-scrum_driver.sh,inl-sigma/ai-scrum,AI-unspecified,mined_repo
+git,llm,llm_Integral-Healthcare_robin-ai-reviewer_ai.sh,Integral-Healthcare/robin-ai-reviewer,AI-unspecified,mined_repo
+git,llm,llm_intent-solutions-io_perception-with-intent_commit.sh,intent-solutions-io/perception-with-intent,AI-unspecified,mined_repo
+git,llm,llm_intent-solutions-io_perception-with-intent_git-push.sh,intent-solutions-io/perception-with-intent,AI-unspecified,mined_repo
+git,llm,llm_ironcore-dev__metal-operator__auto_update.yml,ironcore-dev/metal-operator,AI-unspecified,mined_repo
+git,llm,llm_jabrena__cursor-rules-java__maven.yaml,jabrena/cursor-rules-java,AI-unspecified,mined_repo
+git,llm,llm_jacobrhouse__ALZ-Bicep-001__update-policy-china.yml,jacobrhouse/ALZ-Bicep-001,AI-unspecified,mined_repo
+git,llm,llm_jacobrhouse__ALZ-Bicep-001__update-policy.yml,jacobrhouse/ALZ-Bicep-001,AI-unspecified,mined_repo
+git,llm,llm_jacwu__github-materials__pr-copilot-review.yml,jacwu/github-materials,AI-unspecified,mined_repo
+git,llm,llm_JamiesonLabUTSW_hve-core-codex_sync-upstream.sh,JamiesonLabUTSW/hve-core-codex,AI-unspecified,mined_repo
+git,llm,llm_JanDeDobbeleer__oh-my-posh__ai-changelog.yml,JanDeDobbeleer/oh-my-posh,AI-unspecified,mined_repo
+git,llm,llm_Jarvie8176__tools__ai-guard.yml,Jarvie8176/tools,AI-unspecified,mined_repo
+git,llm,llm_Jayinsightfactory__mindmap-viewer__ai-attribution.yml,Jayinsightfactory/mindmap-viewer,AI-unspecified,mined_repo
+git,llm,llm_jaywyawhare_C-ML_setup_env.sh,jaywyawhare/C-ML,AI-unspecified,mined_repo
+git,llm,llm_jd-opensource_JoySafeter_bump-version.sh,jd-opensource/JoySafeter,AI-unspecified,mined_repo
+git,llm,llm_jeffev_ai-dev-kit_ai-kit.sh,jeffev/ai-dev-kit,AI-unspecified,mined_repo
+git,llm,llm_jfernandez__mdserve__ci.yml,jfernandez/mdserve,AI-unspecified,mined_repo
+git,llm,llm_jfernandez__mdserve__commitlint.yml,jfernandez/mdserve,AI-unspecified,mined_repo
+git,llm,llm_JimWentworth__demos__update-index.yml,JimWentworth/demos,AI-unspecified,mined_repo
+git,llm,llm_JMinyard1335_bashlib-create_create_templates.bash,JMinyard1335/bashlib-create,AI-unspecified,mined_repo
+git,llm,llm_jnMetaCode__superpowers-zh__audit.yml,jnMetaCode/superpowers-zh,AI-unspecified,mined_repo
+git,llm,llm_jonathan-vella__azure-agentic-infraops__branch-enforcement.yml,jonathan-vella/azure-agentic-infraops,AI-unspecified,mined_repo
+git,llm,llm_jonathan-vella__azure-agentic-infraops__ci.yml,jonathan-vella/azure-agentic-infraops,AI-unspecified,mined_repo
+git,llm,llm_jonathan-vella__azure-agentic-infraops__governance-policy-baseline.yml,jonathan-vella/azure-agentic-infraops,AI-unspecified,mined_repo
+git,llm,llm_jonathan-vella__azure-agentic-infraops__sensei-branch-maintenance.yml,jonathan-vella/azure-agentic-infraops,AI-unspecified,mined_repo
+git,llm,llm_jonathan-vella__azure-agentic-infraops__weekly-maintenance.yml,jonathan-vella/azure-agentic-infraops,AI-unspecified,mined_repo
+git,llm,llm_jonwiggins__optio__release.yml,jonwiggins/optio,AI-unspecified,mined_repo
+git,llm,llm_joshuakatt_Bob-The-Builder_config.sh,joshuakatt/Bob-The-Builder,AI-unspecified,mined_repo
+git,llm,llm_jumpserver__jumpserver__i18n-auto-translate.yml,jumpserver/jumpserver,AI-unspecified,mined_repo
+git,llm,llm_justapithecus_dotfiles_ai-install-hooks.sh,justapithecus/dotfiles,AI-unspecified,mined_repo
+git,llm,llm_jyw-atgithub_fish-genome_gene_liftoff.sh,jyw-atgithub/fish-genome,AI-unspecified,mined_repo
+git,llm,llm_k21academyuk__dashboard__cd-helm-workflow.yml,k21academyuk/dashboard,AI-unspecified,mined_repo
+git,llm,llm_karis-org__My-Agent-Research__example-auto-commit.yml,karis-org/My-Agent-Research,AI-unspecified,mined_repo
+git,llm,llm_keckmatd_ai-learning-pct_install-harness.sh,keckmatd/ai-learning-pct,AI-unspecified,mined_repo
+git,llm,llm_kesslerio_attio-mcp-server_prepare-commit-msg,kesslerio/attio-mcp-server,AI-unspecified,mined_repo
+git,llm,llm_kesslerio_attio-mcp-server_ultra-cleanup-branches.sh,kesslerio/attio-mcp-server,AI-unspecified,mined_repo
+git,llm,llm_kevin-hinz__editor.js__bump-version-on-merge-next.yml,kevin-hinz/editor.js,AI-unspecified,mined_repo
+git,llm,llm_kevin-hinz__editor.js__create-a-release-draft.yml,kevin-hinz/editor.js,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__beta.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__generate.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__nix-hashes.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__publish.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__test.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_Kilo-Org__kilocode__visual-regression.yml,Kilo-Org/kilocode,AI-unspecified,mined_repo
+git,llm,llm_kitarefake__cpython__build.yml,kitarefake/cpython,AI-unspecified,mined_repo
+git,llm,llm_kody-w__CommunityRAPP__copilot-steward.yml,kody-w/CommunityRAPP,AI-unspecified,mined_repo
+git,llm,llm_KoljaL_highlight-open-files_reinstall.sh,KoljaL/highlight-open-files,AI-unspecified,mined_repo
+git,llm,llm_koxudaxi__datamodel-code-generator__generated-docs-sync.yaml,koxudaxi/datamodel-code-generator,AI-unspecified,mined_repo
+git,llm,llm_kubernetes__minikube__update-runc-version.yml,kubernetes/minikube,AI-unspecified,mined_repo
+git,llm,llm_LadyKerr__devflow-landing__deploy.yml,LadyKerr/devflow-landing,AI-unspecified,mined_repo
+git,llm,llm_LearningCircuit__local-deep-research__release.yml,LearningCircuit/local-deep-research,AI-unspecified,mined_repo
+git,llm,llm_leehanchung__SMILE-factory__codex-code-review.yml,leehanchung/SMILE-factory,AI-unspecified,mined_repo
+git,llm,llm_LerianStudio__github-actions-shared-workflows__gptchangelog.yml,LerianStudio/github-actions-shared-workflows,AI-unspecified,mined_repo
+git,llm,llm_libis__rdm-integration__ai-governance.yml,libis/rdm-integration,AI-unspecified,mined_repo
+git,llm,llm_Light-Heart-Labs__DreamServer__nightly-code-review.yml,Light-Heart-Labs/DreamServer,AI-unspecified,mined_repo
+git,llm,llm_LingmoOS-Testing_LingmoNix-Starter_hyprland.sh,LingmoOS-Testing/LingmoNix-Starter,AI-unspecified,mined_repo
+git,llm,llm_lisophorm__mcp-memory-service__main.yml,lisophorm/mcp-memory-service,AI-unspecified,mined_repo
+git,llm,llm_liyupi__ai-guide__sync-vibe-coding-course.yml,liyupi/ai-guide,AI-unspecified,mined_repo
+git,llm,llm_LongTermSupport_fedora-desktop_dockerfile-custom.bash,LongTermSupport/fedora-desktop,AI-unspecified,mined_repo
+git,llm,llm_luiseiman_dotforge_post-compact.sh,luiseiman/dotforge,AI-unspecified,mined_repo
+git,llm,llm_LutzGross_esys-escript.github.io_publish-docs.sh,LutzGross/esys-escript.github.io,AI-unspecified,mined_repo
+git,llm,llm_lwnoc_lwnoc_dti_noc_upload_dti_changes_manual_run.sh,lwnoc/lwnoc,AI-unspecified,mined_repo
+git,llm,llm_m0n0x41d__haft__ci.yml,m0n0x41d/haft,AI-unspecified,mined_repo
+git,llm,llm_m0n0x41d__haft__release.yml,m0n0x41d/haft,AI-unspecified,mined_repo
+git,llm,llm_m0n0x41d__haft__update-fpf.yml,m0n0x41d/haft,AI-unspecified,mined_repo
+git,llm,llm_magicxiaomin__novelhub__claude-plan.yml,magicxiaomin/novelhub,AI-unspecified,mined_repo
+git,llm,llm_manaflow-ai__cmux__build-ghosttykit.yml,manaflow-ai/cmux,AI-unspecified,mined_repo
+git,llm,llm_manaflow-ai__cmux__nightly.yml,manaflow-ai/cmux,AI-unspecified,mined_repo
+git,llm,llm_manaflow-ai__cmux__test-depot.yml,manaflow-ai/cmux,AI-unspecified,mined_repo
+git,llm,llm_manaflow-ai__cmux__test-e2e.yml,manaflow-ai/cmux,AI-unspecified,mined_repo
+git,llm,llm_manaflow-ai__cmux__update-homebrew.yml,manaflow-ai/cmux,AI-unspecified,mined_repo
+git,llm,llm_maniranjan07__Ai_Chatbot__auto-i18n.yml,maniranjan07/Ai_Chatbot,AI-unspecified,mined_repo
+git,llm,llm_marcelocra_cli_manage.sh,marcelocra/cli,AI-unspecified,mined_repo
+git,llm,llm_marciohideaki_enterprise-hseos_validate-commit-msg.sh,marciohideaki/enterprise-hseos,AI-unspecified,mined_repo
+git,llm,llm_marcuspat_turbo-flow_generate-claude-md.sh,marcuspat/turbo-flow,AI-unspecified,mined_repo
+git,llm,llm_marcusquinn_aidevops_aidevops.sh,marcusquinn/aidevops,AI-unspecified,mined_repo
+git,llm,llm_marcusquinn_aidevops_init-routines-helper.sh,marcusquinn/aidevops,AI-unspecified,mined_repo
+git,llm,llm_marshallmassengill__tinyusb_frc__build_aarch64.yml,marshallmassengill/tinyusb_frc,AI-unspecified,mined_repo
+git,llm,llm_marshallmassengill__tinyusb_frc__build_arm.yml,marshallmassengill/tinyusb_frc,AI-unspecified,mined_repo
+git,llm,llm_martin-steinegger__ProstT5-llama__docker.yml,martin-steinegger/ProstT5-llama,AI-unspecified,mined_repo
+git,llm,llm_maxrantil__protonvpn-manager__block-ai-attribution.yml,maxrantil/protonvpn-manager,AI-unspecified,mined_repo
+git,llm,llm_maxritter__pilot-shell__claude.yml,maxritter/pilot-shell,AI-unspecified,mined_repo
+git,llm,llm_maxritter__pilot-shell__deploy-website.yml,maxritter/pilot-shell,AI-unspecified,mined_repo
+git,llm,llm_maxritter__pilot-shell__release-dev.yml,maxritter/pilot-shell,AI-unspecified,mined_repo
+git,llm,llm_maxritter__pilot-shell__release.yml,maxritter/pilot-shell,AI-unspecified,mined_repo
+git,llm,llm_maxritter__pilot-shell__supply-chain.yml,maxritter/pilot-shell,AI-unspecified,mined_repo
+git,llm,llm_MCPJam_inspector_ship.sh,MCPJam/inspector,AI-unspecified,mined_repo
+git,llm,llm_medusajs__medusa__dx-triage-doc-fixes.yml,medusajs/medusa,AI-unspecified,mined_repo
+git,llm,llm_MementoRC__mcp-git__copilot-merge.yml,MementoRC/mcp-git,AI-unspecified,mined_repo
+git,llm,llm_mhiskall282__robot2__robot.yml,mhiskall282/robot2,AI-unspecified,mined_repo
+git,llm,llm_miaoxworld_OpenClawInstaller_install.sh,miaoxworld/OpenClawInstaller,AI-unspecified,mined_repo
+git,llm,llm_MilesBHuff_Zebiantu_specialize-aetherius.bash,MilesBHuff/Zebiantu,AI-unspecified,mined_repo
+git,llm,llm_MILL5_claude-code-pipeline_init.sh,MILL5/claude-code-pipeline,AI-unspecified,mined_repo
+git,llm,llm_mithro_rcfiles_setup.sh,mithro/rcfiles,AI-unspecified,mined_repo
+git,llm,llm_mlflow__mlflow__nailaopus.yml,mlflow/mlflow,AI-unspecified,mined_repo
+git,llm,llm_moeru-ai__airi__pr-triage.lock.yml,moeru-ai/airi,AI-unspecified,mined_repo
+git,llm,llm_mountaineerbr_shellChatGPT_chatgpt.sh,mountaineerbr/shellChatGPT,AI-unspecified,mined_repo
+git,llm,llm_Mybono_ai-orchestrator_local-commit.sh,Mybono/ai-orchestrator,AI-unspecified,mined_repo
+git,llm,llm_Nagi-ovo__gemini-voyager__release.yml,Nagi-ovo/gemini-voyager,AI-unspecified,mined_repo
+git,llm,llm_Nagi-ovo__gemini-voyager__sponsors.yml,Nagi-ovo/gemini-voyager,AI-unspecified,mined_repo
+git,llm,llm_Nano-Collective__nanocoder__pr-checks.yml,Nano-Collective/nanocoder,AI-unspecified,mined_repo
+git,llm,llm_Nano-Collective__nanocoder__update-badges.yml,Nano-Collective/nanocoder,AI-unspecified,mined_repo
+git,llm,llm_Nano-Collective__nanocoder__update-homebrew.yml,Nano-Collective/nanocoder,AI-unspecified,mined_repo
+git,llm,llm_Nano-Collective__nanocoder__update-nix.yml,Nano-Collective/nanocoder,AI-unspecified,mined_repo
+git,llm,llm_Nbglut_FOSSATest_create-branches.sh,Nbglut/FOSSATest,AI-unspecified,mined_repo
+git,llm,llm_nicolasramos_odooclaw_install_doodba.sh,nicolasramos/odooclaw,AI-unspecified,mined_repo
+git,llm,llm_Nikhil007nsg__Promotheus-and-Grafana__versions.yaml,Nikhil007nsg/Promotheus-and-Grafana,AI-unspecified,mined_repo
+git,llm,llm_ninja-concepts_issues-high-level-example_ai-commit.sh,ninja-concepts/issues-high-level-example,AI-unspecified,mined_repo
+git,llm,llm_nmudur_Cosmo-LLM_eval_script_main_old.sh,nmudur/Cosmo-LLM,AI-unspecified,mined_repo
+git,llm,llm_nmudur_Cosmo-LLM_eval_script_main.sh,nmudur/Cosmo-LLM,AI-unspecified,mined_repo
+git,llm,llm_Noob99n_Fantasy_setup.sh,Noob99n/Fantasy,AI-unspecified,mined_repo
+git,llm,llm_npanuhin_Bing-Wallpaper-Archive_squash_archive.sh,npanuhin/Bing-Wallpaper-Archive,AI-unspecified,mined_repo
+git,llm,llm_ns408_ai-dev-context_ai-config-sync.sh,ns408/ai-dev-context,AI-unspecified,mined_repo
+git,llm,llm_NVIDIA__Megatron-LM__claude-copy-to-main.yml,NVIDIA/Megatron-LM,AI-unspecified,mined_repo
+git,llm,llm_NVIDIA__Megatron-LM__claude_review.yml,NVIDIA/Megatron-LM,AI-unspecified,mined_repo
+git,llm,llm_nwiizo_tfmcp_Release.sh,nwiizo/tfmcp,AI-unspecified,mined_repo
+git,llm,llm_nyldn__claude-octopus__claude-octopus.yml,nyldn/claude-octopus,AI-unspecified,mined_repo
+git,llm,llm_oleg121203_AI-SYSTEMS-REPO_setup.sh,oleg121203/AI-SYSTEMS-REPO,AI-unspecified,mined_repo
+git,llm,llm_Oluseyi-Kofoworola_gitops2-healthcare-intelligence-git-commit_demo.sh,Oluseyi-Kofoworola/gitops2-healthcare-intelligence-git-commit,AI-unspecified,mined_repo
+git,llm,llm_OpenCoworkAI__open-cowork__codex-pr-review.yml,OpenCoworkAI/open-cowork,AI-unspecified,mined_repo
+git,llm,llm_OpenCoworkAI__open-cowork__update-homebrew.yml,OpenCoworkAI/open-cowork,AI-unspecified,mined_repo
+git,llm,llm_openedx__credentials-themes__create_credentials_requirements_pr.yml,openedx/credentials-themes,AI-unspecified,mined_repo
+git,llm,llm_openedx__credentials-themes__patch_version_on_requirements_update.yml,openedx/credentials-themes,AI-unspecified,mined_repo
+git,llm,llm_OpenHands__software-agent-sdk__integration-runner.yml,OpenHands/software-agent-sdk,AI-unspecified,mined_repo
+git,llm,llm_openvinotoolkit__openvino__ci-doctor.lock.yml,openvinotoolkit/openvino,AI-unspecified,mined_repo
+git,llm,llm_OsProgramadores_op-desafios_checkout-fork.sh,OsProgramadores/op-desafios,AI-unspecified,mined_repo
+git,llm,llm_palimkarakshay__lumivara-site__llm-monitor-watch.yml,palimkarakshay/lumivara-site,AI-unspecified,mined_repo
+git,llm,llm_pantheon-org__opencode-warcraft-notifications__chores-docs-regenerate.yml,pantheon-org/opencode-warcraft-notifications,AI-unspecified,mined_repo
+git,llm,llm_PaulDuvall_ai-development-patterns_automated-review.sh,PaulDuvall/ai-development-patterns,AI-unspecified,mined_repo
+git,llm,llm_phel-lang_phel-lang_release-lib.sh,phel-lang/phel-lang,AI-unspecified,mined_repo
+git,llm,llm_photostructure_exif-oxide_claude.sh,photostructure/exif-oxide,AI-unspecified,mined_repo
+git,llm,llm_PicnicSupermarket__error-prone-support__suggest-commit-message.yml,PicnicSupermarket/error-prone-support,AI-unspecified,mined_repo
+git,llm,llm_planifest_planifest-framework_commit-msg,planifest/planifest-framework,AI-unspecified,mined_repo
+git,llm,llm_PMeeske__Ouroboros-v2__copilot-agent-solver.yml,PMeeske/Ouroboros-v2,AI-unspecified,mined_repo
+git,llm,llm_potgieterdl_ai-dev-setup_setup-ai.sh,potgieterdl/ai-dev-setup,AI-unspecified,mined_repo
+git,llm,llm_pound-emu_pound_setup_submodules.sh,pound-emu/pound,AI-unspecified,mined_repo
+git,llm,llm_pprp__Awesome-Efficient-MoE__daily-paper-update.yml,pprp/Awesome-Efficient-MoE,AI-unspecified,mined_repo
+git,llm,llm_PrefectHQ__prefect__docs-update.yml,PrefectHQ/prefect,AI-unspecified,mined_repo
+git,llm,llm_PriorLabs__TabPFN__claude-code-review.yml,PriorLabs/TabPFN,AI-unspecified,mined_repo
+git,llm,llm_PSR94_CALLSIGNAL_verify_no_ai_traces.sh,PSR94/CALLSIGNAL,AI-unspecified,mined_repo
+git,llm,llm_PSR94_TransitionIQ_verify_no_ai_traces.sh,PSR94/TransitionIQ,AI-unspecified,mined_repo
+git,llm,llm_PX4__PX4-Autopilot__pr-review-poster.yml,PX4/PX4-Autopilot,AI-unspecified,mined_repo
+git,llm,llm_pydantic__pydantic-ai__bots.yml,pydantic/pydantic-ai,AI-unspecified,mined_repo
+git,llm,llm_r0shanbhagat_Compose-CleanArchitecture-Kotlin_setup-ai-agents.sh,r0shanbhagat/Compose-CleanArchitecture-Kotlin,AI-unspecified,mined_repo
+git,llm,llm_RadStr-bot__ffffffffffffffffffffffffffffffff__commit-to-publication-branch.yml,RadStr-bot/ffffffffffffffffffffffffffffffff,AI-unspecified,mined_repo
+git,llm,llm_raeez_ainfinity-chiral-hochschild-cohomology-3d-qft_pre_bash_guard.sh,raeez/ainfinity-chiral-hochschild-cohomology-3d-qft,AI-unspecified,mined_repo
+git,llm,llm_raeez_chiral-bar-cobar-vol2_pre_bash_guard.sh,raeez/chiral-bar-cobar-vol2,AI-unspecified,mined_repo
+git,llm,llm_redpanda-data__redpanda__backport-command.yml,redpanda-data/redpanda,AI-unspecified,mined_repo
+git,llm,llm_regpy_regpy_update-remote.sh,regpy/regpy,AI-unspecified,mined_repo
+git,llm,llm_reshinto_dev-forge_block-ai-attribution.sh,reshinto/dev-forge,AI-unspecified,mined_repo
+git,llm,llm_RickCreator87__richards-credit-authority__Security-scan.yaml,RickCreator87/richards-credit-authority,AI-unspecified,mined_repo
+git,llm,llm_rios0rios0__guide__generate-ai-rules.yaml,rios0rios0/guide,AI-unspecified,mined_repo
+git,llm,llm_RobertB1978__majster-ai-oferty__aictl-guard.yml,RobertB1978/majster-ai-oferty,AI-unspecified,mined_repo
+git,llm,llm_robot-perception-group_aerial_docking_switch_to_real_flights.sh,robot-perception-group/aerial,AI-unspecified,mined_repo
+git,llm,llm_RockyWearsAHat_github-shell-helpers_upload-ai-message.sh,RockyWearsAHat/github-shell-helpers,AI-unspecified,mined_repo
+git,llm,llm_ROCm_amdsmi_run-clang-tidy.sh,ROCm/amdsmi,AI-unspecified,mined_repo
+git,llm,llm_rohitg00__manim-video-generator__deploy-motia.yml,rohitg00/manim-video-generator,AI-unspecified,mined_repo
+git,llm,llm_ronantakizawa__mcpservercicd__llm-direct-mcp-accessibility.yml,ronantakizawa/mcpservercicd,AI-unspecified,mined_repo
+git,llm,llm_rosssivertsen_enterprise-templates_scaffold.sh,rosssivertsen/enterprise-templates,AI-unspecified,mined_repo
+git,llm,llm_rozy0311__viralops-engine__copilot-agent.yml,rozy0311/viralops-engine,AI-unspecified,mined_repo
+git,llm,llm_ruby__ruby__mingw.yml,ruby/ruby,AI-unspecified,mined_repo
+git,llm,llm_sanmak_specops_verify.sh,sanmak/specops,AI-unspecified,mined_repo
+git,llm,llm_satomic_gitlab-copilot-coding-agent_issue_workflow.sh,satomic/gitlab-copilot-coding-agent,AI-unspecified,mined_repo
+git,llm,llm_scanopy__scanopy__promote_to_latest.yml,scanopy/scanopy,AI-unspecified,mined_repo
+git,llm,llm_sergeiwallace_ai-cli-utils_airflow-watch.sh,sergeiwallace/ai-cli-utils,AI-unspecified,mined_repo
+git,llm,llm_shellphish__artiphishell__ai-review.yaml,shellphish/artiphishell,AI-unspecified,mined_repo
+git,llm,llm_shivashant25__eslz-bicep__update-policy-china.yml,shivashant25/eslz-bicep,AI-unspecified,mined_repo
+git,llm,llm_sidlabs-platform_copilot-cli-loop-demo_run-loop.sh,sidlabs-platform/copilot-cli-loop-demo,AI-unspecified,mined_repo
+git,llm,llm_Significant-Gravitas__AutoGPT__docs-enhance.yml,Significant-Gravitas/AutoGPT,AI-unspecified,mined_repo
+git,llm,llm_SimulaVR_Simula_checkCommitConsistency.sh,SimulaVR/Simula,AI-unspecified,mined_repo
+git,llm,llm_Sirco-web__.github__generate-stats.yml,Sirco-web/.github,AI-unspecified,mined_repo
+git,llm,llm_soaringDistributions_ubDistBuild_core.sh,soaringDistributions/ubDistBuild,AI-unspecified,mined_repo
+git,llm,llm_soaringDistributions__ubDistBuild__zUpgrade.yml,soaringDistributions/ubDistBuild,AI-unspecified,mined_repo
+git,llm,llm_soaringDistributions__ubdist_dummy__zUpgrade.yml,soaringDistributions/ubdist_dummy,AI-unspecified,mined_repo
+git,llm,llm_sozercan__ayna__release.yml,sozercan/ayna,AI-unspecified,mined_repo
+git,llm,llm_sparsh-j01_opti-market_check_no_attribution.sh,sparsh-j01/opti-market,AI-unspecified,mined_repo
+git,llm,llm_sswam_allemande_transpatch.sh,sswam/allemande,AI-unspecified,mined_repo
+git,llm,llm_stackopshq_orca-cli_check-no-ai-attribution.sh,stackopshq/orca-cli,AI-unspecified,mined_repo
+git,llm,llm_stillrivercode__idk__ai-orchestrator.yml,stillrivercode/idk,AI-unspecified,mined_repo
+git,llm,llm_Stirling-Tools__Stirling-PDF__ai_pr_title_review.yml,Stirling-Tools/Stirling-PDF,AI-unspecified,mined_repo
+git,llm,llm_streamlit__streamlit__ai-qa-testing.yml,streamlit/streamlit,AI-unspecified,mined_repo
+git,llm,llm_streamlit__streamlit__ai-update-docs.yml,streamlit/streamlit,AI-unspecified,mined_repo
+git,llm,llm_strongca22-cpu_gabagool_deploy.sh,strongca22-cpu/gabagool,AI-unspecified,mined_repo
+git,llm,llm_sundial-org_awesome-openclaw-skills_compress.sh,sundial-org/awesome-openclaw-skills,AI-unspecified,mined_repo
+git,llm,llm_sunflower-land__sunflower-land__main-commit-alerts.yml,sunflower-land/sunflower-land,AI-unspecified,mined_repo
+git,llm,llm_supabase__supabase__docs-sync-auto-troubleshooting.yml,supabase/supabase,AI-unspecified,mined_repo
+git,llm,llm_swcstudiospace__supercompute__ai-pr-creator.yml,swcstudiospace/supercompute,AI-unspecified,mined_repo
+git,llm,llm_swiftforarduino_swift_checkout-swift-ci.sh,swiftforarduino/swift,AI-unspecified,mined_repo
+git,llm,llm_Sylinko__Everywhere__sync-i18n.yml,Sylinko/Everywhere,AI-unspecified,mined_repo
+git,llm,llm_synapticore-io__astro-lab__ai-agent.yml,synapticore-io/astro-lab,AI-unspecified,mined_repo
+git,llm,llm_tasu-tasuku__tasu-tasuku__update-languages.yml,tasu-tasuku/tasu-tasuku,AI-unspecified,mined_repo
+git,llm,llm_tenstorrent__tt-forge__ai-model-bringup.yml,tenstorrent/tt-forge,AI-unspecified,mined_repo
+git,llm,llm_TeplrGuy__Contoso-University__copilot-review.yml,TeplrGuy/Contoso-University,AI-unspecified,mined_repo
+git,llm,llm_tgoai_tgo_tgo.sh,tgoai/tgo,AI-unspecified,mined_repo
+git,llm,llm_ThanakritAof_agent-context-kit_agents.sh,ThanakritAof/agent-context-kit,AI-unspecified,mined_repo
+git,llm,llm_TheArchitectit__agent-guardrails-template__guardrails-lint.yml,TheArchitectit/agent-guardrails-template,AI-unspecified,mined_repo
+git,llm,llm_TheSashaDev__girl-agent__auto-release.yml,TheSashaDev/girl-agent,AI-unspecified,mined_repo
+git,llm,llm_thorgeir93_bin_git_status_check.sh,thorgeir93/bin,AI-unspecified,mined_repo
+git,llm,llm_TiagoMSSantos_MobileRT_release_notes.sh,TiagoMSSantos/MobileRT,AI-unspecified,mined_repo
+git,llm,llm_TIBTHINK_cbt_git.sh,TIBTHINK/cbt,AI-unspecified,mined_repo
+git,llm,llm_TIBTHINK_reliqua2.0_git.sh,TIBTHINK/reliqua2.0,AI-unspecified,mined_repo
+git,llm,llm_tnvmadhav_chatgpt-git-commit_chatgpt_git_commit.sh,tnvmadhav/chatgpt-git-commit,AI-unspecified,mined_repo
+git,llm,llm_TopcuAbdulbaki_Bitirme_llm.sh,TopcuAbdulbaki/Bitirme,AI-unspecified,mined_repo
+git,llm,llm_topoteretes__cognee__release.yml,topoteretes/cognee,AI-unspecified,mined_repo
+git,llm,llm_tosin2013_documcp_release.sh,tosin2013/documcp,AI-unspecified,mined_repo
+git,llm,llm_traylinx_switchAILocal_ail.sh,traylinx/switchAILocal,AI-unspecified,mined_repo
+git,llm,llm_triton-inference-server__server__pre-commit.yml,triton-inference-server/server,AI-unspecified,mined_repo
+git,llm,llm_tw93_Waza_verify-skills.sh,tw93/Waza,AI-unspecified,mined_repo
+git,llm,llm_UEFI-code__PyTorch_For_PoorGuys__generated-macos-arm64-binary-conda-nightly.yml,UEFI-code/PyTorch_For_PoorGuys,AI-unspecified,mined_repo
+git,llm,llm_UniversalStandards__SWARM__copilot-worker.yml,UniversalStandards/SWARM,AI-unspecified,mined_repo
+git,llm,llm_Unleash__unleash__ai-flag-cleanup-pr.yml,Unleash/unleash,AI-unspecified,mined_repo
+git,llm,llm_unslothai__unsloth__notebooks-ci.yml,unslothai/unsloth,AI-unspecified,mined_repo
+git,llm,llm_unslothai__unsloth__security-audit.yml,unslothai/unsloth,AI-unspecified,mined_repo
+git,llm,llm_v3ai_cain_.bashrc,v3ai/cain,AI-unspecified,mined_repo
+git,llm,llm_validator_validator_check-commit-message.sh,validator/validator,AI-unspecified,mined_repo
+git,llm,llm_vendurehq__vendure__generate_docs.yml,vendurehq/vendure,AI-unspecified,mined_repo
+git,llm,llm_VenTheZone_lesson_learned_init.sh,VenTheZone/lesson,AI-unspecified,mined_repo
+git,llm,llm_vercel__workflow__backport.yml,vercel/workflow,AI-unspecified,mined_repo
+git,llm,llm_virelai2604_chatgpt-team_chatgpt_sync.sh,virelai2604/chatgpt-team,AI-unspecified,mined_repo
+git,llm,llm_vquinonesvirtualq_ai-dev-tasks_clean-ai-attribution-history.sh,vquinonesvirtualq/ai-dev-tasks,AI-unspecified,mined_repo
+git,llm,llm_weibaohui__k8m__build-docker-image.yml,weibaohui/k8m,AI-unspecified,mined_repo
+git,llm,llm_wodeh__gstack-kimi__windows-free-tests.yml,wodeh/gstack-kimi,AI-unspecified,mined_repo
+git,llm,llm_xdrfvgz__tts-native__ci.yml,xdrfvgz/tts-native,AI-unspecified,mined_repo
+git,llm,llm_xiaolai__vmark__claude-cost-report.yml,xiaolai/vmark,AI-unspecified,mined_repo
+git,llm,llm_xmtp__docs-xmtp-org__generate-llms.yml,xmtp/docs-xmtp-org,AI-unspecified,mined_repo
+git,llm,llm_xpqz__pylog__pr-policy-no-ai.yml,xpqz/pylog,AI-unspecified,mined_repo
+git,llm,llm_Xtley001_osprey-ranger_update.sh,Xtley001/osprey-ranger,AI-unspecified,mined_repo
+git,llm,llm_Yeachan-Heo__oh-my-claudecode__release.yml,Yeachan-Heo/oh-my-claudecode,AI-unspecified,mined_repo
+git,llm,llm_Yeachan-Heo__oh-my-claudecode__upgrade-test.yml,Yeachan-Heo/oh-my-claudecode,AI-unspecified,mined_repo
+git,llm,llm_YiWang24_AiDIY_daily-update.sh,YiWang24/AiDIY,AI-unspecified,mined_repo
+git,llm,llm_yschimke__meshcore-mobile__no-ai-coauthors.yml,yschimke/meshcore-mobile,AI-unspecified,mined_repo
+git,llm,llm_yusufkaraaslan_lazy-bird_wizard.sh,yusufkaraaslan/lazy-bird,AI-unspecified,mined_repo
+git,llm,llm_Z3Prover__z3__code-simplifier.lock.yml,Z3Prover/z3,AI-unspecified,mined_repo
+git,llm,llm_Z3RO-O_git-contribution-automation_automation.sh,Z3RO-O/git-contribution-automation,AI-unspecified,mined_repo
+git,llm,llm_zainebben-h__jrnl-devops__changelog.yaml,zainebben-h/jrnl-devops,AI-unspecified,mined_repo
+git,llm,llm_zalmoxes-laran_EM-blender-tools_em.sh,zalmoxes-laran/EM-blender-tools,AI-unspecified,mined_repo
+git,llm,llm_zemyblue__ai-briefing-dashboard__daily-briefing.yml,zemyblue/ai-briefing-dashboard,AI-unspecified,mined_repo
+git,llm,llm_zk-b612__claude-cookbooks-zh__notebook-diff-comment.yml,zk-b612/claude-cookbooks-zh,AI-unspecified,mined_repo
+git,llm,llm_zulip__zulip__zulip-ci.yml,zulip/zulip,AI-unspecified,mined_repo

@@ -1,0 +1,14 @@
+Modify package distribution tags
+
+Usage:
+npm dist-tag add <package-spec (with version)> [<tag>]
+npm dist-tag rm <package-spec> <tag>
+npm dist-tag ls [<package-spec>]
+
+Options:
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[-ws|--workspaces] [--include-workspace-root]
+
+alias: dist-tags
+
+Run "npm help dist-tag" for more info

@@ -1,0 +1,16 @@
+--build-arg
+--builder
+--check
+--dry-run
+-m
+--memory
+--no-cache
+--print
+--provenance
+--pull
+--push
+-q
+--quiet
+--sbom
+--ssh
+--with-dependencies

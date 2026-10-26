@@ -1,0 +1,12 @@
+-c
+--cached
+--dereference
+-f
+--file-system
+--format
+--help
+-L
+--printf
+-t
+--terse
+--version

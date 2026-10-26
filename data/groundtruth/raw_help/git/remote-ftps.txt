@@ -1,0 +1,7 @@
+===== git remote-ftps -h =====
+warning: url has no scheme: -h/
+fatal: credential url cannot be parsed: -h/
+===== man option definition lines =====
+
+===== completion helper =====
+

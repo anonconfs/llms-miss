@@ -1,0 +1,9 @@
+--expect-result-count
+--expect-results
+-g
+--global
+--include-workspace-root
+--package-lock-only
+-w
+--workspace
+--workspaces

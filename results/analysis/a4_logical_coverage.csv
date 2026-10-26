@@ -1,0 +1,4 @@
+dataset,gt_logical_options,human_logical,llm_logical,shared_logical,shared_same_spelling,shared_diff_spelling
+gnu,1909,142,144,89,88,1
+git,4684,94,132,62,58,4
+ci,1626,20,20,3,3,0

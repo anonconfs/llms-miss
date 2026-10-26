@@ -1,0 +1,75 @@
+name: Example Auto Commit
+
+# このワークフローは例として、ファイルを自動的に作成・コミット・プッシュする方法を示しています
+# ChatGPT/Copilotから類似のパターンを使用できます
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_name:
+        description: '作成するファイル名（ディレクトリパスは使用不可）'
+        required: true
+        default: 'example.txt'
+      file_content:
+        description: 'ファイルの内容'
+        required: true
+        default: 'This is an example file created by GitHub Actions'
+      branch:
+        description: 'Target branch'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  create-and-commit:
+    runs-on: ubuntu-latest
+    
+    env:
+      OPENAI_API_KEY: ${{ secrets.MALAPI || secrets.MYAGENTRESEARCH_API }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Validate and create example file
+        run: |
+          # ファイル名の検証（パストラバーサル攻撃とその他の悪意のある入力を防ぐ）
+          FILE_NAME="${{ github.event.inputs.file_name }}"
+          
+          # ホワイトリスト方式でファイル名を検証
+          if [[ ! "$FILE_NAME" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "Error: Invalid file name. Only alphanumeric characters, dots, hyphens, and underscores are allowed."
+            exit 1
+          fi
+          
+          # ファイル名の長さ制限
+          if [ ${#FILE_NAME} -gt 100 ]; then
+            echo "Error: File name is too long (max 100 characters)."
+            exit 1
+          fi
+          
+          # ファイル内容のサイズ制限（1MB）
+          CONTENT="${{ github.event.inputs.file_content }}"
+          if [ ${#CONTENT} -gt 1048576 ]; then
+            echo "Error: File content is too large (max 1MB)."
+            exit 1
+          fi
+          
+          echo "$CONTENT" > "$FILE_NAME"
+      
+      - name: Commit and Push
+        run: |
+          FILE_NAME="${{ github.event.inputs.file_name }}"
+          git add "$FILE_NAME"
+          git commit -m "Add $FILE_NAME via workflow"
+          git push origin ${{ github.event.inputs.branch }}

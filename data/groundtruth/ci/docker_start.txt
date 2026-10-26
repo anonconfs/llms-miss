@@ -1,0 +1,5 @@
+-a
+--attach
+--detach-keys
+-i
+--interactive

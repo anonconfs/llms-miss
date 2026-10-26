@@ -1,0 +1,9 @@
+--
+--diagnose
+--no-diagnose
+--no-output-directory
+--no-suffix
+-o
+--output-directory
+-s
+--suffix

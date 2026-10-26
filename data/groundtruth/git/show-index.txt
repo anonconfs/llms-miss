@@ -1,0 +1,2 @@
+--no-object-format
+--object-format

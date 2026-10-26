@@ -1,0 +1,9 @@
+Stop a package
+
+Usage:
+npm stop [-- <args>]
+
+Options:
+[--ignore-scripts] [--script-shell <script-shell>]
+
+Run "npm help stop" for more info

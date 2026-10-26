@@ -1,0 +1,541 @@
+name: Claude Documentation Review
+
+on:
+  push:
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '_doc/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '_doc/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      analysis_scope:
+        description: 'Documentation analysis scope'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - user-docs
+        - technical-docs
+        - api-docs
+
+env:
+  NODE_VERSION: "18"
+
+jobs:
+  claude-doc-analysis:
+    name: "Claude Documentation Analysis"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Identify documentation changes
+      run: |
+        # Get list of changed documentation files
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # For PR, get changed files
+          git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -E '\.(md|rst|txt)$' > /tmp/changed-docs.txt || echo "No documentation changes found"
+        else
+          # For push, get recent changes
+          git diff --name-only HEAD~1..HEAD | grep -E '\.(md|rst|txt)$' > /tmp/changed-docs.txt || echo "No documentation changes found"
+        fi
+        
+        echo "Changed documentation files:"
+        cat /tmp/changed-docs.txt || echo "No changes"
+        
+        # Also get all documentation files for comprehensive analysis
+        find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" > /tmp/all-docs.txt
+        echo "Total documentation files: $(wc -l < /tmp/all-docs.txt)"
+    
+    - name: Create documentation analysis prompt
+      run: |
+        mkdir -p /tmp/claude-doc-analysis
+        
+        ANALYSIS_SCOPE="${{ github.event.inputs.analysis_scope || 'all' }}"
+        
+        cat > /tmp/claude-doc-analysis/doc-analysis-prompt.txt << EOF
+        You are a technical documentation expert specializing in AI/ML projects. Analyze the documentation for the Romantic Companion AI project.
+
+        ## Project Context
+
+        This is a sophisticated AI companion system with multiple complex components:
+        - **Personality System**: Multi-dimensional personality adaptation
+        - **Memory System**: Three-tier memory architecture
+        - **Emotion Processing**: Advanced emotion detection and response
+        - **Conversation Management**: Natural dialog flow
+        - **Voice Integration**: Speech recognition and synthesis
+        - **Analytics**: User interaction tracking and insights
+
+        ## Documentation Analysis Scope: ${ANALYSIS_SCOPE}
+
+        ## Analysis Areas
+
+        1. **Content Quality**:
+           - Accuracy and technical correctness
+           - Completeness of information
+           - Clarity and readability
+           - Logical organization and structure
+
+        2. **User Experience**:
+           - Documentation accessibility for different user types
+           - Navigation and findability
+           - Examples and code snippets quality
+           - Onboarding and getting started experience
+
+        3. **Technical Documentation**:
+           - API documentation completeness
+           - Architecture documentation clarity
+           - Setup and installation instructions
+           - Troubleshooting and FAQ sections
+
+        4. **Maintenance and Consistency**:
+           - Documentation freshness and accuracy
+           - Consistency in style and formatting
+           - Cross-references and linking
+           - Version control and change tracking
+
+        ## Documentation Categories to Analyze
+
+        ### User-Facing Documentation:
+        - \`README.md\`: Project overview and quick start
+        - \`GITHUB_ACTIONS_PIPELINE_GUIDE.md\`: CI/CD pipeline usage
+        - Setup and installation guides
+        - User guides and tutorials
+
+        ### Technical Documentation:
+        - \`CLAUDE.md\`: Project-specific instructions
+        - Architecture documentation
+        - API reference documentation
+        - Developer guides and contribution docs
+
+        ### Internal Documentation:
+        - \`_doc/\` directory: Implementation logs and evaluations
+        - Technical decision records
+        - Development notes and plans
+
+        ## Analysis Process
+
+        1. **Document Discovery**:
+           - Use Glob to find all documentation files: \`**/*.md\`
+           - Focus on changed files if this is a PR review
+           - Identify critical documentation gaps
+
+        2. **Content Analysis**:
+           - Read key documentation files
+           - Assess content quality and accuracy
+           - Check for outdated information
+           - Validate examples and code snippets
+
+        3. **Structure and Organization**:
+           - Evaluate documentation hierarchy
+           - Check navigation and cross-references
+           - Assess information architecture
+
+        4. **User Journey Analysis**:
+           - Evaluate onboarding experience
+           - Check developer setup process
+           - Assess troubleshooting resources
+
+        ## Documentation Review Format
+
+        \`\`\`markdown
+        # Documentation Analysis Report
+
+        ## Executive Summary
+        [Overall assessment of documentation quality and key findings]
+
+        ## Critical Issues ❌
+        ### [Document/Section]
+        - **Issue**: [Specific problem]
+        - **Impact**: [User experience impact]
+        - **Recommendation**: [How to fix]
+
+        ## Content Quality Assessment
+
+        ### Accuracy and Completeness
+        - [Assessment of technical accuracy]
+        - [Gaps in coverage]
+        - [Outdated information]
+
+        ### Clarity and Readability
+        - [Writing quality assessment]
+        - [Technical complexity appropriateness]
+        - [Examples and illustrations]
+
+        ## User Experience Analysis
+
+        ### New User Onboarding
+        - **Getting Started**: [Assessment of initial user experience]
+        - **Setup Process**: [Installation and configuration clarity]
+        - **First Steps**: [Guidance for new users]
+
+        ### Developer Experience
+        - **Development Setup**: [Developer onboarding assessment]
+        - **API Documentation**: [API docs quality and completeness]
+        - **Troubleshooting**: [Problem-solving resource quality]
+
+        ## Documentation Structure
+
+        ### Organization
+        - [Information architecture assessment]
+        - [Navigation and findability]
+        - [Cross-references and linking]
+
+        ### Consistency
+        - [Style and formatting consistency]
+        - [Terminology usage]
+        - [Structure patterns]
+
+        ## Specific Document Reviews
+
+        ### README.md
+        [Detailed review of project README]
+
+        ### CLAUDE.md
+        [Review of Claude-specific instructions]
+
+        ### Technical Documentation
+        [Review of architecture and API docs]
+
+        ### User Guides
+        [Review of user-facing documentation]
+
+        ## Improvement Recommendations
+
+        ### High Priority
+        1. [Critical improvements needed]
+
+        ### Medium Priority
+        1. [Important enhancements]
+
+        ### Low Priority
+        1. [Nice-to-have improvements]
+
+        ## Documentation Roadmap Suggestions
+        [Strategic recommendations for documentation evolution]
+
+        ## Quality Metrics
+        - **Completeness**: [X/10]
+        - **Accuracy**: [X/10]
+        - **Usability**: [X/10]
+        - **Maintainability**: [X/10]
+        - **Overall**: [X/10]
+        \`\`\`
+
+        ## Analysis Guidelines
+
+        1. **Be User-Focused**: Consider different user personas (new users, developers, contributors)
+        2. **Technical Accuracy**: Verify technical information against code implementation
+        3. **Practical Value**: Assess how well documentation helps users achieve goals
+        4. **Maintenance Perspective**: Consider long-term documentation sustainability
+
+        Please begin your comprehensive documentation analysis.
+        EOF
+    
+    - name: Create documentation settings
+      run: |
+        cat > /tmp/claude-doc-analysis/doc-settings.json << 'EOF'
+        {
+          "max_tokens": 8000,
+          "temperature": 0.2,
+          "system_prompt_additions": [
+            "You are a technical writing expert with experience in AI/ML project documentation.",
+            "Focus on practical usability and user experience when reviewing documentation.",
+            "Consider both technical accuracy and accessibility for different user skill levels."
+          ]
+        }
+        EOF
+    
+    - name: Run Claude Documentation Analysis
+      uses: ./claude-code-base-action
+      with:
+        prompt_file: /tmp/claude-doc-analysis/doc-analysis-prompt.txt
+        allowed_tools: "Read,Grep,Glob,Bash,LS"
+        settings: /tmp/claude-doc-analysis/doc-settings.json
+        timeout_minutes: "12"
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        max_turns: "15"
+    
+    - name: Upload documentation analysis results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: documentation-analysis-results
+        path: |
+          /tmp/claude-execution-output.json
+          /tmp/changed-docs.txt
+          /tmp/all-docs.txt
+
+  claude-api-doc-review:
+    name: "Claude API Documentation Review"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.inputs.analysis_scope == 'api-docs' || github.event.inputs.analysis_scope == 'all'
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Create API documentation analysis prompt
+      run: |
+        mkdir -p /tmp/claude-api-analysis
+        
+        cat > /tmp/claude-api-analysis/api-doc-prompt.txt << EOF
+        You are an API documentation specialist. Analyze the API documentation for the Romantic Companion AI project.
+
+        ## API Documentation Analysis Focus
+
+        1. **API Reference Completeness**:
+           - All endpoints documented
+           - Request/response schemas
+           - Authentication requirements
+           - Error responses and codes
+
+        2. **Code Examples Quality**:
+           - Working code examples
+           - Multiple language examples
+           - Real-world usage scenarios
+           - Copy-paste ready snippets
+
+        3. **Developer Experience**:
+           - Getting started guides
+           - Authentication setup
+           - SDK and client library docs
+           - Testing and debugging guides
+
+        ## Analysis Process
+
+        1. **Find API Documentation**:
+           - Search for API docs in \`api/\` directory
+           - Look for OpenAPI/Swagger specifications
+           - Check for endpoint documentation files
+
+        2. **Validate API Coverage**:
+           - Compare documented endpoints with actual API code
+           - Check for missing or outdated documentation
+           - Validate request/response examples
+
+        3. **Developer Journey Assessment**:
+           - Evaluate API onboarding experience
+           - Check authentication documentation
+           - Review error handling guidance
+
+        ## API Documentation Report Format
+
+        \`\`\`markdown
+        # API Documentation Review
+
+        ## API Coverage Summary
+        - **Total Endpoints**: [Number of endpoints found]
+        - **Documented Endpoints**: [Number documented]
+        - **Coverage Percentage**: [X%]
+
+        ## Critical API Doc Issues
+        [Missing or incorrect API documentation]
+
+        ## Authentication Documentation
+        [Review of auth setup and token usage docs]
+
+        ## Request/Response Documentation
+        [Quality of request/response schema docs]
+
+        ## Code Examples Assessment
+        [Quality and completeness of code examples]
+
+        ## Developer Experience
+        [Overall API documentation usability]
+
+        ## Improvement Recommendations
+        [Specific suggestions for API doc improvements]
+        \`\`\`
+
+        Please analyze the API documentation comprehensively.
+        EOF
+    
+    - name: Run Claude API Documentation Review
+      uses: ./claude-code-base-action
+      with:
+        prompt_file: /tmp/claude-api-analysis/api-doc-prompt.txt
+        allowed_tools: "Read,Grep,Glob,Bash,LS"
+        timeout_minutes: "8"
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        max_turns: "10"
+    
+    - name: Upload API documentation analysis results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: api-documentation-analysis-results
+        path: |
+          /tmp/claude-execution-output.json
+
+  documentation-summary:
+    name: "Documentation Analysis Summary"
+    runs-on: ubuntu-latest
+    needs: [claude-doc-analysis, claude-api-doc-review]
+    if: always()
+    
+    steps:
+    - name: Download analysis artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: doc-analysis-results
+    
+    - name: Generate documentation summary
+      run: |
+        echo "# 📚 Documentation Analysis Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Analysis Date**: $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+        echo "**Analysis Time**: $(date -u +%H:%M:%S) UTC" >> $GITHUB_STEP_SUMMARY
+        echo "**Analysis Scope**: ${{ github.event.inputs.analysis_scope || 'all' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Documentation Analysis Results
+        if [ "${{ needs.claude-doc-analysis.result }}" = "success" ]; then
+          echo "✅ **Documentation Analysis**: COMPLETED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Documentation Analysis**: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # API Documentation Results
+        if [ "${{ needs.claude-api-doc-review.result }}" = "success" ]; then
+          echo "✅ **API Documentation Review**: COMPLETED" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.claude-api-doc-review.result }}" = "skipped" ]; then
+          echo "⏭️ **API Documentation Review**: SKIPPED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **API Documentation Review**: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Analysis Components" >> $GITHUB_STEP_SUMMARY
+        echo "- **Content Quality**: Technical accuracy and completeness" >> $GITHUB_STEP_SUMMARY
+        echo "- **User Experience**: Navigation and accessibility" >> $GITHUB_STEP_SUMMARY
+        echo "- **Developer Onboarding**: Setup and getting started guides" >> $GITHUB_STEP_SUMMARY
+        echo "- **API Documentation**: Endpoint documentation and examples" >> $GITHUB_STEP_SUMMARY
+        echo "- **Maintenance**: Consistency and freshness assessment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Documentation Categories Reviewed" >> $GITHUB_STEP_SUMMARY
+        echo "- **User Guides**: End-user documentation and tutorials" >> $GITHUB_STEP_SUMMARY
+        echo "- **Technical Docs**: Architecture and implementation guides" >> $GITHUB_STEP_SUMMARY
+        echo "- **API Reference**: Endpoint documentation and examples" >> $GITHUB_STEP_SUMMARY
+        echo "- **Developer Guides**: Setup, contribution, and maintenance docs" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. Review detailed analysis reports in artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "2. Address critical documentation issues" >> $GITHUB_STEP_SUMMARY
+        echo "3. Implement recommended improvements" >> $GITHUB_STEP_SUMMARY
+        echo "4. Update outdated documentation" >> $GITHUB_STEP_SUMMARY
+        echo "5. Enhance user onboarding experience" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Automated documentation review by Claude Code*" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Create documentation improvement plan
+      run: |
+        cat > documentation-improvement-plan.md << EOF
+        # Documentation Improvement Plan
+
+        **Analysis Date**: $(date -u +%Y-%m-%d)
+        **Repository**: ${{ github.repository }}
+        **Analysis Trigger**: ${{ github.event_name }}
+
+        ## Analysis Summary
+
+        | Component | Status | Priority |
+        |-----------|--------|----------|
+        | General Documentation | ${{ needs.claude-doc-analysis.result }} | High |
+        | API Documentation | ${{ needs.claude-api-doc-review.result }} | High |
+
+        ## Analysis Scope Covered
+
+        ### Content Quality Assessment
+        - Technical accuracy verification
+        - Completeness evaluation
+        - Clarity and readability review
+        - Example and code snippet validation
+
+        ### User Experience Analysis
+        - New user onboarding evaluation
+        - Developer experience assessment
+        - Navigation and findability review
+        - Accessibility and inclusion considerations
+
+        ### Maintenance and Consistency
+        - Documentation freshness check
+        - Style and formatting consistency
+        - Cross-reference validation
+        - Version control assessment
+
+        ## Key Focus Areas for AI Companion Project
+
+        ### Technical Documentation
+        - Personality system architecture documentation
+        - Memory system implementation guides
+        - Emotion processing workflow documentation
+        - Conversation management API reference
+
+        ### User Guides
+        - Getting started with the AI companion
+        - Personality customization guides
+        - Voice interaction setup
+        - Analytics and insights documentation
+
+        ### Developer Resources
+        - Contributing guidelines
+        - Architecture decision records
+        - Testing and validation guides
+        - Deployment and configuration docs
+
+        ## Improvement Implementation Strategy
+
+        ### Phase 1: Critical Issues (Immediate)
+        - Fix broken links and missing references
+        - Update outdated technical information
+        - Add missing API endpoint documentation
+        - Improve getting started experience
+
+        ### Phase 2: Enhancement (Short-term)
+        - Add comprehensive code examples
+        - Improve navigation and structure
+        - Enhance developer onboarding
+        - Create troubleshooting guides
+
+        ### Phase 3: Strategic (Long-term)
+        - Implement documentation automation
+        - Create interactive tutorials
+        - Develop comprehensive API SDK docs
+        - Establish documentation maintenance processes
+
+        ---
+        *Generated by Claude Code Documentation Analysis System*
+        EOF
+    
+    - name: Upload documentation improvement plan
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation-improvement-plan
+        path: |
+          documentation-improvement-plan.md

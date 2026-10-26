@@ -1,0 +1,327 @@
+name: Suggest PR commit message
+on:
+  pull_request:
+    types: [ edited, opened, reopened, synchronize ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number of interest
+        required: true
+        type: number
+permissions:
+  contents: read
+concurrency:
+  group: suggest-commit-message-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: true
+env:
+  # XXX: Figure out how we can block access to `ab.chatgpt.com` and
+  # `chatgpt.com` without causing PR checks to fail.
+  ALLOWED_ENDPOINTS: >
+    ab.chatgpt.com:443
+    api.github.com:443
+    api.openai.com:443
+    chatgpt.com:443
+    github.com:443
+    registry.npmjs.org:443
+jobs:
+  suggest:
+    # No commit message is suggested for code originating from forked
+    # repositories, as such workflow runs do not have access to the requisite
+    # secrets.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    environment: codex
+    steps:
+      - name: Install Harden-Runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        with:
+          # We can't disable `sudo`, as `openai/codex-action` unconditionally
+          # invokes `sudo`, even with `safety-strategy: unsafe` and
+          # `sandbox: danger-full-access`.
+          # XXX: Consider splitting this workflow into three jobs, with
+          # `openai/codex-action` being the sole step of the second job.
+          disable-sudo-and-containers: false
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Resolve pull request metadata
+        id: pr-details
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = Number(context.payload.pull_request?.number ?? context.payload.inputs?.pr_number);
+            if (!Number.isFinite(prNumber) || prNumber <= 0) {
+              throw new Error('Unable to determine pull request number');
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            core.setOutput('number', String(pr.number));
+            core.setOutput('title', pr.title ?? '');
+            core.setOutput('body', pr.body ?? '');
+            core.setOutput('author', pr.user?.login ?? '');
+            core.setOutput('baseRef', pr.base.ref ?? '');
+            core.setOutput('baseSha', pr.base.sha ?? '');
+            core.setOutput('headRef', pr.head.ref ?? '');
+            core.setOutput('headSha', pr.head.sha ?? '');
+      - name: Check out code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Prepare Codex prompt
+        id: prompt
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr-details.outputs.number }}
+          PR_TITLE: ${{ steps.pr-details.outputs.title }}
+          PR_BODY: ${{ steps.pr-details.outputs.body }}
+          PR_AUTHOR: ${{ steps.pr-details.outputs.author }}
+          BASE_REF: ${{ steps.pr-details.outputs.baseRef }}
+          BASE_SHA: ${{ steps.pr-details.outputs.baseSha }}
+          HEAD_REF: ${{ steps.pr-details.outputs.headRef }}
+          HEAD_SHA: ${{ steps.pr-details.outputs.headSha }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const env = process.env;
+            const repository = env.REPOSITORY;
+            const prNumber = env.PR_NUMBER;
+            const title = env.PR_TITLE;
+            const body = env.PR_BODY;
+            const author = env.PR_AUTHOR;
+            const baseRef = env.BASE_REF;
+            const baseSha = env.BASE_SHA;
+            const headRef = env.HEAD_REF;
+            const headSha = env.HEAD_SHA;
+            const commitMessageInstructions = fs
+              .readFileSync('.github/instructions/commit-message.instructions.md', 'utf8')
+              .trim();
+            const reviewInstructions = fs
+              .readFileSync('.github/instructions/review.instructions.md', 'utf8')
+              .trim();
+
+            const cleanedBody = (body || '').trim() || '<no pull request description>';
+
+            // Determine whether this is an upgrade PR.
+            const upgradeMatch = title?.match(/^Upgrade (.+?) (\S+) -> (\S+)/);
+            const upgradeLibrary = upgradeMatch ? upgradeMatch[1] : null;
+            const upgradeFromVersion = upgradeMatch ? upgradeMatch[2] : null;
+            const upgradeToVersion = upgradeMatch ? upgradeMatch[3] : null;
+            const commitMessageReviewSection = reviewInstructions
+              .split(/^## /m)
+              .find(section => section.startsWith('Commit Message Conventions '))
+              ?.trim();
+
+            if (!commitMessageReviewSection) {
+              throw new Error('Unable to locate commit message section in review instructions');
+            }
+
+            // Extract domain names from list of endpoints to which Harden-Runner will allow access.
+            const allowedDomains = process.env.ALLOWED_ENDPOINTS.split(/\s+/).map(line => line.split(':')[0]).filter(Boolean);
+
+            const instructions = `
+            <task>
+            Craft the squash commit message for this GitHub pull request.
+            </task>
+
+            <context>
+            Repository: ${repository}
+            Number: ${prNumber}
+            Title: ${title}
+            Author: ${author}
+            Base branch: ${baseRef} (${baseSha})
+            Head branch: ${headRef} (${headSha})
+
+            Pull request description:
+            \`\`\`
+            ${cleanedBody}
+            \`\`\`
+            </context>
+
+            <rules-and-examples>
+            Treat the following contents of \`.github/instructions/commit-message.instructions.md\` as mandatory:
+
+            ~~~~md
+            ${commitMessageInstructions}
+            ~~~~
+
+            Workflow-specific notes:
+            - End the summary line with " (#${prNumber})".
+            - If the pull request description already contains a suitable commit message, prefer using that as-is.
+            ${upgradeLibrary ? `- This is an upgrade PR for ${upgradeLibrary} (${upgradeFromVersion} -> ${upgradeToVersion}). Prefer a minimal body, often just the \`See:\` section. Use recent upgrade commits and fetched release tags as the source of truth for URLs. Do not invent missing milestone or RC tags or swap in migration guides for established release notes pages.` : ''}
+            </rules-and-examples>
+
+            <commands>
+            Run these commands before drafting the message:
+
+            1. Get the changed files:
+            \`\`\`
+            git diff --name-status ${baseSha}...${headSha}
+            \`\`\`
+
+            2. Get a diff excerpt (first 500 lines):
+            \`\`\`
+            git diff ${baseSha}...${headSha} | head -500
+            \`\`\`
+
+            ${upgradeLibrary ? `3. Collect recent upgrade commit messages for ${upgradeLibrary} and compare them with other upgrade commits:
+            \`\`\`
+            git log -P -i --grep '^Upgrade \\Q${upgradeLibrary}\\E' --pretty='format:%h %B%n---' -n 20 ${baseSha}
+            git log -P -i --grep '^Upgrade (?!\\Q${upgradeLibrary}\\E)' --pretty='format:%h %B%n---' -n 150 ${baseSha}
+            \`\`\`
+
+            4. If this library is hosted on GitHub, identify the concrete upstream owner and repository, replace \`OWNER/REPO\`, and fetch published tags:
+            \`\`\`
+            curl -s "https://api.github.com/repos/OWNER/REPO/releases?per_page=100" | jq -r '.[].tag_name' | sort -V | tail -n 50
+            \`\`\`` : `3. Get examples of recent non-upgrade commits:
+            \`\`\`
+            git log --grep '^Upgrade' --invert-grep --pretty='format:%h %B%n---' -n 50 ${baseSha}
+            \`\`\``}
+
+            Your network access is limited to:
+            ${allowedDomains.map(domain => `- ${domain}`).join('\n')}
+            </commands>
+
+            <validation>
+            Before returning JSON, verify the following:
+            ${`## ${commitMessageReviewSection}`}
+
+            ### Subject line format (continued)
+
+            - [ ] The summary ends with " (#${prNumber})".
+            </validation>
+
+            Return a JSON object with the following shape:
+            {
+              "summary": "<summary line>",
+              "body": "<commit body with paragraphs wrapped at 72 characters, or empty string>"
+            }
+
+            Ensure the JSON is valid. Do not include additional commentary outside the JSON structure.
+            `;
+
+            const promptPath = '/tmp/codex-prompt-suggest-commit-message.md';
+            fs.writeFileSync(promptPath, instructions.trim() + '\n', { encoding: 'utf8' });
+      - name: Suggest commit message with Codex
+        id: codex
+        uses: openai/codex-action@e0fdf01220eb9a88167c4898839d273e3f2609d1 # v1.8
+        with:
+          # XXX: We're using `safety-strategy: unsafe` and
+          # `sandbox: danger-full-access` so that the agent is able to access
+          # the network and look up e.g. GitHub release tags. Some amount of
+          # safety is provided by the Harden-Runner step further up.
+          safety-strategy: unsafe
+          sandbox: danger-full-access
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: /tmp/codex-prompt-suggest-commit-message.md
+          model: gpt-5.4-nano
+          output-schema: |
+            {
+              "type": "object",
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "description": "Summary line in imperative mood, preferably at most 72 characters"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Commit message body explaining what and why, wrapped at 72 characters"
+                }
+              },
+              "required": ["summary", "body"],
+              "additionalProperties": false
+            }
+      - name: Upsert pull request comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ steps.pr-details.outputs.number }}
+          CODEX_RESULT: ${{ steps.codex.outputs.final-message }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            const prNumber = process.env.PR_NUMBER;
+            const codexResult = JSON.parse(process.env.CODEX_RESULT);
+
+            const summary = codexResult.summary.trim();
+            const body = codexResult.body.trim();
+            const commitMessage = body ? `${summary}\n\n${body}` : summary;
+
+            // Write the commit message to a file, so that the next step can
+            // attach it as a workflow artifact for debug purposes.
+            fs.writeFileSync('/tmp/suggested-commit-message.txt', commitMessage, { encoding: 'utf8' });
+
+            // The comment to be upserted includes a hidden marker to identify it.
+            const marker = '<!-- codex-suggested-commit-message -->';
+            const commentBody = `Suggested commit message:\n${marker}\n\n\`\`\`\n${commitMessage}\n\`\`\`\n`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+            if (!existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody,
+              });
+              core.info('Created new commit message suggestion comment.');
+              return;
+            }
+
+            if (existing.body === commentBody) {
+              core.info('Existing comment already up to date.');
+              return;
+            }
+
+            // Determine who, if anybody, last edited the existing comment.
+            const commentNode = await github.graphql(
+              `query ($id: ID!) {
+                 node(id: $id) {
+                   ... on IssueComment {
+                     editor {
+                       login
+                     }
+                   }
+                 }
+               }`,
+              { id: existing.node_id },
+            );
+
+            // If another user last edited the comment, skip the update. Note that the `[bot]` suffix is stripped
+            // because it does not seem to be present consistently.
+            const originalCommenter = existing.user.login.replace(/\[bot\]$/, '');
+            const lastEditor = commentNode.node.editor?.login?.replace(/\[bot\]$/, '');
+            if (lastEditor && lastEditor !== originalCommenter) {
+              core.info(
+                `Skipping update because comment was last edited by ${lastEditor} rather than ${originalCommenter}.`,
+              );
+              return;
+            }
+
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: commentBody,
+            });
+            core.info(`Updated comment ${existing.id} by ${originalCommenter}.`);
+      - name: Upload suggested commit message
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: suggested-commit-message
+          path: /tmp/suggested-commit-message.txt

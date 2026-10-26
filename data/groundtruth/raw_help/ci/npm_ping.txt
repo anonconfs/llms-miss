@@ -1,0 +1,9 @@
+Ping npm registry
+
+Usage:
+npm ping
+
+Options:
+[--registry <registry>]
+
+Run "npm help ping" for more info

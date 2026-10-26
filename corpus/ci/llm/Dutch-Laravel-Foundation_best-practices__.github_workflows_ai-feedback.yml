@@ -1,0 +1,272 @@
+name: PR Fact Check with Claude
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  fact-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: get-diff
+        run: |
+          # Get the diff for the PR
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          DIFF=$(git diff origin/${{ github.event.pull_request.base.ref }}...HEAD)
+
+          # Save diff to file to handle multiline content
+          echo "$DIFF" > pr_diff.txt
+
+          # Also get PR description
+          echo "${{ github.event.pull_request.body }}" > pr_description.txt
+
+          # Get CLAUDE.md guidelines
+          if [ -f "CLAUDE.md" ]; then
+            cat CLAUDE.md > guidelines.txt
+          else
+            echo "No CLAUDE.md found" > guidelines.txt
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install @anthropic-ai/sdk axios cheerio
+
+      - name: Fact-check with Claude
+        id: fact-check
+        run: |
+          cat << 'EOF' > fact_check.js
+          const Anthropic = require('@anthropic-ai/sdk');
+          const axios = require('axios');
+          const cheerio = require('cheerio');
+          const fs = require('fs');
+
+          const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+          });
+
+          // Simple web search function using DuckDuckGo
+          async function searchWeb(query) {
+            try {
+              const response = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`);
+              const $ = cheerio.load(response.data);
+              const results = [];
+
+              $('.result').slice(0, 5).each((i, elem) => {
+                const title = $(elem).find('.result__title').text().trim();
+                const snippet = $(elem).find('.result__snippet').text().trim();
+                const url = $(elem).find('.result__url').text().trim();
+
+                if (title && snippet) {
+                  results.push({ title, snippet, url });
+                }
+              });
+
+              return results;
+            } catch (error) {
+              console.log('Search failed:', error.message);
+              return [];
+            }
+          }
+
+          // Fetch content from a URL
+          async function fetchContent(url) {
+            try {
+              const response = await axios.get(url, {
+                timeout: 10000,
+                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GitHubAction/1.0)' }
+              });
+              const $ = cheerio.load(response.data);
+
+              // Extract main content (remove scripts, styles, etc.)
+              $('script, style, nav, footer, aside').remove();
+              const content = $('main, article, .content, body').first().text().trim();
+
+              return content.slice(0, 2000); // Limit content length
+            } catch (error) {
+              console.log(`Failed to fetch ${url}:`, error.message);
+              return null;
+            }
+          }
+
+          async function factCheck() {
+            try {
+              const diff = fs.readFileSync('pr_diff.txt', 'utf8');
+              const description = fs.readFileSync('pr_description.txt', 'utf8');
+              const guidelines = fs.readFileSync('guidelines.txt', 'utf8');
+
+              // Extract key topics/technologies for research
+              const analysisPrompt = `Based on this PR content, identify 2-3 key technologies, frameworks, or practice areas that should be researched for current best practices:
+
+              PR Description: ${description}
+              Changes: ${diff.slice(0, 1000)}
+
+              Return just a comma-separated list of search terms, like: "React hooks best practices, Node.js security, TypeScript patterns"`;
+
+              const analysisResponse = await anthropic.messages.create({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 150,
+                messages: [{ role: 'user', content: analysisPrompt }]
+              });
+
+              const searchTerms = analysisResponse.content[0].text.split(',').map(term => term.trim());
+              console.log('Researching:', searchTerms);
+
+              // Research each topic
+              let researchResults = '';
+              for (const term of searchTerms.slice(0, 3)) { // Limit to 3 searches
+                console.log(`Searching for: ${term}`);
+                const searchResults = await searchWeb(term);
+
+                if (searchResults.length > 0) {
+                  researchResults += `\n## Research Results for "${term}":\n`;
+                  for (const result of searchResults.slice(0, 3)) { // Top 3 results
+                    researchResults += `- **${result.title}**: ${result.snippet} (${result.url})\n`;
+                  }
+
+                  // Try to fetch detailed content from top result
+                  if (searchResults[0].url.startsWith('http')) {
+                    const content = await fetchContent(searchResults[0].url);
+                    if (content) {
+                      researchResults += `\nKey insights from ${searchResults[0].url}:\n${content.slice(0, 500)}...\n`;
+                    }
+                  }
+                }
+
+                // Small delay to be respectful
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+
+              const prompt = `This is a best practices repository. Please review the following pull request according to the repository guidelines.
+
+          ## Repository Guidelines (from CLAUDE.md):
+          ${guidelines}
+
+          ## PR Description:
+          ${description}
+
+          ## Code Changes:
+          ${diff}
+
+          ## Current Research Context:
+          I've researched the latest information about the technologies/practices mentioned in this PR:
+          ${researchResults}
+
+          ## IMPORTANT: Please analyze against the CLAUDE.md guidelines, specifically checking:
+
+          **1. Content Focus (CRITICAL):**
+          - [ ] Does the practice maintain a **tight focus on one specific topic**?
+          - [ ] Are there suggestions for **scope creep** (e.g., configuration details, deployment, infrastructure)?
+          - [ ] Should any off-topic content be **moved to separate practices**?
+          - [ ] Are external topics properly **linked to other practices** rather than explained in detail?
+
+          **2. Quality Checklist from CLAUDE.md:**
+          - [ ] Clear, descriptive title using sentence case
+          - [ ] Introduction section explaining what the practice is
+          - [ ] "Why" section with bullet points explaining benefits
+          - [ ] "Suitable For" section describing ideal use cases
+          - [ ] "Less Suitable" section describing when not to use
+          - [ ] "More Info" section with additional resources
+          - [ ] Proper markdown formatting and code examples
+          - [ ] Correct link formatting (relative for internal, descriptive titles for external)
+
+          **3. Technical Accuracy:**
+          - Are the recommended practices current and align with the latest research?
+          - Are code examples correct, secure, and following current standards?
+          - Does the PR align with current industry best practices?
+
+          **4. Scope Evaluation:**
+          When reviewing, be especially critical of:
+          - Configuration details that don't directly relate to the core practice
+          - Infrastructure or deployment specifics (unless that IS the practice)
+          - Queue configuration, worker setup, monitoring tools (unless the practice is specifically about those)
+          - Any content that would be better as a separate best practice
+
+          **EXAMPLE of scope creep to flag:**
+          If a practice is about "keeping commands small and deferring to jobs", suggestions about:
+          - Queue configuration details → Should be a separate "Queue Configuration Best Practices"
+          - Horizon setup → Should be a separate "Queue Monitoring with Horizon"
+          - Worker deployment → Should be a separate "Deploying Queue Workers"
+
+          Instead, suggest: "For queue configuration details, see [link to queue configuration best practice]"
+
+          ## OUTPUT FORMAT - KEEP IT COMPACT:
+
+          **IMPORTANT: Be extremely concise. Only mention issues, missing items, or improvements needed.**
+
+          - If structure/format is correct → don't mention it
+          - If links are properly formatted → don't mention it
+          - If content focus is tight → don't mention it
+          - If technical accuracy is good → don't mention it
+
+          **ONLY OUTPUT:**
+          1. Missing required sections (if any)
+          2. Formatting/link errors (if any)
+          3. Scope creep issues (if any)
+          4. Technical inaccuracies (if any)
+          5. Suggested improvements (max 2-3 lines)
+
+          If everything is correct, respond with: "✅ No issues found. Ready to merge."
+
+          Do NOT include praise, approval statements, or detailed explanations of what's already correct. Maximum 2-3 lines per issue.`;
+
+              const message = await anthropic.messages.create({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: prompt }]
+              });
+
+              const feedback = message.content[0].text;
+
+              // Save feedback to file
+              fs.writeFileSync('feedback.txt', feedback);
+              console.log('Fact-check with research completed successfully');
+
+            } catch (error) {
+              console.error('Error during fact-check:', error);
+              process.exit(1);
+            }
+          }
+
+          factCheck();
+          EOF
+
+          node fact_check.js
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Post comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const feedback = fs.readFileSync('feedback.txt', 'utf8');
+
+            const body = `## 🤖 Claude Fact-Check Results
+
+            ${feedback}
+
+            ---
+            *This review was automatically generated by Claude AI*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

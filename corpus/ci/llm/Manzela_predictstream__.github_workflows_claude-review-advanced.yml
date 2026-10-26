@@ -1,0 +1,311 @@
+name: Claude Advanced PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    # Only run when explicitly requested
+    if: |
+      github.event_name == 'issue_comment' && 
+      (contains(github.event.comment.body, '@claude review') || 
+       contains(github.event.comment.body, 'claude review') ||
+       contains(github.event.comment.body, 'need claude review'))
+    
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      checks: write
+    
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          
+      - name: Checkout base
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          
+      - name: Setup Review Environment
+        id: setup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Determine PR number
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER=${{ github.event.pull_request.number }}
+          else
+            PR_NUMBER=${{ github.event.issue.number }}
+          fi
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          
+          # Parse command if from comment
+          if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            COMMENT="${{ github.event.comment.body }}"
+            
+            # Extract review type
+            if [[ "$COMMENT" == *"@claude security"* ]]; then
+              echo "review_type=security" >> $GITHUB_OUTPUT
+            elif [[ "$COMMENT" == *"@claude performance"* ]]; then
+              echo "review_type=performance" >> $GITHUB_OUTPUT
+            elif [[ "$COMMENT" == *"@claude architecture"* ]]; then
+              echo "review_type=architecture" >> $GITHUB_OUTPUT
+            else
+              echo "review_type=comprehensive" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "review_type=comprehensive" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Analyze Changes
+        id: analyze
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ steps.setup.outputs.pr_number }}
+          
+          # Get PR metadata
+          gh pr view $PR_NUMBER --json title,body,files > pr_data.json
+          
+          # Analyze change scope
+          CHANGED_FILES=$(gh pr view $PR_NUMBER --json files --jq '.files | length')
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          
+          # Check components affected
+          COMPONENTS=$(gh pr view $PR_NUMBER --json files --jq '.files[].path' | grep -E "^(core|cli|sdk-js|sdk-py|webui)/" | cut -d'/' -f1 | sort -u | paste -sd, -)
+          echo "components=$COMPONENTS" >> $GITHUB_OUTPUT
+          
+          # Generate focused diff based on file count
+          if [ $CHANGED_FILES -gt 20 ]; then
+            echo "Large PR detected. Will summarize changes."
+            gh pr diff $PR_NUMBER --name-only > changed_files.txt
+            gh pr diff $PR_NUMBER | head -n 5000 > pr_diff_summary.txt
+          else
+            gh pr diff $PR_NUMBER > pr_diff_summary.txt
+          fi
+          
+      - name: Install Dependencies
+        run: |
+          pip install anthropic pyyaml
+          
+      - name: Run Claude Review
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_TYPE: ${{ steps.setup.outputs.review_type }}
+          COMPONENTS: ${{ steps.analyze.outputs.components }}
+        run: |
+          python << 'EOF'
+          import os
+          import json
+          import yaml
+          import anthropic
+          from pathlib import Path
+          
+          client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+          
+          # Load PR data
+          with open('pr_data.json', 'r') as f:
+              pr_data = json.load(f)
+          
+          # Load diff
+          with open('pr_diff_summary.txt', 'r') as f:
+              diff = f.read()
+          
+          # Load project context
+          claude_md = ""
+          if Path('CLAUDE.md').exists():
+              with open('CLAUDE.md', 'r') as f:
+                  claude_md = f.read()[:15000]
+          
+          # Component-specific guidelines
+          component_guidelines = {
+              "core": "Python backend with FastAPI. Must follow PEP 8, use type hints, maintain thin API wrapper.",
+              "cli": "TypeScript CLI using Ink. Must use strict TypeScript, follow ESLint rules.",
+              "sdk-js": "TypeScript SDK. Must maintain API compatibility, use strong typing.",
+              "sdk-py": "Python SDK. Must be a thin wrapper around API calls.",
+              "webui": "React application. Must follow React best practices, use TypeScript."
+          }
+          
+          # Build component context
+          components = os.environ.get('COMPONENTS', '').split(',')
+          component_context = "\n".join([f"- {c}: {component_guidelines.get(c, '')}" for c in components if c])
+          
+          # Review type specific prompts
+          review_prompts = {
+              "security": """Focus on:
+              - Hardcoded credentials or API keys
+              - Input validation and sanitization
+              - SQL injection or command injection risks
+              - Proper error handling without information leakage
+              - Dependency vulnerabilities""",
+              
+              "performance": """Focus on:
+              - Algorithm complexity and efficiency
+              - Database query optimization
+              - Unnecessary loops or computations
+              - Memory usage and potential leaks
+              - Caching opportunities""",
+              
+              "architecture": """Focus on:
+              - Adherence to thin wrapper philosophy
+              - Proper layer separation (business logic in core)
+              - Component isolation and dependencies
+              - API design and contracts
+              - Code organization and modularity""",
+              
+              "comprehensive": """Provide a balanced review covering:
+              - Code quality and maintainability
+              - Architecture and design patterns
+              - Security considerations
+              - Performance implications
+              - Test coverage and quality"""
+          }
+          
+          review_focus = review_prompts.get(os.environ.get('REVIEW_TYPE', 'comprehensive'))
+          
+          # Create review prompt
+          prompt = f"""You are reviewing a PR for PredictStream, an AI-powered event stream processing platform.
+          
+          Project Guidelines (from CLAUDE.md):
+          {claude_md[:5000]}
+          
+          Components Modified: {component_context}
+          
+          PR: {pr_data['title']}
+          Description: {pr_data.get('body', 'No description')}
+          Files Changed: {len(pr_data['files'])}
+          
+          Review Focus: {os.environ.get('REVIEW_TYPE', 'comprehensive').title()} Review
+          {review_focus}
+          
+          Code Changes:
+          ```diff
+          {diff[:40000]}
+          ```
+          
+          Provide a structured review with:
+          1. Summary (2-3 sentences)
+          2. Positive findings (what's done well)
+          3. Issues found (categorized by severity: 🔴 Critical, 🟡 Important, 🟢 Suggestion)
+          4. Specific file/line comments where applicable
+          
+          Be constructive and specific. Reference file names and line numbers where possible.
+          Format using GitHub Markdown.
+          """
+          
+          # Get review
+          message = client.messages.create(
+              model="claude-3-5-sonnet-20241022",
+              max_tokens=4000,
+              temperature=0,
+              messages=[{"role": "user", "content": prompt}]
+          )
+          
+          review = message.content[0].text
+          
+          # Save review
+          with open('review_output.md', 'w') as f:
+              f.write(review)
+          
+          # Check for critical issues
+          has_critical = '🔴' in review or 'Critical' in review
+          print(f"has_critical={'true' if has_critical else 'false'}")
+          
+          EOF
+          
+          # Set output
+          echo "has_critical=$(python -c "print('true' if '🔴' in open('review_output.md').read() else 'false')")" >> $GITHUB_OUTPUT
+          
+      - name: Post Review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ steps.setup.outputs.pr_number }}
+          REVIEW_TYPE=${{ steps.setup.outputs.review_type }}
+          
+          # Create comment header based on review type
+          if [[ "$REVIEW_TYPE" == "comprehensive" ]]; then
+            HEADER="## 🤖 Claude Comprehensive Code Review"
+          else
+            HEADER="## 🤖 Claude ${REVIEW_TYPE^} Review"
+          fi
+          
+          # Build comment
+          cat << EOF > comment.md
+          $HEADER
+          
+          $(cat review_output.md)
+          
+          ---
+          
+          <details>
+          <summary>📋 Review Metadata</summary>
+          
+          - **Review Type**: ${REVIEW_TYPE^}
+          - **Components**: ${{ steps.analyze.outputs.components }}
+          - **Files Changed**: ${{ steps.analyze.outputs.changed_files }}
+          - **Critical Issues**: ${{ steps.claude.outputs.has_critical }}
+          
+          </details>
+          
+          <details>
+          <summary>🔧 Available Commands</summary>
+          
+          - \`@claude review\` - Run comprehensive review
+          - \`@claude security\` - Focus on security issues
+          - \`@claude performance\` - Focus on performance
+          - \`@claude architecture\` - Focus on architecture
+          
+          </details>
+          
+          *This review was generated by Claude 3.5 Sonnet. Please verify suggestions before implementing.*
+          EOF
+          
+          # Post comment
+          gh pr comment $PR_NUMBER --body-file comment.md
+          
+      - name: Set Check Status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Determine status
+          if [[ "${{ job.status }}" == "success" ]]; then
+            if [[ "${{ steps.claude.outputs.has_critical }}" == "true" ]]; then
+              STATE="failure"
+              DESC="Critical issues found"
+            else
+              STATE="success"
+              DESC="Review completed"
+            fi
+          else
+            STATE="error"
+            DESC="Review failed"
+          fi
+          
+          # Create check run
+          curl -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/check-runs \
+            -d @- << EOF
+          {
+            "name": "Claude Review",
+            "head_sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "status": "completed",
+            "conclusion": "$STATE",
+            "output": {
+              "title": "Claude Review - ${{ steps.setup.outputs.review_type }}",
+              "summary": "$DESC"
+            }
+          }
+          EOF

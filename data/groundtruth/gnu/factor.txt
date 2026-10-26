@@ -1,0 +1,4 @@
+--exponents
+-h
+--help
+--version

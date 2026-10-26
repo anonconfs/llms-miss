@@ -1,0 +1,316 @@
+# Fix a GitHub issue with an AI agent
+# This workflow runs an AI agent to address an issue and optionally creates a PR
+# with the changes. Unlike eval-agent-on-issue.yml, this is not an evaluation -
+# it's a direct attempt to solve the issue.
+#
+# Required secrets: ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+# Optional secrets: GH_PAT (for private cross-repo access)
+#
+# ============================================================================
+# WORKFLOW STRATEGY: Direct Issue Resolution
+# ============================================================================
+# This workflow addresses an issue directly without evaluation:
+#
+# 1. Checkout the repository at the default branch
+# 2. Run Claude Code agent on the issue
+# 3. Agent commits changes (if any)
+# 4. Optionally create a PR with the changes
+#
+# Unlike eval-agent-on-issue.yml:
+# - No evaluation baseline (eval_base_branch)
+# - No comparison to existing PR
+# - Changes go directly to solution branch
+# - Simple, direct issue fixing
+#
+# ============================================================================
+name: Fix an issue with AI agent
+run-name: "fix-agent: issue #${{ inputs.issue_number }}; model: ${{ inputs.model }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "The issue number to fix"
+        required: true
+      model:
+        description: "Claude model to use"
+        required: true
+        type: choice
+        options:
+          # Current models (4.5)
+          - claude-sonnet-4-5-20250929
+          - claude-haiku-4-5-20251001
+          - claude-opus-4-5-20251101
+          # Legacy models (4.x)
+          - claude-opus-4-1-20250805
+          - claude-sonnet-4-20250514
+          - claude-opus-4-20250514
+          # Legacy models (3.x)
+          - claude-3-7-sonnet-20250219
+          - claude-3-haiku-20240307
+      create_pr:
+        description: "Whether to create a PR with the changes. Defaults to true."
+        required: false
+        default: "true"
+      target_branch:
+        description: "Target branch for PR. Defaults to main. Use a feature branch name for draft PRs."
+        required: false
+        default: "main"
+      repo_url_prefix:
+        description: "URL prefix for issue links. Defaults to https://href.li/? for indirect links. Set to empty string for direct GitHub links."
+        required: false
+        default: "https://href.li/?"
+      container:
+        description: "Optional container image to run in. Leave empty for host runner."
+        required: false
+        default: ""
+      validation_command:
+        description: "Optional command to validate agent changes (e.g., 'make test'). Job fails if validation fails."
+        required: false
+        default: ""
+      artifact_retention_days:
+        description: "Number of days to retain workflow artifacts"
+        required: false
+        default: "90"
+      timeout_minutes:
+        description: "Job timeout in minutes"
+        required: false
+        default: "30"
+
+env:
+  AGENT_VERSION: v1
+
+jobs:
+  fix-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJson(inputs.timeout_minutes) }}
+    container: ${{ inputs.container || null }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+
+      - name: Set agent config name
+        run: |
+          # Sanitize inputs for branch name
+          MODEL_PART=$(echo "${{ inputs.model }}" | tr '/' '-')
+          AGENT_BRANCH_NAME="fix-agent-issue-${{ inputs.issue_number }}-${MODEL_PART}"
+          echo "agent_branch_name=${AGENT_BRANCH_NAME}" >> $GITHUB_ENV
+          echo "model_short=$(echo "${{ inputs.model }}" | sed -E 's/claude-([a-z]+)-([0-9]+)-([0-9]+).*/\1-\2.\3/')" >> $GITHUB_ENV
+
+      - name: Checkout repository at default branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Gather issue context
+        id: issue_context
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch issue details and all comments
+          gh issue view ${{ inputs.issue_number }} --json url,title,body,comments > __issue_context__.json
+
+          # Extract issue title and URL
+          ISSUE_TITLE=$(jq -r '.title' __issue_context__.json)
+          ISSUE_URL=$(jq -r '.url' __issue_context__.json)
+          echo "issue_title=${ISSUE_TITLE}" >> $GITHUB_OUTPUT
+          echo "issue_url=${ISSUE_URL}" >> $GITHUB_OUTPUT
+          echo "Issue #${{ inputs.issue_number }}: ${ISSUE_TITLE}"
+
+      - name: Create fix branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and checkout fix branch
+          git checkout -b "${{ env.agent_branch_name }}"
+          echo "✓ Created branch: ${{ env.agent_branch_name }}"
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          prompt: |
+            Your job is to address issue #${{ inputs.issue_number }}.
+            First, read the file __issue_context__.json in the current working directory to get the issue title, body, and comments.
+
+            IMPORTANT: You are working directly in ${{ github.repository }}.
+            This is a direct issue fix, not an evaluation.
+            On completion, commit your changes locally. Do NOT push - that will be handled automatically.
+            Don't commit files you did not edit.
+
+            After committing, create a file:
+            SOLUTION_NOTES.md: Description of your changes and rationale
+
+            I will take care of creating the PR and pushing to GitHub, you just need to create this file.
+            Don't commit it, and don't attempt to push.
+
+            If the original issue is not clear, ask for clarification in SOLUTION_NOTES.md, and do not
+            commit any changes.
+
+            Your SOLUTION_NOTES.md should be a human-readable description of your changes, the rationale,
+            and any decisions you made. Include any checklists you created for yourself and completed.
+            If you performed validation, background research, etc, be sure to mention this.
+
+            Follow any CODE_OF_CONDUCT.md or other relevant files in the repository.
+
+          allowed_tools: "Bash,Read,Write,Edit,Glob,Grep,LS,MultiEdit,NotebookEdit,TodoRead,TodoWrite,WebFetch,WebSearch"
+          model: ${{ inputs.model }}
+          timeout_minutes: ${{ inputs.timeout_minutes }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Add signature to solution notes
+        run: |
+          # Metadata signature includes: model and link to workflow run
+          SIGNATURE="---
+          🤖 **Generated by Claude Code Agent**
+          - Model: \`${{ inputs.model }}\`
+          - Run: [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          if [ -f "SOLUTION_NOTES.md" ]; then
+            echo "" >> SOLUTION_NOTES.md
+            echo "$SIGNATURE" >> SOLUTION_NOTES.md
+          fi
+
+      # Run validation command if specified (e.g., make test)
+      - name: Validate agent changes
+        if: ${{ inputs.validation_command != '' }}
+        run: |
+          echo "Running validation: ${{ inputs.validation_command }}"
+          echo "========================================"
+          ${{ inputs.validation_command }}
+          echo "========================================"
+          echo "Validation passed"
+
+      - name: Commit and push branch
+        run: |
+          # Create commit with metadata
+          git commit --allow-empty -m "fix-agent: issue #${{ inputs.issue_number }} (${{ env.model_short }})
+
+          Model: ${{ inputs.model }}
+          Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
+
+          git push -u origin "${{ env.agent_branch_name }}"
+          echo "✓ Pushed branch: ${{ env.agent_branch_name }}"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ inputs.create_pr == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          # Apply repo_url_prefix to issue link
+          # By default, links are prefixed with https://href.li/? to create indirect
+          # redirects. This prevents GitHub's "reciprocal view" from cluttering the issue.
+          ISSUE_URL="${{ inputs.repo_url_prefix }}${{ steps.issue_context.outputs.issue_url }}"
+
+          # Get commit messages from agent's work
+          COMMIT_LOG=$(git log --oneline origin/${{ inputs.target_branch }}.."${{ env.agent_branch_name }}" --pretty=format:"- %s" || echo "No commits from agent")
+          echo "Agent commits:"
+          echo "$COMMIT_LOG"
+
+          # Read agent output file
+          SOLUTION_NOTES=""
+          if [ -f "SOLUTION_NOTES.md" ]; then
+            SOLUTION_NOTES=$(cat SOLUTION_NOTES.md)
+          fi
+
+          # ========================================================================
+          # Build PR body
+          # ========================================================================
+          PR_BODY="## Fixes
+          [#${{ inputs.issue_number }}: ${{ steps.issue_context.outputs.issue_title }}](${ISSUE_URL})
+
+          ## Agent Changes
+          ${COMMIT_LOG}"
+
+          if [ -n "$SOLUTION_NOTES" ]; then
+            PR_BODY="${PR_BODY}
+
+          ## Solution Details
+          ${SOLUTION_NOTES}"
+          fi
+
+          # Add config and footer
+          REPO_URL_PREFIX_DISPLAY="${{ inputs.repo_url_prefix }}"
+          if [ -z "$REPO_URL_PREFIX_DISPLAY" ]; then
+            REPO_URL_PREFIX_DISPLAY="(direct links - no prefix)"
+          fi
+
+          PR_BODY="${PR_BODY}
+
+          ## Agent Config
+          | Parameter | Value |
+          |-----------|-------|
+          | Model | \`${{ inputs.model }}\` |
+          | URL prefix | \`${REPO_URL_PREFIX_DISPLAY}\` |
+
+          See workflow artifacts for full Claude trace."
+
+          # Create the PR
+          PR_URL=$(gh pr create \
+            --base "${{ inputs.target_branch }}" \
+            --head "${{ env.agent_branch_name }}" \
+            --title "fix: issue #${{ inputs.issue_number }} - ${{ steps.issue_context.outputs.issue_title }} (${{ env.model_short }})" \
+            --body "$PR_BODY" \
+            --draft)
+
+          # Extract PR number from URL
+          CREATED_PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "created_pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "created_pr_number=${CREATED_PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "Created PR #${CREATED_PR_NUMBER}: ${PR_URL}"
+
+      - name: Upload issue context
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-context-${{ github.run_id }}
+          path: __issue_context__.json
+          retention-days: ${{ inputs.artifact_retention_days }}
+
+      - name: Upload Claude output
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-response-${{ github.run_id }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          retention-days: ${{ inputs.artifact_retention_days }}
+
+      - name: Upload solution notes
+        uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('SOLUTION_NOTES.md') != '' }}
+        with:
+          name: solution-notes-${{ github.run_id }}
+          path: SOLUTION_NOTES.md
+          retention-days: ${{ inputs.artifact_retention_days }}
+
+      - name: Save run metadata
+        run: |
+          cat > /tmp/run-metadata.json << 'EOF'
+          {
+            "run_id": ${{ github.run_id }},
+            "repo": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "inputs": {
+              "issue_number": "${{ inputs.issue_number }}",
+              "model": "${{ inputs.model }}",
+              "target_branch": "${{ inputs.target_branch }}",
+              "repo_url_prefix": "${{ inputs.repo_url_prefix }}",
+              "create_pr": "${{ inputs.create_pr }}"
+            },
+            "branch": "${{ env.agent_branch_name }}",
+            "created_pr_number": "${{ steps.create_pr.outputs.created_pr_number || '' }}",
+            "created_pr_url": "${{ steps.create_pr.outputs.created_pr_url || '' }}",
+            "issue_url": "${{ steps.issue_context.outputs.issue_url }}"
+          }
+          EOF
+
+      - name: Upload run metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-metadata-${{ github.run_id }}
+          path: /tmp/run-metadata.json
+          retention-days: ${{ inputs.artifact_retention_days }}

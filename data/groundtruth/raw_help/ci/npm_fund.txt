@@ -1,0 +1,11 @@
+Retrieve funding information
+
+Usage:
+npm fund [<package-spec>]
+
+Options:
+[--json] [--no-browser|--browser <browser>] [--no-unicode]
+[-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+[--which <fundingSourceNumber>]
+
+Run "npm help fund" for more info

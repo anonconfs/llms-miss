@@ -1,0 +1,7 @@
+--
+--mailmap-blob
+--mailmap-file
+--no-mailmap-blob
+--no-mailmap-file
+--no-stdin
+--stdin

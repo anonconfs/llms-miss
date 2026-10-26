@@ -1,0 +1,9 @@
+Remove an item from your favorite packages
+
+Usage:
+npm unstar [<package-spec>...]
+
+Options:
+[--registry <registry>] [--no-unicode] [--otp <otp>]
+
+Run "npm help unstar" for more info

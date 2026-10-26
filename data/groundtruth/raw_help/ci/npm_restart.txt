@@ -1,0 +1,9 @@
+Restart a package
+
+Usage:
+npm restart [-- <args>]
+
+Options:
+[--ignore-scripts] [--script-shell <script-shell>]
+
+Run "npm help restart" for more info

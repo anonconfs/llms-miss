@@ -1,0 +1,4 @@
+--dry-run
+-f
+--format
+--short

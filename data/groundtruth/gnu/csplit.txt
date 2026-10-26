@@ -1,0 +1,16 @@
+-b
+--digits
+--elide-empty-files
+-f
+--help
+-k
+--keep-files
+-n
+--prefix
+--quiet
+-s
+--silent
+--suffix-format
+--suppress-matched
+--version
+-z

@@ -1,0 +1,6 @@
+-F
+--gpg-sign
+-m
+--no-gpg-sign
+-p
+-S

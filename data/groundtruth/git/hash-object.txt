@@ -1,0 +1,13 @@
+--
+--filters
+--literally
+--no-filters
+--no-literally
+--no-path
+--no-stdin
+--no-stdin-paths
+--path
+--stdin
+--stdin-paths
+-t
+-w

@@ -1,0 +1,12 @@
+Manipulates packages cache
+
+Usage:
+npm cache add <package-spec>
+npm cache clean [<key>]
+npm cache ls [<name>@<version>]
+npm cache verify
+
+Options:
+[--cache <cache>]
+
+Run "npm help cache" for more info

@@ -1,0 +1,5 @@
+-f
+--format
+-s
+--size
+--type

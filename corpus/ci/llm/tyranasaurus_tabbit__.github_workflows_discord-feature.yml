@@ -1,0 +1,259 @@
+name: discord feature
+
+on:
+  repository_dispatch:
+    types: [discord-feature]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: discord-feature-${{ github.event.client_payload.dedupe_key || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PROMPT: ${{ github.event.client_payload.prompt }}
+      REQUESTER: ${{ github.event.client_payload.user }}
+      THREAD_ID: ${{ github.event.client_payload.thread_id }}
+      CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_ALLOWED_USERS: ${{ secrets.DISCORD_ALLOWED_USERS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Configure git + branch
+        id: branch
+        run: |
+          git config user.name "claude-bot"
+          git config user.email "claude-bot@users.noreply.github.com"
+          SLUG=$(echo "$PROMPT" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | cut -c1-40 | sed 's/-$//')
+          BRANCH="claude/${SLUG:-feature}-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Notify — building
+        env:
+          CONTENT: "🔨 **Building** for **${{ env.REQUESTER }}**: `${{ env.PROMPT }}`\n\nRun: ${{ env.RUN_URL }}\n\n_Replies in this thread will be folded into the run between Claude's tool calls (~one-tool-call latency)._"
+        run: bash .github/scripts/discord-notify.sh
+
+      - name: Seed Discord poll cursor
+        run: bash .github/scripts/discord-seed-cursor.sh
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: "true"
+          prompt: |
+            You are working in the tabbit repo on branch ${{ steps.branch.outputs.name }}.
+            Invoke the /implement-0-to-1 skill explicitly on the feature request below.
+            Run it end-to-end through every stage. Do not skip the orchestrator and
+            implement directly; the skill is the entry point.
+            Make all necessary file changes, then stop. Do NOT commit, push, or open a PR
+            yourself; the workflow handles that.
+
+            Discord thread context:
+            - This run is attached to Discord thread ${{ env.THREAD_ID }}.
+            - You can post to the thread with `CONTENT="<markdown>" bash .github/scripts/discord-notify.sh`.
+            - Replies from the user will be surfaced to you between tool calls as
+              "📨 New Discord messages" additionalContext (PostToolUse hook).
+              Treat them like ESC-interrupt input: weigh against current state,
+              decide whether to revert / adjust / acknowledge, then proceed.
+            - See the "Discord-aware decision broadcasting" section of the
+              implement-0-to-1 skill for when to broadcast and the format.
+
+            FEATURE REQUEST:
+            ${{ env.PROMPT }}
+
+            Guidelines:
+            - Follow conventions in CLAUDE.md, DECISIONS.md, and existing code style.
+            - Keep changes scoped. No speculative refactors.
+            - Run `bun run typecheck` before stopping if you've touched TS files.
+
+            Feature-demo handoff (Stage 8):
+            - If you touched any user-facing UI, write the feature-demo plan to
+              `/tmp/feature-demo.json` BEFORE stopping. The workflow reads this file
+              after the Cloudflare preview is up, runs the capture harness against the
+              real preview, and surfaces results in Discord.
+            - Plan schema is documented in `.claude/skills/feature-demo/SKILL.md`
+              (the "Return" / Step 6 section). Captures should NOT include `url`
+              fields; the workflow fills those in.
+            - **READ Step 4 of the feature-demo SKILL before writing captures.**
+              For EACH capture, you must (a) name the feature-defining DOM element
+              that proves the change shipped, (b) set `waitFor` to a selector for
+              that element, and (c) seed `seed.localStorage` so the app lands on
+              the screen where the element renders. `route: "/"` with no seed
+              lands on the empty "snap the receipt" home screen — that screenshot
+              proves nothing about your feature. If you can't articulate what each
+              capture proves, drop the capture.
+            - To land on the items / review / share screen, you must seed ALL of:
+              `tabbit:settings:v1` (with venmoHandle), `tabbit:active:v1` (raw
+              string id), `tabbit:history:v2` (array containing that id), and
+              `tabbit:screen:v1` (raw string like "items"). The SKILL has the full
+              recipe.
+            - If you scaffold a dev sandbox per `tabbit-backend-principles`, commit
+              the sandbox files alongside the feature (including the main.tsx
+              routing detour; the Worker serves /dev/sandbox/* via the SPA
+              fallback in wrangler.toml so no extra rewrite is needed).
+            - If the diff is pure backend / docs / tooling and there's no UI change,
+              skip writing the plan.
+          claude_args: |
+            --model claude-opus-4-7
+            --permission-mode bypassPermissions
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,Bash"
+
+      - name: Commit changes
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TITLE=$(echo "$PROMPT" | head -c 70)
+          git commit -m "feat: $TITLE
+
+          Triggered via Discord by $REQUESTER.
+          Original request: $PROMPT"
+          # claude-code-action swaps in its own short-lived App token for git auth;
+          # reset to the workflow's GITHUB_TOKEN before pushing.
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -u origin "${{ steps.branch.outputs.name }}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Notify — no changes
+        if: steps.commit.outputs.no_changes == 'true'
+        env:
+          CONTENT: "⚠️ Claude produced **no changes** for: `${{ env.PROMPT }}`\n\nRun: ${{ env.RUN_URL }}"
+        run: bash .github/scripts/discord-notify.sh
+
+      - name: Open pull request
+        id: pr
+        if: steps.commit.outputs.no_changes != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE=$(echo "$PROMPT" | head -c 70)
+          BODY=$(cat <<EOF
+          Triggered via Discord by **$REQUESTER**.
+
+          ### Original request
+          > $PROMPT
+
+          ### Run
+          $RUN_URL
+
+          ---
+          _Auto-generated by Claude Code. Review carefully before merging._
+
+          <!-- discord-thread:$THREAD_ID -->
+          <!-- discord-channel:$CHANNEL_ID -->
+          EOF
+          )
+          PR_URL=$(gh pr create \
+            --title "feat: $TITLE" \
+            --body "$BODY" \
+            --base main \
+            --head "${{ steps.branch.outputs.name }}" \
+            --draft)
+          PR_NUMBER=$(basename "$PR_URL")
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Notify — PR opened
+        if: steps.pr.outputs.url
+        env:
+          CONTENT: "📦 **PR opened**: \"${{ env.PROMPT }}\"\n\nClaude pushed the initial implementation. Cloudflare preview is building..."
+          PR_URL: ${{ steps.pr.outputs.url }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: bash .github/scripts/discord-notify.sh
+
+      - name: Wait for Cloudflare preview
+        id: preview
+        if: steps.pr.outputs.url
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          PREVIEW=""
+          for i in $(seq 1 90); do
+            DEP_ID=$(gh api "repos/${{ github.repository }}/deployments?sha=$SHA&per_page=10" \
+              --jq 'map(select(.environment == "Preview" or (.environment | startswith("Preview")))) | .[0].id // empty' 2>/dev/null || true)
+            if [ -n "$DEP_ID" ]; then
+              STATUS_JSON=$(gh api "repos/${{ github.repository }}/deployments/$DEP_ID/statuses?per_page=1" 2>/dev/null || echo '[]')
+              STATE=$(echo "$STATUS_JSON" | jq -r '.[0].state // empty')
+              ENV_URL=$(echo "$STATUS_JSON" | jq -r '.[0].environment_url // .[0].target_url // empty')
+              if [ "$STATE" = "success" ] && [ -n "$ENV_URL" ]; then
+                PREVIEW="$ENV_URL"
+                break
+              fi
+              if [ "$STATE" = "failure" ] || [ "$STATE" = "error" ]; then
+                echo "cloudflare deployment $STATE; bailing"
+                echo "state=$STATE" >> "$GITHUB_OUTPUT"
+                break
+              fi
+            fi
+            sleep 10
+          done
+          echo "url=$PREVIEW" >> "$GITHUB_OUTPUT"
+
+      - name: Run feature-demo capture
+        if: steps.pr.outputs.url && steps.preview.outputs.url
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: bash .github/scripts/feature-demo-run.sh
+
+      - name: Notify — preview ready
+        if: steps.pr.outputs.url && steps.preview.outputs.url
+        env:
+          PR_URL: ${{ steps.pr.outputs.url }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          BASE="🌐 **Preview live** — refresh to see the new build."$'\n\n'"_Tap a button below to refine, mark ready, or merge._"
+          if [ -s /tmp/feature-demo.content.md ]; then
+            CONTENT="${BASE}"$'\n\n'"$(cat /tmp/feature-demo.content.md)"
+          else
+            CONTENT="${BASE}"
+          fi
+          export CONTENT
+          bash .github/scripts/discord-notify.sh
+
+      - name: Notify — preview failed
+        if: steps.pr.outputs.url && !steps.preview.outputs.url
+        env:
+          CONTENT: "⚠️ Cloudflare preview didn't come online within the polling window. Check the PR for build status."
+          PR_URL: ${{ steps.pr.outputs.url }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: bash .github/scripts/discord-notify.sh
+
+      - name: Notify — failure
+        if: failure()
+        env:
+          CONTENT: "❌ **Build failed** for: `${{ env.PROMPT }}`\n\nRun: ${{ env.RUN_URL }}"
+        run: bash .github/scripts/discord-notify.sh

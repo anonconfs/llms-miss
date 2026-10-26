@@ -1,0 +1,124 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: auto-release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts 2>/dev/null || npm install
+
+      - name: Check for new commits since last tag
+        id: check
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$latest_tag" ]; then
+            echo "has_commits=true" >> $GITHUB_OUTPUT
+            echo "latest_tag=v0.0.0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          count=$(git rev-list "$latest_tag"..HEAD --count 2>/dev/null || echo 0)
+          if [ "$count" -eq 0 ]; then
+            echo "has_commits=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_commits=true" >> $GITHUB_OUTPUT
+          fi
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        if: steps.check.outputs.has_commits == 'true'
+        id: version
+        run: |
+          node scripts/versioning.mjs apply auto
+          new_version=$(node -p "require('./package.json').version")
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "tag=v${new_version}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        if: steps.check.outputs.has_commits == 'true'
+        run: node scripts/versioning.mjs changelog "${{ steps.version.outputs.new_version }}"
+
+      - name: Sync platforms
+        if: steps.check.outputs.has_commits == 'true'
+        run: npm run sync
+
+      - name: Build release bundle
+        if: steps.check.outputs.has_commits == 'true'
+        run: npm run bundle
+
+      - name: Extract release notes
+        if: steps.check.outputs.has_commits == 'true'
+        id: notes
+        run: |
+          VERSION="v${{ steps.version.outputs.new_version }}"
+          notes=$(awk -v ver="$VERSION" '
+            /^\#\# \[/ {
+              if (found) exit
+              if (index($0, ver)) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$notes" ]; then
+            notes="See [CHANGELOG.md](CHANGELOG.md) for details."
+          fi
+          echo "$notes" > release_notes.md
+
+      - name: Commit, tag, and publish release
+        if: steps.check.outputs.has_commits == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.new_version }}"
+          TAG="v${VERSION}"
+          BRANCH="release/${TAG}"
+
+          git config user.name "pantheon-bot"
+          git config user.email "bot@pantheon.ai"
+
+          # Safety net: abort if tag already exists
+          if git tag -l "${TAG}" | grep -q .; then
+            echo "❌ Tag ${TAG} already exists — skipping release"
+            exit 0
+          fi
+
+          # Commit version bump + changelog on a release branch (excluding build output)
+          git checkout -b "${BRANCH}"
+          git add -A
+          git commit -m "chore(release): v${VERSION} [skip ci]"
+
+          # Tag and push (tag triggers nothing — GITHUB_TOKEN limitation — that's fine,
+          # we create the release directly below)
+          # Branch push is idempotent: delete remote branch first to handle CI re-runs
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          # Delete remote branch if it exists (idempotent — handles CI re-runs)
+          git push origin --delete "${BRANCH}" 2>/dev/null || true
+          git push origin "${BRANCH}"
+
+          # Create GitHub release with the bundle as a downloadable asset
+          gh release create "${TAG}" \
+            --title "Pantheon ${TAG}" \
+            --notes-file release_notes.md \
+            "dist/pantheon-${TAG}.tar.gz"
+
+          echo "✅ Released Pantheon ${TAG}"

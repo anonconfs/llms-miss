@@ -1,0 +1,9 @@
+Edit an installed package
+
+Usage:
+npm edit <pkg>[/<subpkg>...]
+
+Options:
+[--editor <editor>]
+
+Run "npm help edit" for more info
